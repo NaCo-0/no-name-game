@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Isometric Terrain Editor</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #1a1a1a;
+    }
+    #app {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+    #game-container {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    #game-container canvas {
+      display: block;
+    }
+    #editor-panel {
+      flex-shrink: 0;
+      /* Fixed here (not left to the .editor-panel class injected later by
+         EditorPanel.js) on purpose: main.js reads gameContainer.clientWidth
+         to size the Phaser canvas BEFORE TerrainDemoScene.create() ever
+         runs, so before EditorPanel exists at all. If this div had no
+         width until EditorPanel populated it, the canvas would already be
+         sized for the full window, then the panel would claim 320px out
+         from under it after the fact -- leaving the canvas rendered too
+         wide and visually covering the panel. Setting the width up front,
+         synchronously available on first layout, keeps both numbers
+         consistent from frame one. */
+      width: 320px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="game-container"></div>
+    <div id="editor-panel"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
