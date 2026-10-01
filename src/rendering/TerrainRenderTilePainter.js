@@ -1,36 +1,35 @@
 /**
  * TerrainRenderTilePainter
  * ------------------------
- * FLAT-BAND, canvas-centric, isometric-projected painter (v5 baseline).
+ * Canvas-centric, isometric-projected terrain painter (v6: soft ramps).
  *
- * Design basis: direct study of Rise of Kingdoms reference screenshots
- * showed the ground is made of a small number (~4-5) of FLAT colors —
- * a few green shades plus dirt/dry shades — with irregular boundaries,
- * and NO visible surface grain/texture. Color is computed as a function
- * of continuous world-space coordinates only, never as a function of tile
- * index — the tile grid is invisible to this painter except for the outer
- * silhouette mask.
+ * v6 change summary (all aimed at matching the Rise of Kingdoms ground):
+ *   1. CONTINUOUS COLOR RAMP per biome (see BiomeRegistry `stops`) instead
+ *      of hard flat bands with a ~3px anti-alias edge. No patch outlines.
+ *   2. BIOME IS RESOLVED PER PIXEL, not once per render tile. Previously a
+ *      whole 16x16-tile block took the biome of its top corner, so
+ *      territory borders snapped to render-tile edges (hard, stair-stepped
+ *      lines). Now BiomeMap's blended weights are sampled at every pixel
+ *      and the biome ramps are mixed, giving a soft transition.
+ *   3. FINE GRAIN: a very low-amplitude per-pixel luminance shimmer, so
+ *      the ground has a faint painted/grassy surface instead of being
+ *      perfectly flat.
  *
- * No heightmap, no normal map, no terrain lighting. The ground in the
- * reference material is visually flat and evenly lit.
+ * Color is a function of continuous world-space coordinates only, never
+ * of tile index — the tile grid is invisible except for the silhouette
+ * mask. No heightmap, no normal map, no terrain lighting (the reference
+ * ground is visually flat and evenly lit).
  *
- * ISOMETRIC PROJECTION: color noise is sampled in an undistorted,
- * isotropic LOGICAL GROUND-PLANE coordinate space (via
- * IsoMath.screenToLogicalPlane), never in raw screen pixels — this is
- * what makes patches look properly compressed into the isometric view
- * instead of like isotropic circles painted flat on the screen.
+ * ISOMETRIC PROJECTION: noise is sampled in an undistorted, isotropic
+ * LOGICAL GROUND-PLANE space (IsoMath.screenToLogicalPlane), never in raw
+ * screen pixels, so patches look compressed into the iso view.
  *
- * OVERLAYS: paint() accepts an optional `overlays` array — each overlay
- * gets a chance to draw directly onto this tile's canvas AFTER terrain
- * color is filled in, but BEFORE the canvas is registered as a Phaser
- * texture. This is the seam the architecture reserves for additive
- * future layers (rivers, roads, snow, fog, ...) — see RiverPainter for
- * the first example. Terrain color logic above is completely unmodified
- * and unaware of any overlay's existence.
+ * OVERLAYS: paint() accepts an optional `overlays` array — each gets to
+ * draw onto this tile's canvas AFTER terrain color, BEFORE the canvas
+ * becomes a Phaser texture. Terrain logic is unaware of them.
  *
- * Terrain generation remains completely independent from object
- * generation: this painter has no knowledge of trees/rocks/resources/
- * buildings.
+ * Terrain generation is independent of object generation: this painter
+ * has no knowledge of trees/rocks/resources/buildings.
  */
 import { WorldConfig } from '../config/WorldConfig.js';
 import { getBiomeDef } from '../world/BiomeRegistry.js';
@@ -53,9 +52,13 @@ export class TerrainRenderTilePainter {
 
     this.paintDownsample = 2;
 
-    // Width, in FINAL (non-downsampled) pixels, of the anti-alias blend
-    // zone at each band boundary.
-    this.edgeSoftnessPx = 3;
+    // Fine surface grain: peak luminance shift, in 0-255 RGB units, added
+    // on top of the ramp color. Kept tiny on purpose — RoK's grain is a
+    // barely-there shimmer; anything above ~5 starts to look noisy.
+    this.grainAmplitude = 3.0;
+
+    // Per-biome precomputed ramps (built lazily, see _getRamp).
+    this._rampCache = new Map();
   }
 
   /**
@@ -86,15 +89,20 @@ export class TerrainRenderTilePainter {
     const imageData = ctx.createImageData(bufW, bufH);
     const data = imageData.data;
 
-    const biomeDef = getBiomeDef(
-      this.biomeMap.getDominantBiomeAt(worldOrigin.x, worldOrigin.y)
-    );
-    const bandsRgb = biomeDef.bands.map((b) => ({ end: b.end, rgb: hexToRgb(b.color) }));
-
     const worldPixelOriginX = worldOrigin.x - pixelWidth / 2;
     const worldPixelOriginY = worldOrigin.y;
 
-    const softEps = this.edgeSoftnessPx / (this.noise.regionScale * 0.02);
+    // FAST PATH: if this whole tile sits inside one territory (no blend
+    // zone anywhere in it), every pixel uses the same biome ramp, so skip
+    // the per-pixel weight computation entirely. Only tiles that actually
+    // straddle a border pay for the exact per-pixel path.
+    const pureBiome = this.biomeMap.getPureBiomeInRect(
+      worldPixelOriginX,
+      worldPixelOriginY,
+      worldPixelOriginX + pixelWidth,
+      worldPixelOriginY + pixelHeight
+    );
+    const pureRamp = pureBiome !== null ? this._getRamp(pureBiome) : null;
 
     for (let by = 0; by < bufH; by++) {
       for (let bx = 0; bx < bufW; bx++) {
@@ -111,12 +119,36 @@ export class TerrainRenderTilePainter {
 
         const logicalPlane = IsoMath.screenToLogicalPlane(worldPxX, worldPxY);
         const n = this.noise.region(logicalPlane.x, logicalPlane.y);
-        const [r, g, b] = this._sampleBandColor(n, bandsRgb, softEps);
+
+        let r = 0, g = 0, b = 0;
+        if (pureRamp) {
+          // Whole tile is one biome: single ramp lookup, no weights.
+          const c = pureRamp[n <= 0 ? 0 : n >= 1 ? 255 : (n * 255) | 0];
+          r = c[0]; g = c[1]; b = c[2];
+        } else {
+          // Tile straddles a border: resolve biome weights PER PIXEL
+          // (see class comment, #2) and mix the ramps.
+          const weights = this.biomeMap.getWeightsAt(worldPxX, worldPxY);
+          for (const id in weights) {
+            const w = weights[id];
+            const c = this._rampColor(Number(id), n);
+            r += c[0] * w;
+            g += c[1] * w;
+            b += c[2] * w;
+          }
+        }
+
+        // Fine grain: same shift on all three channels (pure luminance),
+        // so it never tints the ground.
+        const shimmer = this.noise.grain(logicalPlane.x, logicalPlane.y) * this.grainAmplitude;
+        r += shimmer;
+        g += shimmer;
+        b += shimmer;
 
         const idx = (by * bufW + bx) * 4;
-        data[idx] = r;
-        data[idx + 1] = g;
-        data[idx + 2] = b;
+        data[idx] = r < 0 ? 0 : r > 255 ? 255 : r;
+        data[idx + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+        data[idx + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
         data[idx + 3] = 255;
       }
     }
@@ -158,25 +190,43 @@ export class TerrainRenderTilePainter {
     renderTile.painted = true;
   }
 
-  _sampleBandColor(n, bandsRgb, softEps) {
-    let prevEnd = 0;
-    for (let i = 0; i < bandsRgb.length; i++) {
-      const band = bandsRgb[i];
-      if (n <= band.end || i === bandsRgb.length - 1) {
-        if (i > 0 && n < prevEnd + softEps) {
-          const t = Math.max(0, Math.min(1, (n - (prevEnd - softEps)) / (2 * softEps)));
-          const prevRgb = bandsRgb[i - 1].rgb;
-          return [
-            Math.round(prevRgb[0] + (band.rgb[0] - prevRgb[0]) * t),
-            Math.round(prevRgb[1] + (band.rgb[1] - prevRgb[1]) * t),
-            Math.round(prevRgb[2] + (band.rgb[2] - prevRgb[2]) * t),
-          ];
-        }
-        return band.rgb;
+  /**
+   * Builds (once per biome) a 256-entry lookup table sampling that
+   * biome's color ramp. Per-pixel color is then a single array read
+   * instead of a stop-search + lerp, which matters because this runs for
+   * every pixel of every streamed tile.
+   */
+  _getRamp(biomeId) {
+    let ramp = this._rampCache.get(biomeId);
+    if (ramp) return ramp;
+
+    const stops = getBiomeDef(biomeId).stops.map((st) => ({ at: st.at, rgb: hexToRgb(st.color) }));
+    const LUT = 256;
+    ramp = new Array(LUT);
+    for (let i = 0; i < LUT; i++) {
+      const t = i / (LUT - 1);
+      let lo = stops[0];
+      let hi = stops[stops.length - 1];
+      for (let k = 1; k < stops.length; k++) {
+        if (t <= stops[k].at) { lo = stops[k - 1]; hi = stops[k]; break; }
       }
-      prevEnd = band.end;
+      const span = hi.at - lo.at;
+      const f = span > 0 ? Math.min(1, Math.max(0, (t - lo.at) / span)) : 0;
+      ramp[i] = [
+        lo.rgb[0] + (hi.rgb[0] - lo.rgb[0]) * f,
+        lo.rgb[1] + (hi.rgb[1] - lo.rgb[1]) * f,
+        lo.rgb[2] + (hi.rgb[2] - lo.rgb[2]) * f,
+      ];
     }
-    return bandsRgb[bandsRgb.length - 1].rgb;
+    this._rampCache.set(biomeId, ramp);
+    return ramp;
+  }
+
+  /** Ramp color for a biome at noise value n in [0,1] (no allocation). */
+  _rampColor(biomeId, n) {
+    const ramp = this._getRamp(biomeId);
+    const i = n <= 0 ? 0 : n >= 1 ? 255 : (n * 255) | 0;
+    return ramp[i];
   }
 
   _isInsideTileBlockDiamond(localX, localY, pixelWidth, pixelHeight) {

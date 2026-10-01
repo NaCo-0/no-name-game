@@ -68,6 +68,7 @@ class ValueNoise2D {
 
 // ---- histogram equalization for ValueNoise2D output ----------------------
 //
+// (Table re-measured for the 2-layer region() blend below.)
 // ValueNoise2D.sample() bilinearly interpolates between 4 independent
 // uniform random corners. That interpolation is a sum of independent
 // random variables, so by the central limit theorem the RAW output is NOT
@@ -82,10 +83,10 @@ class ValueNoise2D {
 // so the corrected output IS uniform on [0,1], and every band gets the
 // share of area BiomeRegistry's authors actually intended.
 const EQUALIZE_TABLE = [
-  [0.00, 0.0017], [0.05, 0.1510], [0.10, 0.2152], [0.20, 0.3075],
-  [0.30, 0.3801], [0.40, 0.4463], [0.50, 0.5083], [0.60, 0.5696],
-  [0.70, 0.6358], [0.80, 0.7084], [0.88, 0.7783], [0.90, 0.7984],
-  [0.95, 0.8577], [0.99, 0.9325], [1.00, 0.9988],
+  [0.00, 0.0070], [0.05, 0.2260], [0.10, 0.2748], [0.20, 0.3412],
+  [0.30, 0.3940], [0.40, 0.4413], [0.50, 0.4863], [0.60, 0.5320],
+  [0.70, 0.5810], [0.80, 0.6350], [0.88, 0.6886], [0.90, 0.7048],
+  [0.95, 0.7558], [0.99, 0.8383], [1.00, 0.9869],
 ];
 
 function equalize(raw) {
@@ -110,50 +111,71 @@ export class SeededNoiseField {
   constructor(seed) {
     this.seed = seed;
 
+    // Two independent layers of "region" noise, blended together:
+    //   - a LARGE, calm layer that decides where big dry-dirt patches sit
+    //   - a MEDIUM layer that adds gentle variation inside those areas
+    // RoK ground reads as mostly-one-green with a few big, soft dirt
+    // patches — not as many small, evenly-spaced blobs — so the large
+    // layer carries most of the weight.
     this._region = new ValueNoise2D(seed, 64);
+    this._regionMid = new ValueNoise2D(seed ^ 0x7f4a7c15, 64);
     this._warpX = new ValueNoise2D(seed ^ 0x51ed270b, 32);
     this._warpY = new ValueNoise2D(seed ^ 0x2b9a1e07, 32);
 
-    // World-pixels per noise-grid-cell. Larger = larger, calmer regions.
-    // Lowered again after user feedback that patches were still much too
-    // large even at 350 (~5-8 tiles) — halved to bring a typical patch
-    // down to roughly 2-4 tiles across.
-    this.regionScale = 180;
+    // Fine surface grain (the subtle "grass texture" visible in RoK).
+    this._grain = new ValueNoise2D(seed ^ 0x1b873593, 64);
 
-    // Domain warp: distorts the sample point before the main region lookup
-    // so boundaries read as irregular hand-painted shapes rather than
-    // following the underlying noise grid's implicit axes. Scaled down
-    // proportionally with regionScale (same ~0.4x / ~0.22x ratios) so
-    // warping still looks proportionate to the smaller regions.
-    this.warpScale = 72;
-    this.warpStrength = 40; // in world pixels
+    // World-pixels per noise-grid-cell. Larger = larger, calmer regions.
+    // (Was 180 — patches were far too small/busy compared to RoK.)
+    this.regionScale = 520;
+    this.regionMidScale = 210;
+
+    // Domain warp keeps patch outlines organic instead of grid-aligned.
+    this.warpScale = 160;
+    this.warpStrength = 90; // in world pixels
+
+    // Grain: very high frequency, very low amplitude (see grain()).
+    this.grainScale = 9;
 
     this.frequencies = {
       region: 1 / this.regionScale,
+      regionMid: 1 / this.regionMidScale,
       warp: 1 / this.warpScale,
+      grain: 1 / this.grainScale,
     };
   }
 
   /**
-   * The single noise value the painter thresholds into flat color bands.
-   * Returns a value in [0, 1], and — unlike the raw ValueNoise2D sample —
-   * this value IS uniformly distributed on [0, 1] (see `equalize` above),
-   * so BiomeRegistry band widths translate directly into actual on-screen
-   * area shares. Always sampled at absolute world coordinates — this is
-   * what guarantees continuity across render-tile and logical-chunk
-   * boundaries.
+   * The single smooth noise value the painter maps to color. Returns a
+   * value in [0, 1], approximately uniformly distributed (see `equalize`).
+   * Always sampled at absolute world coordinates — this is what keeps the
+   * field continuous across render-tile and logical-chunk boundaries.
    */
   region(worldX, worldY) {
     const wf = this.frequencies.warp;
     const warpedX = worldX + (this._warpX.sample(worldX * wf, worldY * wf) - 0.5) * 2 * this.warpStrength;
     const warpedY = worldY + (this._warpY.sample(worldX * wf, worldY * wf) - 0.5) * 2 * this.warpStrength;
 
-    const rf = this.frequencies.region;
-    const raw = this._region.sample(warpedX * rf, warpedY * rf);
+    const big = this._region.sample(warpedX * this.frequencies.region, warpedY * this.frequencies.region);
+    const mid = this._regionMid.sample(warpedX * this.frequencies.regionMid, warpedY * this.frequencies.regionMid);
+
+    // Big layer dominates (70%) so patches stay large and calm; the mid
+    // layer (30%) just breaks up the perfectly-smooth look.
+    const raw = big * 0.7 + mid * 0.3;
     return equalize(raw);
   }
 
+  /**
+   * Fine surface grain in [-1, 1]. Not warped and not equalized on
+   * purpose: it is meant to be a barely-visible per-pixel shimmer, added
+   * on top of the flat color by the painter at very low amplitude.
+   */
+  grain(worldX, worldY) {
+    const gf = this.frequencies.grain;
+    return this._grain.sample(worldX * gf, worldY * gf) * 2 - 1;
+  }
+
   static to01(v) {
-    return v; // already normalized to a uniform [0,1] by `region()`
+    return v; // already normalized by `region()`
   }
 }
