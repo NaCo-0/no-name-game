@@ -39,6 +39,10 @@ function hexToRgb(hex) {
   return [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff];
 }
 
+function mix(a, b, f) {
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+
 export class TerrainRenderTilePainter {
   /**
    * @param {Phaser.Scene} scene
@@ -55,7 +59,23 @@ export class TerrainRenderTilePainter {
     // Fine surface grain: peak luminance shift, in 0-255 RGB units, added
     // on top of the ramp color. Kept tiny on purpose — RoK's grain is a
     // barely-there shimmer; anything above ~5 starts to look noisy.
-    this.grainAmplitude = 3.0;
+    this.grainAmplitude = 2.0;
+
+    // ---- SOFT CEL-SHADE look -------------------------------------------
+    // The biome `stops` define a smooth palette; the painter then
+    // QUANTIZES it into a few flat tones (cel shading) with a narrow soft
+    // edge between them. Matches the hand-painted city art: 3-4 flat
+    // tones, clear-but-organic shape edges, no velvety gradients.
+    //
+    // bandCuts: noise values where one tone ends and the next begins
+    // (4 tones: shade / base / light / dirt). Base gets the biggest share.
+    this.bandCuts = [0.17, 0.72, 0.91];
+    // Half-width of the transition at each cut, in noise units. ~0.008
+    // is roughly 2-4 screen px at the default zoom: crisp, not jagged.
+    this.edgeHalfWidth = 0.008;
+    // How far each tone is pushed away from the biome's base tone.
+    // 1 = exactly the palette; >1 = more distinct steps.
+    this.toneContrast = 1.05;
 
     // Per-biome precomputed ramps (built lazily, see _getRamp).
     this._rampCache = new Map();
@@ -123,7 +143,7 @@ export class TerrainRenderTilePainter {
         let r = 0, g = 0, b = 0;
         if (pureRamp) {
           // Whole tile is one biome: single ramp lookup, no weights.
-          const c = pureRamp[n <= 0 ? 0 : n >= 1 ? 255 : (n * 255) | 0];
+          const c = pureRamp[n <= 0 ? 0 : n >= 1 ? 1023 : (n * 1023) | 0];
           r = c[0]; g = c[1]; b = c[2];
         } else {
           // Tile straddles a border: resolve biome weights PER PIXEL
@@ -191,7 +211,7 @@ export class TerrainRenderTilePainter {
   }
 
   /**
-   * Builds (once per biome) a 256-entry lookup table sampling that
+   * Builds (once per biome) a 1024-entry lookup table sampling that
    * biome's color ramp. Per-pixel color is then a single array read
    * instead of a stop-search + lerp, which matters because this runs for
    * every pixel of every streamed tile.
@@ -201,10 +221,9 @@ export class TerrainRenderTilePainter {
     if (ramp) return ramp;
 
     const stops = getBiomeDef(biomeId).stops.map((st) => ({ at: st.at, rgb: hexToRgb(st.color) }));
-    const LUT = 256;
-    ramp = new Array(LUT);
-    for (let i = 0; i < LUT; i++) {
-      const t = i / (LUT - 1);
+
+    // Smooth palette color at t (the un-quantized ramp).
+    const smooth = (t) => {
       let lo = stops[0];
       let hi = stops[stops.length - 1];
       for (let k = 1; k < stops.length; k++) {
@@ -212,11 +231,48 @@ export class TerrainRenderTilePainter {
       }
       const span = hi.at - lo.at;
       const f = span > 0 ? Math.min(1, Math.max(0, (t - lo.at) / span)) : 0;
-      ramp[i] = [
+      return [
         lo.rgb[0] + (hi.rgb[0] - lo.rgb[0]) * f,
         lo.rgb[1] + (hi.rgb[1] - lo.rgb[1]) * f,
         lo.rgb[2] + (hi.rgb[2] - lo.rgb[2]) * f,
       ];
+    };
+
+    // One flat tone per band, sampled at the band's middle, then pushed
+    // away from the base tone by toneContrast so the steps are readable.
+    const cuts = this.bandCuts;
+    const edges = [0, ...cuts, 1];
+    const base = smooth((edges[1] + edges[2]) / 2); // the big middle band
+    const tones = [];
+    for (let b = 0; b < edges.length - 1; b++) {
+      const c = smooth((edges[b] + edges[b + 1]) / 2);
+      tones.push([
+        Math.max(0, Math.min(255, base[0] + (c[0] - base[0]) * this.toneContrast)),
+        Math.max(0, Math.min(255, base[1] + (c[1] - base[1]) * this.toneContrast)),
+        Math.max(0, Math.min(255, base[2] + (c[2] - base[2]) * this.toneContrast)),
+      ]);
+    }
+
+    const LUT = 1024; // fine enough that a ~0.008 edge spans several entries
+    const hw = this.edgeHalfWidth;
+    ramp = new Array(LUT);
+    for (let i = 0; i < LUT; i++) {
+      const t = i / (LUT - 1);
+      // Find the band, then blend with its neighbour only inside the
+      // narrow zone around a cut (smoothstep => no visible stair-steps).
+      let b = 0;
+      while (b < cuts.length && t > cuts[b]) b++;
+      let col = tones[b];
+      if (b > 0 && t - cuts[b - 1] < hw) {
+        const u = (t - (cuts[b - 1] - hw)) / (2 * hw);
+        const f = u * u * (3 - 2 * u);
+        col = mix(tones[b - 1], tones[b], f);
+      } else if (b < cuts.length && cuts[b] - t < hw) {
+        const u = (t - (cuts[b] - hw)) / (2 * hw);
+        const f = u * u * (3 - 2 * u);
+        col = mix(tones[b], tones[b + 1], f);
+      }
+      ramp[i] = col;
     }
     this._rampCache.set(biomeId, ramp);
     return ramp;
@@ -225,7 +281,7 @@ export class TerrainRenderTilePainter {
   /** Ramp color for a biome at noise value n in [0,1] (no allocation). */
   _rampColor(biomeId, n) {
     const ramp = this._getRamp(biomeId);
-    const i = n <= 0 ? 0 : n >= 1 ? 255 : (n * 255) | 0;
+    const i = n <= 0 ? 0 : n >= 1 ? 1023 : (n * 1023) | 0;
     return ramp[i];
   }
 
