@@ -131,45 +131,13 @@ export class TerrainRenderTilePainter {
 
         const localX = bx * ds;
         const localY = by * ds;
+        const idx = (by * bufW + bx) * 4;
         if (!this._isInsideTileBlockDiamond(localX, localY, pixelWidth, pixelHeight)) {
-          const idx = (by * bufW + bx) * 4;
           data[idx + 3] = 0;
           continue;
         }
 
-        const logicalPlane = IsoMath.screenToLogicalPlane(worldPxX, worldPxY);
-        const n = this.noise.region(logicalPlane.x, logicalPlane.y);
-
-        let r = 0, g = 0, b = 0;
-        if (pureRamp) {
-          // Whole tile is one biome: single ramp lookup, no weights.
-          const c = pureRamp[n <= 0 ? 0 : n >= 1 ? 1023 : (n * 1023) | 0];
-          r = c[0]; g = c[1]; b = c[2];
-        } else {
-          // Tile straddles a border: resolve biome weights PER PIXEL
-          // (see class comment, #2) and mix the ramps.
-          const weights = this.biomeMap.getWeightsAt(worldPxX, worldPxY);
-          for (const id in weights) {
-            const w = weights[id];
-            const c = this._rampColor(Number(id), n);
-            r += c[0] * w;
-            g += c[1] * w;
-            b += c[2] * w;
-          }
-        }
-
-        // Fine grain: same shift on all three channels (pure luminance),
-        // so it never tints the ground.
-        const shimmer = this.noise.grain(logicalPlane.x, logicalPlane.y) * this.grainAmplitude;
-        r += shimmer;
-        g += shimmer;
-        b += shimmer;
-
-        const idx = (by * bufW + bx) * 4;
-        data[idx] = r < 0 ? 0 : r > 255 ? 255 : r;
-        data[idx + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
-        data[idx + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
-        data[idx + 3] = 255;
+        this._writePixel(data, idx, worldPxX, worldPxY, pureRamp);
       }
     }
 
@@ -208,6 +176,107 @@ export class TerrainRenderTilePainter {
     renderTile.renderTexture = image;
     renderTile.textureKey = textureKey;
     renderTile.painted = true;
+  }
+
+  /**
+   * Shades ONE pixel at world-pixel (worldPxX, worldPxY) into `data[idx..idx+3]`.
+   * Single source of truth for terrain color: used by the live tile painter
+   * and by renderRegion (bake export).
+   * @param {Uint8ClampedArray} data
+   * @param {number} idx
+   * @param {Array|null} pureRamp - biome ramp if the whole area is one biome, else null
+   */
+  _writePixel(data, idx, worldPxX, worldPxY, pureRamp) {
+    const logicalPlane = IsoMath.screenToLogicalPlane(worldPxX, worldPxY);
+    const n = this.noise.region(logicalPlane.x, logicalPlane.y);
+
+    let r = 0, g = 0, b = 0;
+    if (pureRamp) {
+      // Whole tile is one biome: single ramp lookup, no weights.
+      const c = pureRamp[n <= 0 ? 0 : n >= 1 ? 1023 : (n * 1023) | 0];
+      r = c[0]; g = c[1]; b = c[2];
+    } else {
+      // Tile straddles a border: resolve biome weights PER PIXEL
+      // (see class comment, #2) and mix the ramps.
+      const weights = this.biomeMap.getWeightsAt(worldPxX, worldPxY);
+      for (const id in weights) {
+        const w = weights[id];
+        const c = this._rampColor(Number(id), n);
+        r += c[0] * w;
+        g += c[1] * w;
+        b += c[2] * w;
+      }
+    }
+
+    // Fine grain: same shift on all three channels (pure luminance),
+    // so it never tints the ground.
+    const shimmer = this.noise.grain(logicalPlane.x, logicalPlane.y) * this.grainAmplitude;
+    r += shimmer;
+    g += shimmer;
+    b += shimmer;
+
+    data[idx] = r < 0 ? 0 : r > 255 ? 255 : r;
+    data[idx + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+    data[idx + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
+    data[idx + 3] = 255;
+  }
+
+  /**
+   * Renders an axis-aligned world-pixel rectangle to a canvas at `scale`
+   * output pixels per world pixel. Pixels outside the map's diamond
+   * (tile coords outside [0,gridWidth) x [0,gridHeight)) are transparent.
+   * Used by the bake exporter; does not touch the Phaser scene.
+   *
+   * @param {number} worldX - rect's left edge, world px
+   * @param {number} worldY - rect's top edge, world px
+   * @param {number} outW - output width in px
+   * @param {number} outH - output height in px
+   * @param {number} scale - output px per world px (0.5 = half resolution)
+   * @returns {HTMLCanvasElement|null} null if the rect has no map pixels at all
+   */
+  renderRegion(worldX, worldY, outW, outH, scale) {
+    const { gridWidth, gridHeight } = WorldConfig;
+    const worldW = outW / scale;
+    const worldH = outH / scale;
+
+    // Cheap reject by tile-coordinate bounds of the rect's corners.
+    const corners = [
+      [worldX, worldY], [worldX + worldW, worldY],
+      [worldX, worldY + worldH], [worldX + worldW, worldY + worldH],
+    ].map(([x, y]) => IsoMath.worldToTileContinuous(x, y));
+    const minTx = Math.min(...corners.map((c) => c.x));
+    const maxTx = Math.max(...corners.map((c) => c.x));
+    const minTy = Math.min(...corners.map((c) => c.y));
+    const maxTy = Math.max(...corners.map((c) => c.y));
+    if (maxTx < 0 || minTx > gridWidth || maxTy < 0 || minTy > gridHeight) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(outW, outH);
+    const data = imageData.data;
+
+    // Dense probe grid (33x33) — the live painter's 9x9 is acceptable for
+    // on-screen tiles, but a baked tile is permanent so be more careful.
+    const pureBiome = this.biomeMap.getPureBiomeInRect(worldX, worldY, worldX + worldW, worldY + worldH, 33);
+    const pureRamp = pureBiome !== null ? this._getRamp(pureBiome) : null;
+
+    let anyOpaque = false;
+    for (let by = 0; by < outH; by++) {
+      const wy = worldY + (by + 0.5) / scale;
+      for (let bx = 0; bx < outW; bx++) {
+        const wx = worldX + (bx + 0.5) / scale;
+        const t = IsoMath.worldToTileContinuous(wx, wy);
+        if (t.x < 0 || t.y < 0 || t.x >= gridWidth || t.y >= gridHeight) continue;
+        this._writePixel(data, (by * outW + bx) * 4, wx, wy, pureRamp);
+        anyOpaque = true;
+      }
+    }
+    if (!anyOpaque) return null;
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
   }
 
   /**

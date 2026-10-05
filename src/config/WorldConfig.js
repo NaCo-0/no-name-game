@@ -48,18 +48,16 @@ export const WorldConfig = {
   // configs drifting apart. centerTileX/Y are computed below (they just
   // mirror gridWidth/gridHeight/2, no need to duplicate the literal here).
   territories: {
-    sectionCount: 5,
+    sectionCount: 6,
     startAngleDeg: 0,
     // Below this radius (tiles from map center) is the shared neutral
     // zone (plain grass) — should sit just past the inner mountain ring's
     // own radius so the two don't overlap. See TerrainDemoScene.
     innerRadiusTiles: 55,
-    // Ordered biome per section index [0, sectionCount) — section i is
-    // the wedge between divider i and divider i+1 (see TerritoryMap).
-    // Egypt/Mongol were specified directly; Japan/Persia/Rome are our
-    // pick (see BiomeRegistry's per-biome comments for the reasoning).
-    sectionBiomeIds: [BiomeId.DESERT, BiomeId.STEPPE, BiomeId.JAPAN, BiomeId.PERSIA, BiomeId.ROME],
-    sectionNames: ['Egypt', 'Mongol Steppe', 'Japan', 'Persia', 'Rome'],
+    // Colors were sampled from the six civilization map images
+    // (see BiomeRegistry).
+    sectionBiomeIds: [BiomeId.PERSIA, BiomeId.STEPPE, BiomeId.ARABIA, BiomeId.JAPAN, BiomeId.ROME, BiomeId.VIKING],
+    sectionNames: ['Persia', 'Mongol Steppe', 'Arabia', 'Japan', 'Rome', 'Viking'],
   },
 };
 

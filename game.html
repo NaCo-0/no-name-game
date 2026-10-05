@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Kingdoms: Realm & World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@600;700&family=Vazirmatn:wght@400;500;600;700&family=Amiri:wght@700&family=Bitter:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="./kingdom_art/kingdom_data.js"></script>
+<style>
+  :root { --canvas: #05070a; color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overscroll-behavior: none; }
+  body { background: var(--canvas); color: #eee; font-family: 'Inter', -apple-system, sans-serif; position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+  #root { height: 100%; display: flex; flex-direction: column; }
+  svg { display: block; }
+  .icon { width: 1em; height: 1em; flex-shrink: 0; }
+  button, input { font-family: inherit; }
+
+  /* ===== TOP HUD ===== */
+  .hud-top { position: relative; z-index: 50; flex-shrink: 0; padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px; background: var(--panel-color); border-bottom: 1px solid var(--border-color); }
+  .hud-row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .realm-crest { width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); display: flex; align-items: center; justify-content: center; color: var(--highlight-color); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .realm-crest .icon { width: 18px; height: 18px; }
+  .ledger { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+  .ledger::-webkit-scrollbar { display: none; }
+  .ledger-cell { display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 9px; background: var(--paneldeep-color); border: 1px solid var(--border-color); white-space: nowrap; flex-shrink: 0; }
+  .ledger-cell .icon { width: 14px; height: 14px; color: var(--accent-color); }
+  .ledger-cell b { font-size: 11.5px; color: var(--ink-color); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .ledger-cell.coin .icon, .ledger-cell.coin b { color: var(--highlight-color); }
+  
+  .mode-switch-btn {
+    padding: 6px 12px; border-radius: 9px; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color));
+    border: 1px solid var(--highlight-color); color: #fff; font-size: 11.5px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0;
+    transition: transform .12s, filter .12s;
+  }
+  .mode-switch-btn:active { transform: scale(.96); filter: brightness(1.1); }
+
+  .menu-toggle { width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; background: var(--paneldeep-color); border: 1px solid var(--border-color); color: var(--ink-color); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .menu-toggle .icon { width: 16px; height: 16px; }
+  .culture-row { display: flex; gap: 6px; margin-top: 7px; overflow-x: auto; scrollbar-width: none; }
+  .culture-row::-webkit-scrollbar { display: none; }
+  .culture-tab { flex: 0 0 auto; font-size: 12px; font-weight: 600; border: 1px solid var(--border-color); background: var(--paneldeep-color); color: var(--inksoft-color); padding: 6px 13px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all .15s ease; }
+  .culture-tab.active { color: #fff; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); border-color: var(--accent-color); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+
+  /* ===== MAIN STAGE ===== */
+  .stage { flex: 1; position: relative; overflow: hidden; min-height: 0; background: #000; }
+
+  /* ===== CITY VIEW ===== */
+  .city-container { position: absolute; inset: 0; overflow-x: auto; overflow-y: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+  .city-inner { position: relative; height: 100%; width: max-content; }
+  .city-inner img { height: 100%; width: auto; display: block; -webkit-user-select: none; user-select: none; pointer-events: none; }
+
+  .hotspot { position: absolute; cursor: pointer; outline: none; }
+  .plate {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; align-items: center; gap: calc(var(--u) * .55);
+    padding: calc(var(--u) * .35) calc(var(--u) * 1.0) calc(var(--u) * .35) calc(var(--u) * .45);
+    background: linear-gradient(180deg, var(--plate-bg1), var(--plate-bg2));
+    border: max(1px, calc(var(--u) * .16)) solid var(--plate-border);
+    border-radius: var(--plate-radius);
+    box-shadow: 0 calc(var(--u) * .25) calc(var(--u) * .8) rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.55);
+    white-space: nowrap; cursor: pointer; z-index: 6;
+    transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+  }
+  .plate:hover, .plate.active { transform: translate(-50%, calc(-50% - var(--u) * .35)) scale(1.05); box-shadow: 0 calc(var(--u) * .6) calc(var(--u) * 1.3) rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.55); filter: brightness(1.06); }
+  .plate-icon { width: calc(var(--u) * 2.1); height: calc(var(--u) * 2.1); flex-shrink: 0; color: var(--plate-ink); display: flex; align-items: center; justify-content: center; }
+  .plate-icon .icon { width: 100%; height: 100%; }
+  .plate-text { display: flex; flex-direction: column; line-height: 1.12; text-align: center; }
+  .plate-name { font-family: var(--plate-font); font-size: calc(var(--u) * 1.3); font-weight: 700; color: var(--plate-ink); }
+  .plate-level { font-size: calc(var(--u) * 1.0); font-weight: 700; color: var(--plate-sub); letter-spacing: .04em; }
+
+  .collect-badge {
+    position: absolute; z-index: 7; cursor: pointer; transform: translate(-50%, -50%);
+    width: calc(var(--u) * 2.9); height: calc(var(--u) * 2.9); border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff6d6, var(--highlight-color) 55%, var(--accent-color));
+    border: max(1.5px, calc(var(--u) * .2)) solid #fffaf0;
+    display: flex; align-items: center; justify-content: center; color: #2a1d0e;
+    box-shadow: 0 calc(var(--u) * .35) calc(var(--u) * 1) rgba(0,0,0,.55), 0 0 0 calc(var(--u) * .4) rgba(255,255,255,.1);
+    animation: bob 1.1s ease-in-out infinite;
+  }
+  .collect-badge .icon { width: 56%; height: 56%; }
+  .collect-badge .res { position: absolute; right: -18%; bottom: -18%; width: 46%; height: 46%; border-radius: 50%; background: #1b140c; color: var(--highlight-color); display: flex; align-items: center; justify-content: center; border: 1px solid var(--highlight-color); }
+  .collect-badge .res .icon { width: 68%; height: 68%; }
+  @keyframes bob { 0%,100% { margin-top: 0; } 50% { margin-top: calc(var(--u) * -.6); } }
+
+  .float-pop { position: absolute; z-index: 30; pointer-events: none; font-size: calc(var(--u) * 1.5); font-weight: 800; color: var(--highlight-color); text-shadow: 0 1px 3px rgba(0,0,0,.85); animation: floatUp 1s ease-out forwards; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .float-pop .icon { width: 1em; height: 1em; }
+  @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 0) scale(.7); } 15% { opacity: 1; transform: translate(-50%, -6px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
+
+  .scroll-hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,10,12,.88); color: #eee; font-size: 11px; font-weight: 600; padding: 6px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.15); pointer-events: none; z-index: 20; white-space: nowrap; transition: opacity .6s; opacity: 1; display: flex; align-items: center; gap: 6px; }
+  .scroll-hint .icon { width: 12px; height: 12px; }
+  .scroll-hint.hide { opacity: 0; }
+
+  /* ===== WORLD MAP VIEW ===== */
+  .world-map-wrap { position: absolute; inset: 0; overflow: hidden; background: #090c10; cursor: grab; }
+  .world-map-wrap:active { cursor: grabbing; }
+  #world-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  /* Minimap Radar */
+  .minimap-radar {
+    position: absolute; top: 12px; right: 12px; width: 140px; height: 70px;
+    background: rgba(8,12,18,.85); border: 1.5px solid var(--border-color);
+    border-radius: 8px; overflow: hidden; z-index: 25; box-shadow: 0 4px 16px rgba(0,0,0,.6);
+    backdrop-filter: blur(6px); cursor: pointer;
+  }
+  .minimap-radar canvas { width: 100%; height: 100%; display: block; }
+  .minimap-label { position: absolute; bottom: 2px; right: 5px; font-size: 8px; font-weight: 700; color: var(--inksoft-color); pointer-events: none; letter-spacing: .05em; }
+
+  /* World Navigation Controls */
+  .world-controls {
+    position: absolute; bottom: 20px; right: 14px; z-index: 25; display: flex; flex-direction: column; gap: 6px;
+  }
+  .world-btn {
+    width: 36px; height: 36px; border-radius: 10px; background: rgba(18, 25, 34, 0.88);
+    border: 1px solid var(--border-color); color: #eee; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.4); backdrop-filter: blur(4px);
+    transition: transform .1s, background .15s;
+  }
+  .world-btn:active { transform: scale(.92); }
+  .world-btn .icon { width: 16px; height: 16px; }
+
+  /* Floating Territory HUD */
+  .territory-hud {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(12, 18, 26, 0.88); border: 1px solid var(--border-color);
+    padding: 6px 14px; border-radius: 999px; z-index: 25; backdrop-filter: blur(6px);
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    font-size: 11.5px; font-weight: 600; color: var(--ink-color); pointer-events: none;
+  }
+  .territory-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-color); box-shadow: 0 0 6px var(--accent-color); }
+
+  /* Citadel Markers on Map */
+  .citadel-marker {
+    position: absolute; transform: translate(-50%, -100%); z-index: 15; pointer-events: auto;
+    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .citadel-marker:hover { transform: translate(-50%, -105%) scale(1.06); filter: brightness(1.15); }
+  .citadel-icon-wrap {
+    width: 48px; height: 48px; border-radius: 14px; background: radial-gradient(circle, var(--accent-color), var(--paneldeep-color));
+    border: 2px solid var(--highlight-color); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,.7), 0 0 12px var(--accent-color);
+  }
+  .citadel-icon-wrap img { width: 75%; height: 75%; object-fit: contain; }
+  .citadel-banner {
+    margin-top: 3px; background: rgba(10,14,20,.9); border: 1px solid var(--border-color);
+    border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 700; color: #fff;
+    white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.6); display: flex; align-items: center; gap: 4px;
+  }
+  .citadel-banner .tag { color: var(--highlight-color); }
+
+  /* March Action Pop */
+  .action-target-pop {
+    position: absolute; z-index: 35; transform: translate(-50%, -115%);
+    background: var(--panel-color); border: 1px solid var(--highlight-color);
+    padding: 8px 12px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.7);
+    display: flex; flex-direction: column; gap: 6px; min-width: 140px; text-align: center;
+  }
+  .action-target-pop b { font-size: 11.5px; color: var(--ink-color); }
+  .action-target-pop .coord { font-size: 9.5px; color: var(--inksoft-color); }
+  .march-btn {
+    padding: 6px 10px; border-radius: 8px; border: none; font-size: 11px; font-weight: 700;
+    cursor: pointer; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color));
+    color: #fff; display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+
+  /* ===== BOTTOM NAV ===== */
+  .hud-bottom { position: relative; z-index: 50; flex-shrink: 0; background: var(--panel-color); border-top: 1px solid var(--border-color); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: stretch; justify-content: space-around; }
+  .nav-btn { background: transparent; border: none; color: var(--inksoft-color); display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border-radius: 10px; cursor: pointer; flex: 1; max-width: 80px; position: relative; transition: color .14s ease; }
+  .nav-btn .nic { width: 21px; height: 21px; }
+  .nav-btn span { font-size: 9.5px; font-weight: 600; }
+  .nav-btn.active { color: var(--highlight-color); }
+  .nav-btn .badge { position: absolute; top: -1px; right: 14px; background: #d1443a; color: #fff; font-size: 9px; min-width: 15px; height: 15px; border-radius: 999px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--panel-color); }
+
+  /* ===== SHEETS ===== */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 90; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s ease; backdrop-filter: blur(2px); }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet { width: 100%; max-width: 500px; background: var(--panel-color); color: var(--ink-color); border-radius: 20px 20px 0 0; border: 1px solid var(--border-color); border-bottom: none; padding: 18px 20px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateY(20px); transition: transform .25s ease; box-shadow: 0 -14px 40px rgba(0,0,0,.6); max-height: 88vh; overflow-y: auto; }
+  .overlay.open .sheet { transform: translateY(0); }
+  @media (min-width: 720px) { .overlay { align-items: center; } .sheet { border-radius: 16px; border-bottom: 1px solid var(--border-color); } }
+  .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .sheet-title { display: flex; align-items: center; gap: 10px; }
+  .sheet-title .icon-wrap { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); display: flex; align-items: center; justify-content: center; color: #fff; }
+  .sheet-title .icon-wrap .icon { width: 20px; height: 20px; }
+  .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+  .level-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .level-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--accent-color) 25%, transparent); color: var(--highlight-color); }
+  .close-btn { background: var(--paneldeep-color); border: 1px solid var(--border-color); color: var(--ink-color); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .close-btn .icon { width: 14px; height: 14px; }
+  .sheet-desc { color: var(--inksoft-color); font-size: 13.5px; line-height: 1.6; margin: 13px 0 16px; }
+  .prod-row { display: flex; align-items: center; justify-content: space-between; background: var(--paneldeep-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; gap: 10px; }
+  .prod-row .prod-info { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--inksoft-color); }
+  .prod-row .prod-info .icon { width: 16px; height: 16px; color: var(--accent-color); }
+  .prod-row .prod-amount { font-size: 15px; font-weight: 800; color: var(--highlight-color); }
+  .collect-btn { width: 100%; padding: 13px; border-radius: 12px; border: none; cursor: pointer; font-size: 14px; font-weight: 700; margin-bottom: 12px; background: linear-gradient(155deg, var(--highlight-color), var(--accent-color)); color: #14100c; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .collect-btn:disabled { opacity: .4; cursor: default; }
+  .collect-btn .icon { width: 16px; height: 16px; }
+  .upgrade-box { background: var(--paneldeep-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .upgrade-box .ub-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .upgrade-box .ub-head b { font-size: 13px; font-weight: 700; }
+  .upgrade-box .ub-head .arrow { font-size: 12px; color: var(--inksoft-color); }
+  .cost-list { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cost-chip { display: flex; align-items: center; gap: 5px; background: var(--panel-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; }
+  .cost-chip .icon { width: 13px; height: 13px; color: var(--accent-color); }
+  .cost-chip.insufficient { color: #e0655a; border-color: #e0655a; }
+  .cost-chip.insufficient .icon { color: #e0655a; }
+  .action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .action-btn { flex: 1; min-width: 120px; padding: 12px 14px; border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; }
+  .action-btn .icon { width: 14px; height: 14px; }
+  .action-btn.primary { background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); color: #fff; }
+  .action-btn.primary:disabled { opacity: .4; cursor: default; }
+  .action-btn.secondary { background: var(--paneldeep-color); color: var(--ink-color); border: 1px solid var(--border-color); }
+
+  /* ===== CHAT ===== */
+  .chat-overlay { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.65); display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .chat-overlay.open { opacity: 1; pointer-events: auto; }
+  .chat-panel { width: 100%; max-width: 480px; height: 82vh; background: var(--panel-color); color: var(--ink-color); border-radius: 18px 18px 0 0; border: 1px solid var(--border-color); display: flex; flex-direction: column; transform: translateY(20px); transition: transform .25s; }
+  .chat-overlay.open .chat-panel { transform: translateY(0); }
+  .chat-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
+  .chat-head-info { display: flex; align-items: center; gap: 10px; }
+  .chat-head-avatar { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); display: flex; align-items: center; justify-content: center; color: #fff; }
+  .chat-head-avatar .icon { width: 16px; height: 16px; }
+  .chat-head-text b { display: block; font-size: 14px; font-weight: 700; }
+  .chat-head-text span { font-size: 11px; color: var(--inksoft-color); display: flex; align-items: center; gap: 4px; }
+  .online-dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf6d; display: inline-block; }
+  .chat-tabs { display: flex; gap: 6px; padding: 10px 14px 0; }
+  .chat-tab { padding: 6px 13px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--paneldeep-color); color: var(--inksoft-color); border: 1px solid var(--border-color); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .chat-tab .icon { width: 12px; height: 12px; }
+  .chat-tab.active { background: var(--accent-color); color: #fff; border-color: var(--accent-color); }
+  .chat-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .sys-msg { text-align: center; font-size: 11.5px; color: var(--inksoft-color); background: var(--paneldeep-color); border-radius: 999px; padding: 5px 12px; margin: 6px auto; display: inline-flex; align-self: center; gap: 6px; align-items: center; }
+  .sys-msg .icon { width: 11px; height: 11px; color: var(--accent-color); }
+  .msg-row { display: flex; gap: 8px; align-items: flex-end; margin: 5px 0; }
+  .msg-row.me { flex-direction: row-reverse; }
+  .msg-avatar { width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0; background: var(--paneldeep-color); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--inksoft-color); }
+  .msg-col { display: flex; flex-direction: column; max-width: 72%; gap: 3px; }
+  .msg-row.me .msg-col { align-items: flex-end; }
+  .msg-name { font-size: 10.5px; color: var(--inksoft-color); font-weight: 600; padding: 0 3px; }
+  .msg-bubble { padding: 9px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.55; background: var(--paneldeep-color); border: 1px solid var(--border-color); }
+  .msg-row.me .msg-bubble { background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); color: #fff; border: none; }
+  .msg-bubble.fa, .chat-input-row input.fa { font-family: 'Vazirmatn', 'Inter', sans-serif; direction: rtl; text-align: right; }
+  .msg-time { font-size: 9.5px; color: var(--inksoft-color); padding: 0 3px; }
+  .typing-row { display: flex; align-items: center; padding: 2px 0 2px 34px; }
+  .typing-dots { display: flex; gap: 3px; background: var(--paneldeep-color); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 14px; }
+  .typing-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--inksoft-color); animation: typingBounce 1.2s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: .15s; }
+  .typing-dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes typingBounce { 0%,60%,100% { transform: translateY(0); opacity:.5; } 30% { transform: translateY(-3px); opacity: 1; } }
+  .chat-input-row { display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom,0px)); border-top: 1px solid var(--border-color); }
+  .chat-input-row input { flex: 1; background: var(--paneldeep-color); border: 1px solid var(--border-color); border-radius: 999px; padding: 10px 16px; color: var(--ink-color); font-size: 14px; }
+  .chat-input-row input::placeholder { color: var(--inksoft-color); }
+  .chat-input-row input:focus { outline: none; border-color: var(--accent-color); }
+  .chat-send { background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .chat-send .icon { width: 16px; height: 16px; }
+  .chat-send:disabled { opacity: .4; }
+
+  /* ===== MENU & GENERAL ===== */
+  .menu-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .menu-item { display: flex; align-items: center; gap: 12px; background: var(--paneldeep-color); border: 1px solid var(--border-color); border-radius: 11px; padding: 12px 14px; cursor: pointer; color: var(--ink-color); font-size: 14px; text-align: left; }
+  .menu-item .icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent-color); }
+  .toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(10px); background: #14100c; color: #f0e9dc; padding: 10px 20px; border-radius: 999px; font-size: 12.5px; font-weight: 600; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; border: 1px solid rgba(255,255,255,.15); white-space: nowrap; display: flex; align-items: center; gap: 7px; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="root"><div style="height:100%;display:flex;align-items:center;justify-content:center;color:#9fb3c2;font:600 14px Inter,sans-serif">Loading kingdom & world...</div></div>
+
+<script>
+const { useState, useEffect, useRef, useCallback } = React;
+const e = React.createElement;
+
+const CULTURE_ORDER = ["viking", "roman", "japanese", "arabian", "mongol", "persian"];
+const COLLECT_ICON_MS = 20000;
+
+// World map capital coordinates & colors matching the baked 6 territories
+const CAPITALS = {
+  persian:  { name: "The Persian Empire",  title: "Apadana Palace", x: 3520,   y: 25760, color: "#21879e", icon: "hall" },
+  mongol:   { name: "The Steppe Horde",    title: "Great Yurt",     x: -9600,  y: 24000, color: "#c2692f", icon: "hall" },
+  arabian:  { name: "The Sultanate",       title: "Grand Mosque",   x: -13120, y: 17440, color: "#1f8a7a", icon: "hall" },
+  japanese: { name: "The Shogunate",       title: "Tenshu Keep",    x: -3520,  y: 12640, color: "#9a3a3a", icon: "hall" },
+  roman:    { name: "The Roman Empire",    title: "Praetorium",     x: 9600,   y: 14400, color: "#b04a34", icon: "hall" },
+  viking:   { name: "The Frost Realm",     title: "Valhalla Hall",  x: 13120,  y: 20960, color: "#4f86a8", icon: "hall" }
+};
+
+// Procedural Audio Engine (Web Audio API)
+class AudioSystem {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+  _init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+  playClick() {
+    if (!this.enabled) return;
+    this._init(); if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.05);
+    g.gain.setValueAtTime(0.08, this.ctx.currentTime);
+    g.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.05);
+    osc.connect(g); g.connect(this.ctx.destination);
+    osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+  }
+  playCollect() {
+    if (!this.enabled) return;
+    this._init(); if (!this.ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      const t = this.ctx.currentTime + idx * 0.06;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.12, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(g); g.connect(this.ctx.destination);
+      osc.start(t); osc.stop(t + 0.25);
+    });
+  }
+  playUpgrade() {
+    if (!this.enabled) return;
+    this._init(); if (!this.ctx) return;
+    const chords = [392.00, 523.25, 659.25, 783.99]; // G C E G
+    chords.forEach((freq) => {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      g.gain.setValueAtTime(0.08, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.7);
+      osc.connect(g); g.connect(this.ctx.destination);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.7);
+    });
+  }
+  playFly() {
+    if (!this.enabled) return;
+    this._init(); if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.35);
+    g.gain.setValueAtTime(0.06, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+    osc.connect(g); g.connect(this.ctx.destination);
+    osc.start(); osc.stop(this.ctx.currentTime + 0.4);
+  }
+}
+const sound = new AudioSystem();
+
+// Icons
+function Icon(name) {
+  const c = { className: "icon", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" };
+  const P = {
+    crown: e("path", { d: "M4 17l-1.4-8.2a.6.6 0 0 1 .95-.56L7 10.5l4.05-5.4a1.2 1.2 0 0 1 1.9 0L17 10.5l3.45-2.26a.6.6 0 0 1 .95.56L20 17H4z" }),
+    scroll: e(React.Fragment, null, e("path", { d: "M7 3.5h9a2 2 0 0 1 2 2V19a1.5 1.5 0 0 1-1.5 1.5H8" }), e("path", { d: "M7 3.5A2 2 0 0 0 5 5.5V19a1.5 1.5 0 0 0 1.5 1.5" }), e("path", { d: "M9 8.5h6M9 12h6" })),
+    wheat: e(React.Fragment, null, e("path", { d: "M12 21V8" }), e("path", { d: "M12 8c-2.6-.2-3.6-1.9-3.4-4 2.4.1 3.6 1.7 3.4 4z" })),
+    wood: e(React.Fragment, null, e("circle", { cx: "7.5", cy: "16.5", r: "3.6" }), e("circle", { cx: "16.5", cy: "16.5", r: "3.6" }), e("circle", { cx: "12", cy: "8.8", r: "3.6" })),
+    stone: e("path", { d: "M3.5 17.5 6 9.5l5-3.5 6 1.5 3.5 6-2.5 4.5h-13z" }),
+    iron: e(React.Fragment, null, e("path", { d: "M4 17.5l2-4h12l2 4z" }), e("path", { d: "M6.5 13.5l1.7-3.6h7.6l1.7 3.6" })),
+    coin: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "8.6" }), e("circle", { cx: "12", cy: "12", r: "5.6", opacity: ".55" })),
+    menu: e("path", { d: "M4 7h16M4 12h16M4 17h16" }),
+    close: e("path", { d: "M6 6l12 12M18 6L6 18" }),
+    map: e(React.Fragment, null, e("path", { d: "M9 4.5L3.5 6.3v13.2L9 17.7l6 1.8 5.5-1.8V4.5L15 6.3l-6-1.8z" }), e("path", { d: "M9 4.5v13.2M15 6.3v13.2" })),
+    sword: e("path", { d: "M15 3l6 6-10 10-4.5-1.5L5 16 3 21l5-2 .5-1.5L10 15" }),
+    chest: e(React.Fragment, null, e("rect", { x: "3.5", y: "10", width: "17", height: "9.5", rx: "1.8" }), e("circle", { cx: "12", cy: "14.5", r: "1.4" })),
+    chat: e(React.Fragment, null, e("path", { d: "M4.5 5.5h15v10.5h-9L6 20v-4H4.5z" }), e("path", { d: "M8 9.3h8M8 12.4h5.5" })),
+    trophy: e(React.Fragment, null, e("path", { d: "M7.5 3.5h9v5a4.5 4.5 0 0 1-9 0v-5z" }), e("path", { d: "M12 13v3.2M8.7 20.5h6.6M9 17.2h6v3.3H9z" })),
+    download: e(React.Fragment, null, e("path", { d: "M12 3.5v11.5M7.5 10.5L12 15l4.5-4.5" }), e("path", { d: "M4.5 18.5h15" })),
+    gear: e("circle", { cx: "12", cy: "12", r: "5.5" }),
+    shield: e("path", { d: "M12 3.5l6.5 2.7v5.4c0 4-2.7 6.9-6.5 8.4-3.8-1.5-6.5-4.4-6.5-8.4V6.2L12 3.5z" }),
+    help: e("circle", { cx: "12", cy: "12", r: "8.5" }),
+    send: e("path", { d: "M4.5 12L19.5 4.5l-5 15-3-6.5-7-1z" }),
+    hall: e(React.Fragment, null, e("path", { d: "M4.5 20.5V10.2L12 4.5l7.5 5.7v10.3" }), e("path", { d: "M9.3 20.5v-6h5.4v6M4.5 10.2h15" })),
+    alliance: e(React.Fragment, null, e("circle", { cx: "8.3", cy: "8", r: "2.8" }), e("circle", { cx: "15.7", cy: "8", r: "2.8" })),
+    scale: e("path", { d: "M12 3.5v17M6.3 20.5h11.4" }),
+    arrowUp: e("path", { d: "M12 18.5V6M6.5 11l5.5-5.5 5.5 5.5" }),
+    drag: e("path", { d: "M4.5 8.5h15" }),
+    hand: e("path", { d: "M8 13V6.5a1.5 1.5 0 0 1 3 0V11" }),
+    globe: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "8.5" }), e("path", { d: "M3.5 12h17" })),
+    clock: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "8.5" }), e("path", { d: "M12 7v5.3l3.6 2.1" })),
+    plus: e("path", { d: "M12 5v14M5 12h14" }),
+    minus: e("path", { d: "M5 12h14" }),
+    locate: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "3" }), e("path", { d: "M12 2v3M12 19v3M2 12h3M19 12h3" }))
+  };
+  return React.createElement("svg", c, P[name] || null);
+}
+
+const CAT_ICON = { hq: "hall", research: "scroll", alliance: "alliance", market: "scale", barracks: "sword", mine: "iron", quarry: "stone", lumber: "wood", farm: "wheat" };
+const RES_ICON = { food: "wheat", wood: "wood", stone: "stone", iron: "iron", coin: "coin" };
+
+function fmt(n) { n = Math.floor(n); if (n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+"M"; if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'')+"k"; return String(n); }
+function upgradeCost(l) { const b = 40 * Math.pow(1.6, l - 1); return { wood: Math.round(b), stone: Math.round(b * .8), coin: Math.round(b * .5) }; }
+function productionRate(l) { return 5 + (l - 1) * 3; }
+function capacity(l) { return 200 + (l - 1) * 150; }
+function isPersian(s) { return /[\u0600-\u06FF]/.test(s); }
+function nowHHMM() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ":" + String(d.getMinutes()).padStart(2,'0'); }
+
+const CHAT_SEED = [
+  { kind: "sys", text: "Commander connected to realm network" },
+  { kind: "msg", from: "them", name: "Ragnar", text: "درود بر شما فرمانده! قلعه در آرامش و آمادگی است.", lang: "fa", time: "10:02" },
+  { kind: "msg", from: "them", name: "Kourosh", text: "دیده‌بان‌ها گزارش دادند که معادن آهن شمال فعال شده‌اند.", lang: "fa", time: "10:03" },
+  { kind: "msg", from: "them", name: "Astrid", text: "All territorial borders are secure. Ready for the next march.", lang: "en", time: "10:15" },
+  { kind: "sys", text: "Territory defense bonus +15% active" }
+];
+
+// ---------- Hotspot component for City View ----------
+function Hotspot({ b, theme, showCollect, active, onSelect, onCollect }) {
+  const label = theme.labels[b.id] || { name: b.id };
+  const zone = { left: b.x + "%", top: b.y + "%", width: b.w + "%", height: b.h + "%" };
+  const plate = { left: b.plateX + "%", top: b.plateY + "%", width: b.cover ? b.plateW + "%" : "auto", justifyContent: b.cover ? "center" : "flex-start" };
+  const badgePos = { left: (b.x + b.w / 2) + "%", top: (b.y + b.h * 0.62) + "%" };
+  return e(React.Fragment, null,
+    e("div", { className: "hotspot", style: zone, role: "button", tabIndex: 0, onClick: () => { sound.playClick(); onSelect(b); } }),
+    e("div", { className: "plate" + (active ? " active" : ""), style: plate, onClick: () => { sound.playClick(); onSelect(b); } },
+      e("div", { className: "plate-icon" }, Icon(CAT_ICON[b.category] || "hall")),
+      e("div", { className: "plate-text" }, e("span", { className: "plate-name" }, label.name), e("span", { className: "plate-level" }, "Lv. " + b.level))
+    ),
+    showCollect && e("div", { className: "collect-badge", style: badgePos, onClick: (ev) => { ev.stopPropagation(); onCollect(b); } },
+      Icon("hand"), e("div", { className: "res" }, Icon(RES_ICON[b.produces])))
+  );
+}
+
+// ---------- Detail Sheet ----------
+function DetailSheet({ building, theme, resources, onClose, onCollect, onUpgrade }) {
+  if (!building) return e("div", { className: "overlay" });
+  const label = theme.labels[building.id] || { name: building.id, desc: "" };
+  const isProducer = !!building.produces;
+  const rate = productionRate(building.level), cap = capacity(building.level);
+  const stored = Math.min(building.stored || 0, cap);
+  const cost = upgradeCost(building.level);
+  const canAfford = resources.wood >= cost.wood && resources.stone >= cost.stone && resources.coin >= cost.coin;
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" },
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon(CAT_ICON[building.category] || "hall")),
+          e("div", null, e("h2", null, label.name), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, "LEVEL " + building.level)))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("p", { className: "sheet-desc" }, label.desc),
+      isProducer && e(React.Fragment, null,
+        e("div", { className: "prod-row" },
+          e("div", { className: "prod-info" }, Icon(RES_ICON[building.produces]), rate + "/sec · " + fmt(stored) + " / " + fmt(cap)),
+          e("div", { className: "prod-amount" }, "+" + fmt(stored))),
+        e("button", { className: "collect-btn", disabled: stored < 1, onClick: () => onCollect(building) }, Icon("hand"), stored < 1 ? "Nothing to collect" : "Collect " + fmt(stored) + " " + theme.resourceNames[building.produces])),
+      e("div", { className: "upgrade-box" },
+        e("div", { className: "ub-head" }, e("b", null, "Upgrade to Level " + (building.level + 1)), isProducer && e("span", { className: "arrow" }, rate + "/s → " + productionRate(building.level + 1) + "/s")),
+        e("div", { className: "cost-list" },
+          e("div", { className: "cost-chip" + (resources.wood < cost.wood ? " insufficient" : "") }, Icon("wood"), fmt(cost.wood)),
+          e("div", { className: "cost-chip" + (resources.stone < cost.stone ? " insufficient" : "") }, Icon("stone"), fmt(cost.stone)),
+          e("div", { className: "cost-chip" + (resources.coin < cost.coin ? " insufficient" : "") }, Icon("coin"), fmt(cost.coin))),
+        e("div", { className: "action-row" }, e("button", { className: "action-btn primary", disabled: !canAfford, onClick: () => onUpgrade(building, cost) }, Icon("arrowUp"), "Upgrade"))),
+      e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
+    ));
+}
+
+// ---------- Chat Panel ----------
+function ChatPanel({ open, onClose }) {
+  const [messages, setMessages] = useState(CHAT_SEED);
+  const [val, setVal] = useState("");
+  const [tab, setTab] = useState("alliance");
+  const [typing, setTyping] = useState(false);
+  const bodyRef = useRef(null);
+  const timer = useRef(null);
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [messages, open, typing]);
+  const send = () => {
+    if (!val.trim()) return;
+    sound.playClick();
+    setMessages((m) => [...m, { kind: "msg", from: "me", name: "You", text: val.trim(), lang: isPersian(val) ? "fa" : "en", time: nowHHMM() }]);
+    setVal(""); setTyping(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setTyping(false);
+      const R = ["اطاعت شد فرمانده، یگان‌ها مستقر شدند.", "نیروها آماده حرکت به سمت مرز هستند.", "Excellent command. Reinforcements are ready.", "دریافت شد، دیده‌بان‌ها اعزام شدند."];
+      const r = R[Math.floor(Math.random() * R.length)];
+      setMessages((m) => [...m, { kind: "msg", from: "them", name: "Ragnar", text: r, lang: isPersian(r) ? "fa" : "en", time: nowHHMM() }]);
+    }, 1500);
+  };
+  return e("div", { className: "chat-overlay" + (open ? " open" : ""), onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "chat-panel" },
+      e("div", { className: "chat-head" },
+        e("div", { className: "chat-head-info" }, e("div", { className: "chat-head-avatar" }, Icon("alliance")),
+          e("div", { className: "chat-head-text" }, e("b", null, "Alliance Network"), e("span", null, e("span", { className: "online-dot" }), "6 realms connected"))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("div", { className: "chat-tabs" },
+        e("button", { className: "chat-tab" + (tab === "alliance" ? " active" : ""), onClick: () => setTab("alliance") }, Icon("alliance"), "Alliance"),
+        e("button", { className: "chat-tab" + (tab === "global" ? " active" : ""), onClick: () => setTab("global") }, Icon("globe"), "Global"),
+        e("button", { className: "chat-tab" + (tab === "history" ? " active" : ""), onClick: () => setTab("history") }, Icon("clock"), "Reports")),
+      e("div", { className: "chat-body", ref: bodyRef },
+        messages.map((m, i) => m.kind === "sys" ? e("div", { key: i, className: "sys-msg" }, Icon("shield"), m.text) :
+          e("div", { key: i, className: "msg-row " + (m.from === "me" ? "me" : "them") },
+            e("div", { className: "msg-avatar" }, m.name ? m.name[0] : "?"),
+            e("div", { className: "msg-col" }, m.from !== "me" && e("span", { className: "msg-name" }, m.name),
+              e("div", { className: "msg-bubble" + (m.lang === "fa" ? " fa" : "") }, m.text), e("span", { className: "msg-time" }, m.time)))),
+        typing && e("div", { className: "typing-row" }, e("div", { className: "typing-dots" }, e("span"), e("span"), e("span")))),
+      e("div", { className: "chat-input-row" },
+        e("input", { className: isPersian(val) ? "fa" : "", value: val, onChange: (ev) => setVal(ev.target.value), placeholder: "Type a command or message...", onKeyDown: (ev) => { if (ev.key === "Enter") send(); } }),
+        e("button", { className: "chat-send", disabled: !val.trim(), onClick: send }, Icon("send")))));
+}
+
+// ---------- Storage / Treasury Sheet ----------
+function StorageSheet({ open, onClose, resources, buildings, theme }) {
+  if (!open) return null;
+  const rates = { food: 0, wood: 0, stone: 0, iron: 0 };
+  buildings.forEach(b => {
+    if (b.produces && rates[b.produces] !== undefined) rates[b.produces] += productionRate(b.level);
+  });
+  const resKeys = ["food", "wood", "stone", "iron", "coin"];
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" },
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("chest")),
+          e("div", null, e("h2", null, "Realm Treasury & Storage"), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, theme.name + " Depot")))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("p", { className: "sheet-desc" }, "Overview of stockpiled provisions and net hourly yields for this civilization."),
+      resKeys.map(r => {
+        const ratePerHour = (rates[r] || 0) * 3600;
+        return e("div", { key: r, className: "prod-row" },
+          e("div", { className: "prod-info" }, Icon(RES_ICON[r]), theme.resourceNames[r] || "Coin", r !== 'coin' && e("span", null, " (+" + fmt(ratePerHour) + "/hr)")),
+          e("div", { className: "prod-amount" }, fmt(resources[r])));
+      }),
+      e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
+    ));
+}
+
+// ---------- Battle / Marches Sheet ----------
+function BattleSheet({ open, onClose, marches, onNewMarch }) {
+  if (!open) return null;
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" },
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("sword")),
+          e("div", null, e("h2", null, "War Room & Expeditions"), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, marches.length + " Active Marches")))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("p", { className: "sheet-desc" }, "Scouts and armies marching across the isometric world territories."),
+      marches.length === 0 ? e("div", { style: { padding: "20px 0", textAlign: "center", color: "var(--inksoft-color)" } }, "No active marches. Tap on the World Map to dispatch scouts.") :
+        marches.map(m => e("div", { key: m.id, className: "prod-row" },
+          e("div", { className: "prod-info" }, Icon("sword"), m.title),
+          e("div", { className: "prod-amount", style: { fontSize: "12px", color: "var(--highlight-color)" } }, Math.max(0, Math.ceil(m.timeLeft)) + "s"))),
+      e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
+    ));
+}
+
+// ---------- Rankings Sheet ----------
+function RankingsSheet({ open, onClose, culture, buildingsByCulture }) {
+  if (!open) return null;
+  const ranks = CULTURE_ORDER.map(c => {
+    const list = buildingsByCulture[c] || [];
+    const power = list.reduce((sum, b) => sum + b.level * 450, 25000);
+    return { id: c, name: CAPITALS[c].name, power };
+  }).sort((a,b) => b.power - a.power);
+
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" },
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("trophy")),
+          e("div", null, e("h2", null, "Civilization Rankings"), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, "Global Power")))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("div", { style: { marginTop: "14px", display: "flex", flexDirection: "column", gap: "8px" } },
+        ranks.map((r, i) => e("div", { key: r.id, className: "prod-row", style: { border: r.id === culture ? "1.5px solid var(--highlight-color)" : "1px solid var(--border-color)" } },
+          e("div", { className: "prod-info" }, e("b", { style: { width: "20px" } }, "#" + (i+1)), r.name),
+          e("div", { className: "prod-amount" }, fmt(r.power) + " Power")))),
+      e("div", { className: "action-row", style: { marginTop: "16px" } }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
+    ));
+}
+
+// ---------- Menu Sheet ----------
+function MenuSheet({ open, onClose, soundEnabled, onToggleSound }) {
+  if (!open) return null;
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" }, e("h2", null, "Settings & Realm Menu"), e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("div", { className: "menu-list" },
+        e("button", { className: "menu-item", onClick: onToggleSound }, Icon("gear"), "Sound FX: " + (soundEnabled ? "Enabled (ON)" : "Muted (OFF)")),
+        e("button", { className: "menu-item", onClick: () => alert("Kingdom Strategy Client v2.0 - Fully connected with Baked Isometric Streaming Map") }, Icon("shield"), "Client Version & Engine Info"),
+        e("button", { className: "menu-item", onClick: onClose }, Icon("close"), "Return to Game"))));
+}
+
+// ==========================================
+// WORLD MAP ENGINE COMPONENT (CANVAS STREAMER)
+// ==========================================
+function WorldMapView({ culture, onSelectCulture, onSwitchToCity, marches, onAddMarch }) {
+  const canvasRef = useRef(null);
+  const radarRef = useRef(null);
+  const stateRef = useRef({
+    camX: 0, camY: 19200, zoom: 0.18, targetX: 0, targetY: 19200, targetZoom: 0.18,
+    isDragging: false, dragStartX: 0, dragStartY: 0, camStartX: 0, camStartY: 0,
+    manifest: null, tilesMap: new Map(), loadedImages: new Map(), minimapImg: null,
+    targetMarker: null,
+    objectTypes: new Map(), objectImages: new Map(), shadowImg: null,
+    citadelImages: {}, objectGrid: new Map()
+  });
+
+  const [activeTerritory, setActiveTerritory] = useState("World Map");
+  const [hudCoords, setHudCoords] = useState("0, 0");
+  const [actionPop, setActionPop] = useState(null);
+
+  // Initialize and load manifest, tiles, objects & minimap
+  useEffect(() => {
+    const s = stateRef.current;
+    fetch('/map.json').then(r => r.json()).then(m => {
+      s.manifest = m;
+      m.terrain.tiles.forEach(t => s.tilesMap.set(`${t.col},${t.row}`, t.file));
+
+      // 1. Preload object types & images (mountains, etc.)
+      s.objectTypes = new Map((m.objectTypes || []).map(t => [t.id, t]));
+      s.objectImages = new Map();
+      (m.objectTypes || []).forEach(t => {
+        const img = new Image();
+        img.src = '/' + t.image;
+        s.objectImages.set(t.id, img);
+      });
+
+      const sh = new Image();
+      sh.src = '/' + (m.shadowTexture || 'objects/_shadow.png');
+      s.shadowImg = sh;
+
+      // 2. Preload citadels for the 6 capitals
+      s.citadelImages = {
+        persian: new Image(),
+        roman: new Image(),
+        japanese: new Image(),
+        arabian: new Image(),
+        mongol: new Image(),
+        viking: new Image()
+      };
+      s.citadelImages.persian.src = '/kingdom_art/Layer 3.png';
+      s.citadelImages.roman.src = '/kingdom_art/Layer 1.png';
+      s.citadelImages.japanese.src = '/kingdom_art/Layer 2.png';
+      s.citadelImages.viking.src = '/kingdom_art/Layer 12.png';
+      s.citadelImages.arabian.src = '/kingdom_art/Layer 3.png';
+      s.citadelImages.mongol.src = '/kingdom_art/Layer 1.png';
+
+      // 3. Build spatial chunk grid for fast frustum culling of 2400+ objects
+      const CHUNK = 2048;
+      s.objectGrid = new Map();
+      (m.objects || []).forEach(o => {
+        const cx = Math.floor(o.x / CHUNK);
+        const cy = Math.floor(o.y / CHUNK);
+        const key = `${cx},${cy}`;
+        if (!s.objectGrid.has(key)) s.objectGrid.set(key, []);
+        s.objectGrid.get(key).push(o);
+      });
+
+      // Focus on selected culture
+      if (CAPITALS[culture]) {
+        s.camX = s.targetX = CAPITALS[culture].x;
+        s.camY = s.targetY = CAPITALS[culture].y;
+        s.zoom = s.targetZoom = 0.28;
+      }
+    }).catch(err => console.log('Serving from static path or fallback:', err));
+
+    const mini = new Image();
+    mini.src = '/minimap.png';
+    mini.onload = () => { s.minimapImg = mini; };
+  }, []);
+
+  // Camera fly when culture changes
+  useEffect(() => {
+    const s = stateRef.current;
+    if (CAPITALS[culture]) {
+      s.targetX = CAPITALS[culture].x;
+      s.targetY = CAPITALS[culture].y;
+      s.targetZoom = 0.32;
+      sound.playFly();
+    }
+  }, [culture]);
+
+  // Main Render Loop
+  useEffect(() => {
+    let animId;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const radar = radarRef.current;
+    const rctx = radar ? radar.getContext('2d') : null;
+
+    const render = () => {
+      animId = requestAnimationFrame(render);
+      const s = stateRef.current;
+
+      // Smooth camera interpolation
+      s.camX += (s.targetX - s.camX) * 0.1;
+      s.camY += (s.targetY - s.camY) * 0.1;
+      s.zoom += (s.targetZoom - s.zoom) * 0.1;
+
+      const w = canvas.width = canvas.clientWidth;
+      const h = canvas.height = canvas.clientHeight;
+
+      ctx.fillStyle = '#060a0f';
+      ctx.fillRect(0, 0, w, h);
+
+      if (!s.manifest) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '600 14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading baked isometric world & objects...', w / 2, h / 2);
+        return;
+      }
+
+      const t = s.manifest.terrain;
+      const size = t.tileWorldSize;
+      const originX = t.origin.x;
+      const originY = t.origin.y;
+
+      // Viewport bounds in world coords
+      const vLeft = s.camX - (w / s.zoom) / 2;
+      const vRight = s.camX + (w / s.zoom) / 2;
+      const vTop = s.camY - (h / s.zoom) / 2;
+      const vBottom = s.camY + (h / s.zoom) / 2;
+
+      // Always draw minimap as underlying base LOD
+      if (s.minimapImg && s.minimapImg.complete) {
+        const miniScreenX = (originX - s.camX) * s.zoom + w / 2;
+        const miniScreenY = (originY - s.camY) * s.zoom + h / 2;
+        const miniScreenW = t.worldSize.width * s.zoom;
+        const miniScreenH = t.worldSize.height * s.zoom;
+        ctx.drawImage(s.minimapImg, miniScreenX, miniScreenY, miniScreenW, miniScreenH);
+      }
+
+      // 1. Tile streaming
+      const c0 = Math.max(0, Math.floor((vLeft - originX) / size));
+      const c1 = Math.min(t.cols - 1, Math.floor((vRight - originX) / size));
+      const r0 = Math.max(0, Math.floor((vTop - originY) / size));
+      const r1 = Math.min(t.rows - 1, Math.floor((vBottom - originY) / size));
+
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const key = `${c},${r}`;
+          if (!s.tilesMap.has(key)) continue;
+
+          let img = s.loadedImages.get(key);
+          if (!img) {
+            img = new Image();
+            img.src = '/' + s.tilesMap.get(key);
+            s.loadedImages.set(key, img);
+          }
+
+          if (img.complete && img.naturalWidth > 0) {
+            const sx = (originX + c * size - s.camX) * s.zoom + w / 2;
+            const sy = (originY + r * size - s.camY) * s.zoom + h / 2;
+            const sw = size * s.zoom + 1; // +1 to eliminate seams
+            const sh = size * s.zoom + 1;
+            ctx.drawImage(img, sx, sy, sw, sh);
+          }
+        }
+      }
+
+      // 2. Draw Objects (Mountains, Rocks, Structures) with Depth Sorting
+      if (s.zoom > 0.05 && s.objectGrid) {
+        const CHUNK = 2048;
+        const cX0 = Math.floor((vLeft - 1000) / CHUNK);
+        const cX1 = Math.floor((vRight + 1000) / CHUNK);
+        const cY0 = Math.floor((vTop - 1000) / CHUNK);
+        const cY1 = Math.floor((vBottom + 1000) / CHUNK);
+
+        const visibleItems = [];
+
+        // Collect visible objects from spatial grid
+        for (let cy = cY0; cy <= cY1; cy++) {
+          for (let cx = cX0; cx <= cX1; cx++) {
+            const list = s.objectGrid.get(`${cx},${cy}`);
+            if (!list) continue;
+            for (let i = 0; i < list.length; i++) {
+              const o = list[i];
+              if (o.x >= vLeft - 700 && o.x <= vRight + 700 && o.y >= vTop - 700 && o.y <= vBottom + 700) {
+                visibleItems.push(o);
+              }
+            }
+          }
+        }
+
+        // Add visible citadels to depth-sorted queue
+        Object.entries(CAPITALS).forEach(([k, cap]) => {
+          if (cap.x >= vLeft - 800 && cap.x <= vRight + 800 && cap.y >= vTop - 800 && cap.y <= vBottom + 800) {
+            visibleItems.push({
+              isCitadel: true,
+              cultureKey: k,
+              x: cap.x,
+              y: cap.y,
+              depth: cap.y,
+              color: cap.color,
+              name: cap.name,
+              title: cap.title
+            });
+          }
+        });
+
+        // Depth sort back to front (smaller depth/y first)
+        visibleItems.sort((a, b) => (a.depth || a.y) - (b.depth || b.y));
+
+        // Render each visible item
+        for (let i = 0; i < visibleItems.length; i++) {
+          const item = visibleItems[i];
+          const sx = (item.x - s.camX) * s.zoom + w / 2;
+          const sy = (item.y - s.camY) * s.zoom + h / 2;
+
+          if (item.isCitadel) {
+            // Draw Citadel on terrain
+            // 1. Glowing ground aura
+            ctx.save();
+            ctx.fillStyle = item.color + '33';
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.ellipse(sx, sy, 140 * s.zoom, 70 * s.zoom, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // 2. Citadel Fortress Sprite
+            const citImg = s.citadelImages[item.cultureKey];
+            if (citImg && citImg.complete && citImg.naturalWidth > 0) {
+              const citScale = (500 / citImg.naturalHeight) * s.zoom;
+              const citW = citImg.naturalWidth * citScale;
+              const citH = citImg.naturalHeight * citScale;
+              ctx.drawImage(citImg, sx - citW / 2, sy - citH * 0.95, citW, citH);
+            }
+          } else {
+            // Mountain / Placed Object
+            const type = s.objectTypes.get(item.typeId);
+            const img = s.objectImages.get(item.typeId);
+            if (!type || !img || !img.complete || img.naturalWidth === 0) continue;
+
+            const scale = (type.displayHeight / type.naturalHeight) * s.zoom;
+            const drawW = type.naturalWidth * scale;
+            const drawH = type.displayHeight * s.zoom;
+            const drawX = sx - drawW * (type.anchor ? type.anchor.x : 0.5);
+            const drawY = sy - drawH * (type.anchor ? type.anchor.y : 1.0);
+
+            // Contact shadow
+            if (type.shadow && s.shadowImg && s.shadowImg.complete) {
+              const shW = (type.shadow.width || 120) * 3.5 * s.zoom;
+              const shH = (type.shadow.height || 50) * 3.5 * s.zoom;
+              ctx.globalAlpha = type.shadow.alpha || 0.75;
+              ctx.drawImage(s.shadowImg, sx - shW / 2, sy - shH * 0.7, shW, shH);
+              ctx.globalAlpha = 1.0;
+            }
+
+            // Mountain Sprite
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+          }
+        }
+      }
+
+      // 3. Draw active Marches & Scouts
+      marches.forEach(m => {
+        const sx = (m.x - s.camX) * s.zoom + w / 2;
+        const sy = (m.y - s.camY) * s.zoom + h / 2;
+
+        ctx.strokeStyle = 'rgba(240, 201, 90, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        const startX = (m.originX - s.camX) * s.zoom + w / 2;
+        const startY = (m.originY - s.camY) * s.zoom + h / 2;
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(sx, sy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Unit marker
+        ctx.fillStyle = '#f0c95a';
+        ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0a0d14';
+        ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // 4. Target Waypoint Marker
+      if (s.targetMarker) {
+        const mx = (s.targetMarker.x - s.camX) * s.zoom + w / 2;
+        const my = (s.targetMarker.y - s.camY) * s.zoom + h / 2;
+        ctx.strokeStyle = '#f0c95a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(mx, my, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(mx - 18, my); ctx.lineTo(mx + 18, my); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(mx, my - 18); ctx.lineTo(mx, my + 18); ctx.stroke();
+      }
+
+      // 5. Render Radar Minimap
+      if (rctx && s.minimapImg && s.minimapImg.complete) {
+        const rw = radar.width = radar.clientWidth;
+        const rh = radar.height = radar.clientHeight;
+        rctx.drawImage(s.minimapImg, 0, 0, rw, rh);
+
+        // Viewport frustum rectangle
+        const rx = ((s.camX - originX) / t.worldSize.width) * rw;
+        const ry = ((s.camY - originY) / t.worldSize.height) * rh;
+        const rvw = ((w / s.zoom) / t.worldSize.width) * rw;
+        const rvh = ((h / s.zoom) / t.worldSize.height) * rh;
+
+        rctx.strokeStyle = '#fff';
+        rctx.lineWidth = 1.5;
+        rctx.strokeRect(rx - rvw/2, ry - rvh/2, rvw, rvh);
+
+        // Capital dots
+        Object.entries(CAPITALS).forEach(([k, cap]) => {
+          const cx = ((cap.x - originX) / t.worldSize.width) * rw;
+          const cy = ((cap.y - originY) / t.worldSize.height) * rh;
+          rctx.fillStyle = cap.color;
+          rctx.beginPath(); rctx.arc(cx, cy, 3, 0, Math.PI * 2); rctx.fill();
+        });
+      }
+    };
+
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, [marches]);
+
+  // Pointer Drag & Pan
+  const handlePointerDown = (ev) => {
+    const s = stateRef.current;
+    s.isDragging = true;
+    s.dragStartX = ev.clientX;
+    s.dragStartY = ev.clientY;
+    s.camStartX = s.camX;
+    s.camStartY = s.camY;
+    s.targetX = s.camX;
+    s.targetY = s.camY;
+  };
+
+  const handlePointerMove = (ev) => {
+    const s = stateRef.current;
+    if (!s.isDragging) return;
+    const dx = ev.clientX - s.dragStartX;
+    const dy = ev.clientY - s.dragStartY;
+    s.targetX = s.camStartX - dx / s.zoom;
+    s.targetY = s.camStartY - dy / s.zoom;
+
+    // Update territory HUD coordinates
+    const tileX = Math.round((s.targetX / 64 + s.targetY / 32) / 2);
+    const tileY = Math.round((s.targetY / 32 - s.targetX / 64) / 2);
+    setHudCoords(`${tileX}, ${tileY}`);
+  };
+
+  const handlePointerUp = (ev) => {
+    const s = stateRef.current;
+    const dist = Math.hypot(ev.clientX - s.dragStartX, ev.clientY - s.dragStartY);
+    s.isDragging = false;
+
+    // Clicked terrain to set action marker
+    if (dist < 6) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const clickX = ev.clientX - rect.left;
+      const clickY = ev.clientY - rect.top;
+      const worldX = s.camX + (clickX - rect.width / 2) / s.zoom;
+      const worldY = s.camY + (clickY - rect.height / 2) / s.zoom;
+
+      s.targetMarker = { x: worldX, y: worldY };
+      setActionPop({ screenX: clickX, screenY: clickY, worldX, worldY });
+      sound.playClick();
+    }
+  };
+
+  const handleWheel = (ev) => {
+    ev.preventDefault();
+    const s = stateRef.current;
+    const factor = ev.deltaY < 0 ? 1.2 : 0.82;
+    s.targetZoom = Math.max(0.08, Math.min(1.4, s.targetZoom * factor));
+  };
+
+  const zoomIn = () => { const s = stateRef.current; s.targetZoom = Math.min(1.4, s.targetZoom * 1.3); sound.playClick(); };
+  const zoomOut = () => { const s = stateRef.current; s.targetZoom = Math.max(0.08, s.targetZoom * 0.75); sound.playClick(); };
+  const resetCamera = () => {
+    const s = stateRef.current;
+    if (CAPITALS[culture]) {
+      s.targetX = CAPITALS[culture].x;
+      s.targetY = CAPITALS[culture].y;
+      s.targetZoom = 0.28;
+      sound.playFly();
+    }
+  };
+
+  // Minimap Click Teleport
+  const handleRadarClick = (ev) => {
+    const s = stateRef.current;
+    if (!s.manifest) return;
+    const rect = radarRef.current.getBoundingClientRect();
+    const rx = (ev.clientX - rect.left) / rect.width;
+    const ry = (ev.clientY - rect.top) / rect.height;
+    const t = s.manifest.terrain;
+    s.targetX = t.origin.x + rx * t.worldSize.width;
+    s.targetY = t.origin.y + ry * t.worldSize.height;
+    sound.playFly();
+  };
+
+  const dispatchScout = () => {
+    if (!actionPop) return;
+    const cap = CAPITALS[culture];
+    onAddMarch({
+      id: Date.now(),
+      title: "Scout to (" + Math.round(actionPop.worldX) + ")",
+      originX: cap.x,
+      originY: cap.y,
+      x: cap.x,
+      y: cap.y,
+      targetX: actionPop.worldX,
+      targetY: actionPop.worldY,
+      speed: 300,
+      timeLeft: 12
+    });
+    setActionPop(null);
+    stateRef.current.targetMarker = null;
+    sound.playUpgrade();
+  };
+
+  return e("div", { className: "world-map-wrap", onPointerDown: handlePointerDown, onPointerMove: handlePointerMove, onPointerUp: handlePointerUp, onWheel: handleWheel },
+    e("canvas", { ref: canvasRef, id: "world-canvas" }),
+    
+    // Minimap Radar
+    e("div", { className: "minimap-radar", onClick: handleRadarClick },
+      e("canvas", { ref: radarRef }),
+      e("div", { className: "minimap-label" }, "WORLD RADAR")),
+
+    // World Map Controls
+    e("div", { className: "world-controls" },
+      e("button", { className: "world-btn", onClick: zoomIn, "aria-label": "Zoom in" }, Icon("plus")),
+      e("button", { className: "world-btn", onClick: zoomOut, "aria-label": "Zoom out" }, Icon("minus")),
+      e("button", { className: "world-btn", onClick: resetCamera, "aria-label": "Center capital" }, Icon("locate"))),
+
+    // Territory Info HUD
+    e("div", { className: "territory-hud" },
+      e("span", { className: "territory-dot", style: { background: CAPITALS[culture]?.color || "#21879e" } }),
+      CAPITALS[culture]?.name || "Neutral Territory",
+      e("span", { style: { opacity: 0.6 } }, "· Tile: " + hudCoords)),
+
+    // Citadels on World Map
+    Object.entries(CAPITALS).map(([k, cap]) => {
+      const s = stateRef.current;
+      const w = canvasRef.current?.width || window.innerWidth;
+      const h = canvasRef.current?.height || window.innerHeight;
+      const screenX = (cap.x - s.camX) * s.zoom + w / 2;
+      const screenY = (cap.y - s.camY) * s.zoom + h / 2;
+
+      // Only show when on screen
+      if (screenX < -100 || screenX > w + 100 || screenY < -100 || screenY > h + 100) return null;
+
+      return e("div", {
+        key: k, className: "citadel-marker",
+        style: { left: screenX + "px", top: screenY + "px" },
+        onClick: (ev) => {
+          ev.stopPropagation();
+          onSelectCulture(k);
+          sound.playClick();
+          if (k === culture) onSwitchToCity();
+        }
+      },
+        e("div", { className: "citadel-icon-wrap", style: { borderColor: cap.color, boxShadow: "0 0 14px " + cap.color } }, Icon("hall")),
+        e("div", { className: "citadel-banner" },
+          e("span", { className: "tag" }, "CAPITAL"),
+          cap.title));
+    }),
+
+    // Action popup on map click
+    actionPop && e("div", { className: "action-target-pop", style: { left: actionPop.screenX + "px", top: actionPop.screenY + "px" } },
+      e("b", null, "Uncharted Terrain"),
+      e("span", { className: "coord" }, Math.round(actionPop.worldX) + ", " + Math.round(actionPop.worldY)),
+      e("button", { className: "march-btn", onClick: dispatchScout }, Icon("sword"), "Dispatch Scout"),
+      e("button", { className: "action-btn secondary", style: { padding: "4px", fontSize: "10px" }, onClick: () => setActionPop(null) }, "Cancel"))
+  );
+}
+
+// ==========================================
+// ROOT APP COMPONENT
+// ==========================================
+function App() {
+  const [culture, setCulture] = useState("persian");
+  const [viewMode, setViewMode] = useState("world"); // "city" or "world"
+  const [selectedId, setSelectedId] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [storageOpen, setStorageOpen] = useState(false);
+  const [battleOpen, setBattleOpen] = useState(false);
+  const [ranksOpen, setRanksOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [toast, setToast] = useState("");
+  const [hintVisible, setHintVisible] = useState(true);
+  const [pops, setPops] = useState([]);
+  const [mapH, setMapH] = useState(600);
+  const [marches, setMarches] = useState([]);
+
+  const toastTimer = useRef(null), scrollerRef = useRef(null), stageRef = useRef(null), popId = useRef(0);
+
+  // Buildings and Resources with localStorage persistence
+  const [bByC, setBByC] = useState(() => {
+    const saved = localStorage.getItem("kingdom_buildings_v2");
+    if (saved) { try { return JSON.parse(saved); } catch(e){} }
+    const m = {};
+    const initData = window.__BUILDINGS__ || {};
+    CULTURE_ORDER.forEach((c) => {
+      m[c] = (initData[c] || []).map((b) => ({ ...b, stored: 0, readyAt: 0 }));
+    });
+    return m;
+  });
+
+  const [rByC, setRByC] = useState(() => {
+    const saved = localStorage.getItem("kingdom_resources_v2");
+    if (saved) { try { return JSON.parse(saved); } catch(e){} }
+    const m = {};
+    CULTURE_ORDER.forEach((c) => { m[c] = { food: 120, wood: 150, stone: 100, iron: 50, coin: 250 }; });
+    return m;
+  });
+
+  const themes = window.__THEMES__ || {};
+  const theme = themes[culture] || {
+    name: "Persian", kingdomName: "The Persian Empire", panel: "#14233a", panelDeep: "#0d1a2b",
+    ink: "#eef2f8", inkSoft: "#9bb0c8", accent: "#21879e", accent2: "#155f72", highlight: "#f0c95a",
+    border: "#2a405c", plateBg1: "#f2ead4", plateBg2: "#e0d3b0", plateBorder: "#1f6f86",
+    plateInk: "#1f2a3a", plateSub: "#8a6a1f", plateFont: "'Cinzel', serif", plateRadius: "2px",
+    resourceNames: { food: "Grain", wood: "Timber", stone: "Stone", iron: "Iron" },
+    labels: {}
+  };
+
+  const buildings = bByC[culture] || [];
+  const resources = rByC[culture] || { food: 0, wood: 0, stone: 0, iron: 0, coin: 0 };
+  const selected = buildings.find((b) => b.id === selectedId) || null;
+
+  const vars = {
+    "--panel-color": theme.panel, "--paneldeep-color": theme.panelDeep, "--ink-color": theme.ink, "--inksoft-color": theme.inkSoft,
+    "--accent-color": theme.accent, "--accent2-color": theme.accent2, "--highlight-color": theme.highlight, "--border-color": theme.border,
+    "--plate-bg1": theme.plateBg1, "--plate-bg2": theme.plateBg2, "--plate-border": theme.plateBorder, "--plate-ink": theme.plateInk,
+    "--plate-sub": theme.plateSub, "--plate-font": theme.plateFont, "--plate-radius": theme.plateRadius
+  };
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 2200);
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    localStorage.setItem("kingdom_buildings_v2", JSON.stringify(bByC));
+    localStorage.setItem("kingdom_resources_v2", JSON.stringify(rByC));
+  }, [bByC, rByC]);
+
+  // City image dimensions calculation
+  useEffect(() => {
+    const el = stageRef.current; if (!el) return;
+    const update = () => setMapH(Math.max(el.clientHeight, el.clientWidth / (3174 / 1344)));
+    update();
+    const ro = new ResizeObserver(update); ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Production tick (1s) & Marches update
+  useEffect(() => {
+    const iv = setInterval(() => {
+      // 1. Resources
+      setBByC((prev) => {
+        const next = { ...prev };
+        CULTURE_ORDER.forEach((c) => {
+          next[c] = (next[c] || []).map((b) => {
+            if (!b.produces) return b;
+            const prev0 = b.stored || 0;
+            const stored = Math.min(prev0 + productionRate(b.level), capacity(b.level));
+            if (stored === prev0) return b;
+            const readyAt = (prev0 < 1 && stored >= 1) ? Date.now() : (b.readyAt || 0);
+            return { ...b, stored, readyAt };
+          });
+        });
+        return next;
+      });
+
+      // 2. Marches
+      setMarches((prev) => {
+        return prev.map(m => {
+          const timeLeft = m.timeLeft - 1;
+          const progress = Math.min(1, 1 - (timeLeft / 12));
+          const x = m.originX + (m.targetX - m.originX) * progress;
+          const y = m.originY + (m.targetY - m.originY) * progress;
+          return { ...m, x, y, timeLeft };
+        }).filter(m => {
+          if (m.timeLeft <= 0) {
+            showToast("Scout expedition arrived at destination!");
+            return false;
+          }
+          return true;
+        });
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [showToast]);
+
+  const spawnPop = (id, text, icon) => {
+    const pid = ++popId.current;
+    setPops((p) => [...p, { id: pid, bid: id, text, icon }]);
+    setTimeout(() => setPops((p) => p.filter((x) => x.id !== pid)), 950);
+  };
+
+  const collect = (building) => {
+    const amount = Math.floor(building.stored || 0);
+    if (amount < 1) return;
+    sound.playCollect();
+    setBByC((prev) => ({ ...prev, [culture]: prev[culture].map((b) => b.id === building.id ? { ...b, stored: 0, readyAt: 0 } : b) }));
+    setRByC((prev) => ({ ...prev, [culture]: { ...prev[culture], [building.produces]: prev[culture][building.produces] + amount } }));
+    spawnPop(building.id, "+" + fmt(amount), RES_ICON[building.produces]);
+    showToast("+" + fmt(amount) + " " + theme.resourceNames[building.produces]);
+  };
+
+  const upgrade = (building, cost) => {
+    sound.playUpgrade();
+    setRByC((prev) => ({ ...prev, [culture]: { ...prev[culture], wood: prev[culture].wood - cost.wood, stone: prev[culture].stone - cost.stone, coin: prev[culture].coin - cost.coin } }));
+    setBByC((prev) => ({ ...prev, [culture]: prev[culture].map((b) => b.id === building.id ? { ...b, level: b.level + 1 } : b) }));
+    setSelectedId(null);
+    showToast((theme.labels[building.id] || { name: building.id }).name + " → Level " + (building.level + 1));
+  };
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    sound.enabled = next;
+    setSoundEnabled(next);
+    showToast(next ? "Sound FX Enabled" : "Sound Muted");
+  };
+
+  const now = Date.now();
+  const resKeys = ["food", "wood", "stone", "iron"];
+
+  return e("div", { style: { height: "100%", display: "flex", flexDirection: "column", ...vars } },
+    // Top HUD
+    e("div", { className: "hud-top" },
+      e("div", { className: "hud-row1" },
+        e("div", { className: "realm-crest" }, Icon("crown")),
+        e("div", { className: "ledger" },
+          resKeys.map((r) => e("div", { key: r, className: "ledger-cell" }, Icon(RES_ICON[r]), e("b", null, fmt(resources[r])))),
+          e("div", { className: "ledger-cell coin" }, Icon("coin"), e("b", null, fmt(resources.coin)))),
+        e("button", {
+          className: "mode-switch-btn",
+          onClick: () => {
+            sound.playClick();
+            setViewMode(viewMode === "city" ? "world" : "city");
+          }
+        }, Icon(viewMode === "city" ? "map" : "hall"), viewMode === "city" ? "World Map" : "City Base"),
+        e("button", { className: "menu-toggle", onClick: () => { sound.playClick(); setMenuOpen(true); }, "aria-label": "Menu" }, Icon("menu"))),
+      
+      // Culture Tabs
+      e("div", { className: "culture-row" }, CULTURE_ORDER.map((c) => e("button", {
+        key: c,
+        className: "culture-tab" + (c === culture ? " active" : ""),
+        onClick: (ev) => {
+          sound.playClick();
+          setCulture(c);
+          ev.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+        }
+      }, themes[c]?.name || c)))),
+
+    // Main Stage Area (Dual View)
+    e("div", { className: "stage", ref: stageRef },
+      viewMode === "world" ?
+        e(WorldMapView, {
+          culture,
+          onSelectCulture: setCulture,
+          onSwitchToCity: () => setViewMode("city"),
+          marches,
+          onAddMarch: (m) => setMarches((prev) => [...prev, m])
+        }) :
+        e("div", { className: "city-container", ref: scrollerRef, onScroll: () => setHintVisible(false) },
+          e("div", { className: "city-inner", style: { "--u": (mapH / 100) + "px", height: mapH + "px" } },
+            e("img", { src: `./kingdom_art/${culture}.jpg`, alt: theme.kingdomName, draggable: false }),
+            buildings.map((b) => e(Hotspot, {
+              key: culture + "-" + b.id, b, theme,
+              showCollect: !!b.produces && (b.stored || 0) >= 1 && (b.readyAt || 0) > 0 && (now - b.readyAt) < COLLECT_ICON_MS,
+              active: selectedId === b.id,
+              onSelect: (bb) => setSelectedId(bb.id),
+              onCollect: collect
+            })),
+            pops.map((p) => {
+              const b = buildings.find((x) => x.id === p.bid); if (!b) return null;
+              return e("div", { key: p.id, className: "float-pop", style: { left: (b.x + b.w / 2) + "%", top: (b.y + b.h * 0.5) + "%" } }, Icon(p.icon), p.text);
+            })),
+          e("div", { className: "scroll-hint" + (hintVisible ? "" : " hide") }, Icon("drag"), "DRAG TO EXPLORE CITY"))
+    ),
+
+    // Bottom Navigation HUD
+    e("div", { className: "hud-bottom" },
+      e("button", { className: "nav-btn" + (viewMode === "city" ? " active" : ""), onClick: () => { sound.playClick(); setViewMode("city"); } }, e("div", { className: "nic" }, Icon("hall")), e("span", null, "City")),
+      e("button", { className: "nav-btn" + (viewMode === "world" ? " active" : ""), onClick: () => { sound.playClick(); setViewMode("world"); } }, e("div", { className: "nic" }, Icon("map")), e("span", null, "World Map")),
+      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setBattleOpen(true); } },
+        marches.length > 0 && e("span", { className: "badge" }, marches.length),
+        e("div", { className: "nic" }, Icon("sword")), e("span", null, "Battle")),
+      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setStorageOpen(true); } }, e("div", { className: "nic" }, Icon("chest")), e("span", null, "Storage")),
+      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setChatOpen(true); } },
+        e("span", { className: "badge" }, "3"),
+        e("div", { className: "nic" }, Icon("chat")), e("span", null, "Chat")),
+      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setRanksOpen(true); } }, e("div", { className: "nic" }, Icon("trophy")), e("span", null, "Ranks"))),
+
+    // Sheets & Overlays
+    e(DetailSheet, { building: selected, theme, resources, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
+    e(ChatPanel, { open: chatOpen, onClose: () => setChatOpen(false) }),
+    e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme }),
+    e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, onNewMarch: (m) => setMarches(p => [...p, m]) }),
+    e(RankingsSheet, { open: ranksOpen, onClose: () => setRanksOpen(false), culture, buildingsByCulture: bByC }),
+    e(MenuSheet, { open: menuOpen, onClose: () => setMenuOpen(false), soundEnabled, onToggleSound: toggleSound }),
+    e("div", { className: "toast" + (toast ? " show" : "") }, toast)
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>

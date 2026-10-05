@@ -19,6 +19,8 @@ import { TerrainStreamingManager } from '../rendering/TerrainStreamingManager.js
 import { generatePlaceholderTextures } from '../rendering/PlaceholderTextureGenerator.js';
 import { EditorController } from '../editor/EditorController.js';
 import { EditorPanel } from '../editor/EditorPanel.js';
+import { serializeProject, loadProject, downloadBlob } from '../export/ProjectIO.js';
+import { bakeExport } from '../export/BakeExporter.js';
 
 // Bundled mountain assets (see the "Mountain Rings" editor section) — not
 // user-uploaded, so they're loaded like any other static asset via
@@ -116,6 +118,39 @@ export class TerrainDemoScene extends Phaser.Scene {
 
     this.panel = new EditorPanel(panelContainer, this.editor, {
       onGridToggle: (visible) => this.gridOverlay.setVisible(visible),
+
+      onSaveProject: () => {
+        const data = serializeProject(this.editor);
+        downloadBlob(
+          new Blob([JSON.stringify(data)], { type: 'application/json' }),
+          `terrain-project-seed${WorldConfig.seed}.json`
+        );
+        this.panel.setProjectStatus(`Saved ${data.instances.length} objects, ${data.types.length} types`);
+      },
+
+      onLoadProject: async (file) => {
+        try {
+          const data = JSON.parse(await file.text());
+          const res = await loadProject(this.editor, data);
+          this.panel.rebuildTypeList();
+          this.panel.setProjectStatus(`Loaded ${res.instances} objects, ${res.types} types`);
+        } catch (err) {
+          console.error(err);
+          this.panel.setProjectStatus(`Load failed: ${err.message}`);
+        }
+      },
+
+      onBake: (opts, onProgress, isCancelled) =>
+        bakeExport(
+          {
+            scene: this,
+            editor: this.editor,
+            painter: this.painter,
+            logicalGrid: this.logicalGrid,
+            territoryMap: this.territoryMap,
+          },
+          { ...opts, onProgress, isCancelled }
+        ),
     });
 
     this._setupMountainRings();
@@ -177,11 +212,13 @@ export class TerrainDemoScene extends Phaser.Scene {
       name: MOUNTAIN_ASSETS[0].name,
       textureKey: MOUNTAIN_ASSETS[0].key,
       displayHeight: 460,
+      blockRadius: 0.8,
     });
     const typeB = this.editor.registerBuiltinType({
       name: MOUNTAIN_ASSETS[1].name,
       textureKey: MOUNTAIN_ASSETS[1].key,
       displayHeight: 460,
+      blockRadius: 0.8,
     });
     this.panel._addTypeCard(typeA);
     this.panel._addTypeCard(typeB);
@@ -229,15 +266,15 @@ export class TerrainDemoScene extends Phaser.Scene {
     ];
     this.panel.buildMountainRingSection(typeOptions, ringDefaults);
 
-    // Outer divisions: 5 CONTINUOUS mountain walls (type A, per spec)
+    // Outer divisions: 6 CONTINUOUS mountain walls (type A, per spec)
     // running from just past ring 1 (territories.innerRadiusTiles) out
-    // to near the map edge, fully enclosing 5 wedge territories. Each
+    // to near the map edge, fully enclosing 6 wedge territories. Each
     // wall has exactly ONE small entrance gap (entranceRadiusTiles +/-
     // half of entranceWidthTiles) connecting it to its neighbor — this
-    // is what makes the 5 territories genuinely separate (no path
+    // is what makes the 6 territories genuinely separate (no path
     // between them except through an entrance), unlike an earlier
     // version where the walls started beyond ring 2 and left the whole
-    // ring1-ring2 donut as a free shared corridor between all 5 wedges.
+    // ring1-ring2 donut as a free shared corridor between all 6 wedges.
     this.panel.buildOuterDivisionsSection([{ id: typeA.id, label: typeA.name }], {
       tag: 'outerDivisions',
       centerTileX,

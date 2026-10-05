@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "game": "vite --open /game.html",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "jszip": "^3.10.2",
     "phaser": "^3.80.1"
   },
   "devDependencies": {

@@ -34,6 +34,8 @@ export const BiomeId = {
   JAPAN: 6,
   PERSIA: 7,
   ROME: 8,
+  ARABIA: 9,
+  VIKING: 10,
 };
 
 export const BiomeRegistry = {
@@ -75,55 +77,81 @@ export const BiomeRegistry = {
     ],
   },
 
-  // Mongol: dry yellow-leaning steppe grass.
+  // Mongol: dry yellow-olive steppe grass (sampled from mongol-map.jpg).
   [BiomeId.STEPPE]: {
     id: BiomeId.STEPPE,
     name: 'steppe',
     stops: [
-      { at: 0.000, color: 0x98935a },
-      { at: 0.350, color: 0xa39d62 },
-      { at: 0.700, color: 0xafa96c },
-      { at: 0.900, color: 0xb8b276 },
-      { at: 1.000, color: 0xc0ba82 },
+      { at: 0.000, color: 0xa99a58 },
+      { at: 0.350, color: 0xb8a85c },
+      { at: 0.700, color: 0xc2b35f },
+      { at: 0.900, color: 0xc9ba65 },
+      { at: 1.000, color: 0xcfc16f },
     ],
   },
 
-  // Japan: cool misty green; faintly warmer/paler at the top of the ramp.
+  // Japan: muted grey-olive green (sampled from japanese-map.jpg).
   [BiomeId.JAPAN]: {
     id: BiomeId.JAPAN,
     name: 'japan',
     stops: [
-      { at: 0.000, color: 0x5f8c6c },
-      { at: 0.350, color: 0x6b9a76 },
-      { at: 0.700, color: 0x78a583 },
-      { at: 0.900, color: 0x86b08e },
-      { at: 1.000, color: 0x9bbb9c },
+      { at: 0.000, color: 0x8f9a72 },
+      { at: 0.350, color: 0x9aa47a },
+      { at: 0.700, color: 0xa6ac82 },
+      { at: 0.900, color: 0xb2b48a },
+      { at: 1.000, color: 0xbfbb94 },
     ],
   },
 
-  // Persia: warm terracotta plateau.
+  // Persia: pale warm tan sand (sampled from persian-map.jpg).
   [BiomeId.PERSIA]: {
     id: BiomeId.PERSIA,
     name: 'persia',
     stops: [
-      { at: 0.000, color: 0xa6795a },
-      { at: 0.350, color: 0xb08561 },
-      { at: 0.700, color: 0xb98f68 },
-      { at: 0.900, color: 0xc29a72 },
-      { at: 1.000, color: 0xcba57c },
+      { at: 0.000, color: 0xcb9f69 },
+      { at: 0.350, color: 0xd3a66f },
+      { at: 0.700, color: 0xdcb177 },
+      { at: 0.900, color: 0xe4ba7f },
+      { at: 1.000, color: 0xebc386 },
     ],
   },
 
-  // Rome: Mediterranean olive-gold — between GRASS and STEPPE.
+  // Rome: Mediterranean olive grass (sampled from roman-map.jpg).
   [BiomeId.ROME]: {
     id: BiomeId.ROME,
     name: 'rome',
     stops: [
-      { at: 0.000, color: 0x87944f },
-      { at: 0.350, color: 0x92a058 },
-      { at: 0.700, color: 0x9daa62 },
-      { at: 0.900, color: 0xaab46d },
-      { at: 1.000, color: 0xb5bd79 },
+      { at: 0.000, color: 0x868a5f },
+      { at: 0.350, color: 0x94975f },
+      { at: 0.700, color: 0xa1a05e },
+      { at: 0.900, color: 0xaba862 },
+      { at: 1.000, color: 0xb3af66 },
+    ],
+  },
+
+  // Arabia: saturated golden-orange sand (sampled from arabian-map.jpg).
+  [BiomeId.ARABIA]: {
+    id: BiomeId.ARABIA,
+    name: 'arabia',
+    stops: [
+      { at: 0.000, color: 0xc98f54 },
+      { at: 0.350, color: 0xd29a56 },
+      { at: 0.700, color: 0xdba859 },
+      { at: 0.900, color: 0xe1b25b },
+      { at: 1.000, color: 0xe6ba62 },
+    ],
+  },
+
+  // Viking: pale blue-white snow (sampled from viking-map.jpg).
+  [BiomeId.VIKING]: {
+    id: BiomeId.VIKING,
+    name: 'viking',
+    stops: [
+      { at: 0.000, color: 0xbccad4 },
+      { at: 0.350, color: 0xc9d6df },
+      { at: 0.700, color: 0xd7e2e8 },
+      { at: 0.900, color: 0xdde7ed },
+      { at: 1.000, color: 0xe4edf3 },
     ],
   },
 

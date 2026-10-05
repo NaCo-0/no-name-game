@@ -16,6 +16,7 @@
  * etc.) independent of terrain generation.
  */
 import { WorldConfig } from '../config/WorldConfig.js';
+import { IsoMath } from './IsoMath.js';
 
 export class LogicalGrid {
   /**
@@ -40,10 +41,9 @@ export class LogicalGrid {
   }
 
   getDominantBiomeAt(tileX, tileY) {
-    // Sample at tile center in world space (tile coordinates map 1:1 to
-    // noise-space world coordinates via tile size — see IsoMath).
-    const worldX = tileX * WorldConfig.tileWidth;
-    const worldY = tileY * WorldConfig.tileHeight;
+    // Sample at the tile's center, projected to world space exactly like
+    // the renderer does (IsoMath), so gameplay sees the biome that's drawn.
+    const { x: worldX, y: worldY } = IsoMath.tileToWorld(tileX + 0.5, tileY + 0.5);
     return this.biomeMap.getDominantBiomeAt(worldX, worldY);
   }
 

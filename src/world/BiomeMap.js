@@ -122,8 +122,8 @@ export class BiomeMap {
    * @param {number} minX @param {number} minY @param {number} maxX @param {number} maxY  world px
    * @returns {number|null}
    */
-  getPureBiomeInRect(minX, minY, maxX, maxY) {
-    const N = 9; // 9x9 probes: spacing is far below the blend width at any radius we care about
+  getPureBiomeInRect(minX, minY, maxX, maxY, N = 9) {
+    // N x N probes: spacing is far below the blend width at any radius we care about (at the default).
     let found = null;
     for (let j = 0; j < N; j++) {
       for (let i = 0; i < N; i++) {

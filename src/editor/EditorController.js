@@ -98,6 +98,29 @@ export class EditorController {
   }
 
   /**
+   * Like uploadImage, but from an image URL (e.g. a data: URL stored in a
+   * saved project) instead of a File.
+   * @param {string} name
+   * @param {string} src
+   * @returns {Promise<object>} the new object type
+   */
+  addImageType(name, src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const id = `type_${nextTypeId++}`;
+        const key = `editor_obj_${id}`;
+        this.scene.textures.addImage(key, img);
+        const type = this._makeTypeRecord(id, name, key, img.width, img.height);
+        this.objectTypes.set(id, type);
+        resolve(type);
+      };
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  /**
    * Registers a type from a texture already loaded into the Phaser
    * texture manager (e.g. via this.scene.load.image in preload()) rather
    * than from a user-uploaded File. Used for assets bundled with the
@@ -112,11 +135,13 @@ export class EditorController {
    * @param {number} [opts.displayHeight] - defaults to a capped natural height, same as uploadImage
    * @returns {object} the new object type
    */
-  registerBuiltinType({ name, textureKey, displayHeight }) {
+  registerBuiltinType({ name, textureKey, displayHeight, blockRadius }) {
     const src = this.scene.textures.get(textureKey).getSourceImage();
     const id = `type_${nextTypeId++}`;
     const type = this._makeTypeRecord(id, name, textureKey, src.width, src.height);
     if (displayHeight) type.displayHeight = displayHeight;
+    if (blockRadius !== undefined) type.blockRadius = blockRadius;
+    type.builtin = true;
     this.objectTypes.set(id, type);
     return type;
   }
@@ -128,6 +153,7 @@ export class EditorController {
       textureKey,
       naturalWidth,
       naturalHeight,
+      builtin: false,
       displayHeight: Math.min(200, naturalHeight),
       anchorX: 0.5,
       anchorY: 1.0,
@@ -136,7 +162,15 @@ export class EditorController {
       shadowWidth: 90,
       shadowHeight: 38,
       shadowAlpha: 0.85,
+      // Radius (in tiles) around an instance that is marked NOT walkable in
+      // the baked collision map. 0 = purely decorative.
+      blockRadius: 0,
     };
+  }
+
+  /** Removes every placed instance (types are kept). */
+  clearAllInstances() {
+    for (const inst of [...this.instances.values()]) this.removeInstance(inst.id);
   }
 
   updateTypeParam(typeId, param, value) {

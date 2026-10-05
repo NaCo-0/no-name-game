@@ -82,10 +82,115 @@ export class EditorPanel {
     this.selectedSection.style.display = 'none';
     this.container.appendChild(this.selectedSection);
 
-    // --- Export section ---
+    // --- Project (save / load) section ---
+    const projectSection = document.createElement('div');
+    projectSection.className = 'editor-section';
+    projectSection.innerHTML = `<h3>Project</h3>`;
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save project (.json)';
+    saveBtn.className = 'editor-btn';
+    saveBtn.addEventListener('click', () => this.callbacks.onSaveProject?.());
+    projectSection.appendChild(saveBtn);
+
+    const loadLabel = document.createElement('div');
+    loadLabel.className = 'editor-readout';
+    loadLabel.textContent = 'Load project (replaces current objects):';
+    projectSection.appendChild(loadLabel);
+
+    const loadInput = document.createElement('input');
+    loadInput.type = 'file';
+    loadInput.accept = '.json,application/json';
+    loadInput.className = 'editor-upload-input';
+    loadInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      loadInput.value = '';
+      if (file) await this.callbacks.onLoadProject?.(file);
+    });
+    projectSection.appendChild(loadInput);
+
+    this.projectStatus = document.createElement('div');
+    this.projectStatus.className = 'editor-readout';
+    projectSection.appendChild(this.projectStatus);
+
+    this.container.appendChild(projectSection);
+
+    // --- Bake export section ---
+    const bakeSection = document.createElement('div');
+    bakeSection.className = 'editor-section';
+    bakeSection.innerHTML = `<h3>Bake export (for the game)</h3>`;
+
+    const scaleSelect = document.createElement('select');
+    scaleSelect.className = 'editor-select';
+    for (const [v, label] of [
+      [0.25, 'Terrain res: 0.25x (small, mobile-friendly)'],
+      [0.5, 'Terrain res: 0.5x (matches editor look)'],
+      [1, 'Terrain res: 1x (huge)'],
+    ]) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = label;
+      if (v === 0.5) o.selected = true;
+      scaleSelect.appendChild(o);
+    }
+    bakeSection.appendChild(scaleSelect);
+
+    const formatSelect = document.createElement('select');
+    formatSelect.className = 'editor-select';
+    for (const [v, label] of [['webp', 'Terrain format: WebP (smaller)'], ['png', 'Terrain format: PNG (lossless)']]) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = label;
+      formatSelect.appendChild(o);
+    }
+    bakeSection.appendChild(formatSelect);
+
+    const bakeBtn = document.createElement('button');
+    bakeBtn.textContent = 'Bake & download .zip';
+    bakeBtn.className = 'editor-btn';
+    bakeSection.appendChild(bakeBtn);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'editor-btn editor-btn-danger';
+    cancelBtn.style.display = 'none';
+    bakeSection.appendChild(cancelBtn);
+
+    this.bakeStatus = document.createElement('div');
+    this.bakeStatus.className = 'editor-readout';
+    this.bakeStatus.textContent = 'Not baked yet. Takes a while at 0.5x; keep this tab open.';
+    bakeSection.appendChild(this.bakeStatus);
+
+    let cancelled = false;
+    cancelBtn.addEventListener('click', () => { cancelled = true; });
+    bakeBtn.addEventListener('click', async () => {
+      cancelled = false;
+      bakeBtn.disabled = true;
+      cancelBtn.style.display = '';
+      try {
+        const res = await this.callbacks.onBake?.(
+          { scale: parseFloat(scaleSelect.value), format: formatSelect.value },
+          (msg) => { this.bakeStatus.textContent = msg; },
+          () => cancelled
+        );
+        if (res) {
+          this.bakeStatus.textContent =
+            `Done: ${res.tiles} terrain tiles, ${res.objects} objects, ${(res.bytes / 1048576).toFixed(1)} MB`;
+        }
+      } catch (err) {
+        this.bakeStatus.textContent = `Failed: ${err.message}`;
+      } finally {
+        bakeBtn.disabled = false;
+        cancelBtn.style.display = 'none';
+      }
+    });
+
+    this.container.appendChild(bakeSection);
+
+    // --- Export section (raw placement JSON, legacy) ---
     const exportSection = document.createElement('div');
     exportSection.className = 'editor-section';
-    exportSection.innerHTML = `<h3>Export</h3>`;
+    exportSection.innerHTML = `<h3>Quick export</h3>`;
 
     const exportBtn = document.createElement('button');
     exportBtn.textContent = 'Export placement JSON';
@@ -203,7 +308,7 @@ export class EditorPanel {
     tintLabel.textContent = 'Tint';
     const tintInput = document.createElement('input');
     tintInput.type = 'color';
-    tintInput.value = '#ffffff';
+    tintInput.value = `#${type.tint.toString(16).padStart(6, '0')}`;
     tintInput.addEventListener('input', () => {
       const hex = parseInt(tintInput.value.replace('#', ''), 16);
       this.controller.updateTypeParam(type.id, 'tint', hex);
@@ -213,7 +318,7 @@ export class EditorPanel {
     card.appendChild(tintRow);
 
     card.appendChild(
-      this._checkboxRow('Contact shadow', true, (checked) => {
+      this._checkboxRow('Contact shadow', type.shadowEnabled, (checked) => {
         this.controller.updateTypeParam(type.id, 'shadowEnabled', checked);
         shadowWidthRow.style.display = checked ? '' : 'none';
         shadowHeightRow.style.display = checked ? '' : 'none';
@@ -232,6 +337,18 @@ export class EditorPanel {
     card.appendChild(shadowWidthRow);
     card.appendChild(shadowHeightRow);
     card.appendChild(shadowAlphaRow);
+    if (!type.shadowEnabled) {
+      shadowWidthRow.style.display = 'none';
+      shadowHeightRow.style.display = 'none';
+      shadowAlphaRow.style.display = 'none';
+    }
+
+    // Collision footprint used by the bake export (0 = decorative only).
+    card.appendChild(
+      this._slider('Blocks movement (radius, tiles)', 0, 5, 0.1, type.blockRadius, (v) => {
+        this.controller.updateTypeParam(type.id, 'blockRadius', v);
+      })
+    );
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'editor-btn editor-btn-danger';
@@ -243,6 +360,17 @@ export class EditorPanel {
     card.appendChild(deleteBtn);
 
     this.typeListEl.appendChild(card);
+  }
+
+  /** Re-renders every type card from the controller's current types (used after Load). */
+  rebuildTypeList() {
+    this.typeListEl.innerHTML = '';
+    this.hideSelectedInstance();
+    for (const type of this.controller.objectTypes.values()) this._addTypeCard(type);
+  }
+
+  setProjectStatus(text) {
+    this.projectStatus.textContent = text;
   }
 
   _clearArmedButtons() {
