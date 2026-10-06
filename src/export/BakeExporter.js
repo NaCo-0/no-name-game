@@ -1,8 +1,16 @@
 /**
  * BakeExporter
  * ------------
- * Produces a self-contained .zip that a Phaser (mobile) game can load,
- * with NO dependency on this editor or the procedural generators:
+ * Produces a self-contained baked map that a game can load, with NO
+ * dependency on this editor or the procedural generators. Two output modes
+ * (same file set either way):
+ *
+ *   DIRECT (dev server running): files are streamed to the Vite dev/preview
+ *     server, which stages them and then applies them to public/ and dist/
+ *     in one go (see vite.config.js). `npm run game` then shows the new map.
+ *   ZIP (no dev server, e.g. a static host): a .zip is downloaded instead.
+ *
+ * File set:
  *
  *   map.json                 manifest: grid/projection info, terrain tile
  *                            index, object types, object instances
@@ -62,13 +70,29 @@ async function postBakeFile(relPath, blobOrBuffer) {
     method: 'POST',
     body: blobOrBuffer,
   });
-  if (!res.ok) throw new Error(`Failed to save ${relPath}: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Failed to save ${relPath}: ${await readError(res)}`);
 }
 
-async function clearBakeDir() {
+async function readError(res) {
   try {
-    await fetch('/api/bake-clear', { method: 'POST' });
-  } catch (e) {}
+    const j = await res.json();
+    return j.error || res.statusText;
+  } catch (e) {
+    return res.statusText || `HTTP ${res.status}`;
+  }
+}
+
+/** Empties the server's staging folder (live public/ and dist/ are NOT touched). */
+async function clearBakeDir() {
+  const res = await fetch('/api/bake-clear', { method: 'POST' });
+  if (!res.ok) throw new Error(`Could not prepare the bake folder: ${await readError(res)}`);
+}
+
+/** Tells the server to verify the staged bake and apply it to public/ + dist/. */
+async function commitBake() {
+  const res = await fetch('/api/bake-commit', { method: 'POST' });
+  if (!res.ok) throw new Error(`Bake was not applied: ${await readError(res)}`);
+  return res.json();
 }
 
 /** Marks every tile whose center is within an instance's blockRadius. */
@@ -124,6 +148,7 @@ function collisionPreviewCanvas(grid, width, height) {
  * @param {number} [opts.quality=0.92] webp quality
  * @param {(msg:string, fraction:number)=>void} [opts.onProgress]
  * @param {()=>boolean} [opts.isCancelled]
+ * @returns {Promise<{tiles:number, objects:number, bytes:number, direct:boolean, applied?:string[]}>}
  */
 export async function bakeExport(
   { scene, editor, painter, logicalGrid, territoryMap },
@@ -136,7 +161,7 @@ export async function bakeExport(
   const ext = format === 'png' ? 'png' : 'webp';
 
   if (isDirect) {
-    onProgress('Clearing old dist/ tiles…', 0);
+    onProgress('Preparing bake folder…', 0);
     await clearBakeDir();
   }
 
@@ -149,20 +174,18 @@ export async function bakeExport(
   const cols = Math.ceil(worldW / tileWorldSize);
   const rows = Math.ceil(worldH / tileWorldSize);
 
+  // The ONE place every output file goes through. Direct mode -> dev server
+  // staging; zip mode -> the zip. (Previously only the object sprites used
+  // this and everything else wrote to `zip`, which is null in direct mode.)
   let totalBytes = 0;
   const saveFile = async (relPath, data, zipOpts = { compression: 'STORE' }) => {
-    if (data.size) totalBytes += data.size;
-    else if (data.length) totalBytes += data.length;
-
-    if (isDirect) {
-      await postBakeFile(relPath, data);
-    } else {
-      zip.file(relPath, data, zipOpts);
-    }
+    totalBytes += data.size ?? data.byteLength ?? data.length ?? 0;
+    if (isDirect) await postBakeFile(relPath, data);
+    else zip.file(relPath, data, zipOpts);
   };
 
   // ---- 1. object sprites -------------------------------------------------
-  onProgress(isDirect ? 'Saving object images to dist/…' : 'Exporting object images…', 0);
+  onProgress('Exporting object images…', 0);
   const objectTypes = [];
   for (const t of editor.objectTypes.values()) {
     const file = `objects/${t.id}.png`;
@@ -182,8 +205,6 @@ export async function bakeExport(
     });
   }
   await saveFile('objects/_shadow.png', await dataURLToBlob(textureToDataURL(scene, SHADOW_TEXTURE_KEY)));
-    compression: 'STORE',
-  });
 
   const objects = [...editor.instances.values()]
     .map((i) => {
@@ -204,11 +225,10 @@ export async function bakeExport(
   onProgress('Building collision / biome data…', 0);
   await yieldToUI();
   const collision = buildCollision(editor, gridWidth, gridHeight);
-  zip.file('data/collision.bin', collision, { compression: 'DEFLATE' });
-  zip.file(
+  await saveFile('data/collision.bin', collision, { compression: 'DEFLATE' });
+  await saveFile(
     'data/collision_preview.png',
-    await canvasToBlob(collisionPreviewCanvas(collision, gridWidth, gridHeight), 'image/png'),
-    { compression: 'STORE' }
+    await canvasToBlob(collisionPreviewCanvas(collision, gridWidth, gridHeight), 'image/png')
   );
 
   const biome = new Uint8Array(gridWidth * gridHeight);
@@ -221,8 +241,8 @@ export async function bakeExport(
       territory[y * gridWidth + x] = sec === null ? 255 : sec;
     }
   }
-  zip.file('data/biome.bin', biome, { compression: 'DEFLATE' });
-  zip.file('data/territory.bin', territory, { compression: 'DEFLATE' });
+  await saveFile('data/biome.bin', biome, { compression: 'DEFLATE' });
+  await saveFile('data/territory.bin', territory, { compression: 'DEFLATE' });
 
   // ---- 3. minimap --------------------------------------------------------
   onProgress('Rendering minimap…', 0);
@@ -231,7 +251,7 @@ export async function bakeExport(
   const miniW = Math.round(worldW * miniScale);
   const miniH = Math.round(worldH * miniScale);
   const mini = painter.renderRegion(originX, originY, miniW, miniH, miniScale);
-  if (mini) zip.file('minimap.png', await canvasToBlob(mini, 'image/png'), { compression: 'STORE' });
+  if (mini) await saveFile('minimap.png', await canvasToBlob(mini, 'image/png'));
 
   // ---- 4. terrain tiles --------------------------------------------------
   const tiles = [];
@@ -253,13 +273,13 @@ export async function bakeExport(
       );
       if (!canvas) continue;
       const file = `terrain/t_${col}_${row}.${ext}`;
-      zip.file(file, await canvasToBlob(canvas, mime, quality), { compression: 'STORE' });
+      await saveFile(file, await canvasToBlob(canvas, mime, quality));
       tiles.push({ col, row, file });
       canvas.width = canvas.height = 0; // release memory early
     }
   }
 
-  // ---- 5. manifest -------------------------------------------------------
+  // ---- 5. manifest (written LAST: its presence means "bake is complete") --
   const biomeLegend = Object.fromEntries(Object.entries(BiomeId).map(([name, id]) => [id, name.toLowerCase()]));
   const manifest = {
     format: 'iso-baked-map',
@@ -297,14 +317,22 @@ export async function bakeExport(
       },
     },
   };
-  zip.file('map.json', JSON.stringify(manifest, null, 1));
+  await saveFile('map.json', new Blob([JSON.stringify(manifest, null, 1)], { type: 'application/json' }));
 
-  // ---- 6. zip + download -------------------------------------------------
+  // ---- 6. finish ----------------------------------------------------------
+  if (isDirect) {
+    // The server checks that every file the manifest lists really arrived,
+    // then swaps the whole bake into public/ and dist/ at once.
+    onProgress('Applying to public/ and dist/…', 1);
+    const result = await commitBake();
+    return { tiles: tiles.length, objects: objects.length, bytes: totalBytes, direct: true, applied: result.applied };
+  }
+
   onProgress('Packing zip…', 1);
   await yieldToUI();
   const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE', streamFiles: true }, (meta) =>
     onProgress(`Packing zip… ${Math.round(meta.percent)}%`, 1)
   );
   downloadBlob(blob, `baked-map-seed${seed}.zip`);
-  return { tiles: tiles.length, objects: objects.length, bytes: blob.size };
+  return { tiles: tiles.length, objects: objects.length, bytes: blob.size, direct: false };
 }

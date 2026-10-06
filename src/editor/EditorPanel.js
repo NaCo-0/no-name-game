@@ -146,7 +146,7 @@ export class EditorPanel {
     bakeSection.appendChild(formatSelect);
 
     const bakeBtn = document.createElement('button');
-    bakeBtn.textContent = 'Bake & download .zip';
+    bakeBtn.textContent = 'Bake map';
     bakeBtn.className = 'editor-btn';
     bakeSection.appendChild(bakeBtn);
 
@@ -158,7 +158,8 @@ export class EditorPanel {
 
     this.bakeStatus = document.createElement('div');
     this.bakeStatus.className = 'editor-readout';
-    this.bakeStatus.textContent = 'Not baked yet. Takes a while at 0.5x; keep this tab open.';
+    this.bakeStatus.textContent =
+      'Not baked yet. Saves into public/ and dist/ when the dev server is running (then `npm run game` shows it); otherwise downloads a .zip. Keep this tab open.';
     bakeSection.appendChild(this.bakeStatus);
 
     let cancelled = false;
@@ -174,8 +175,10 @@ export class EditorPanel {
           () => cancelled
         );
         if (res) {
-          this.bakeStatus.textContent =
-            `Done: ${res.tiles} terrain tiles, ${res.objects} objects, ${(res.bytes / 1048576).toFixed(1)} MB`;
+          const mb = (res.bytes / 1048576).toFixed(1);
+          this.bakeStatus.textContent = res.direct
+            ? `Applied to ${res.applied.join(' + ')}: ${res.tiles} terrain tiles, ${res.objects} objects, ${mb} MB. Run "npm run game".`
+            : `Downloaded .zip: ${res.tiles} terrain tiles, ${res.objects} objects, ${mb} MB`;
         }
       } catch (err) {
         this.bakeStatus.textContent = `Failed: ${err.message}`;

@@ -7,7 +7,8 @@
     "dev": "vite",
     "game": "vite --open /game.html",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "game:dist": "vite build && vite preview --open /game.html"
   },
   "dependencies": {
     "jszip": "^3.10.2",
