@@ -216,6 +216,8 @@ export async function bakeExport(
         x: w.x,
         y: w.y,
         depth: INSTANCE_DEPTH_BASE + i.tileX + i.tileY,
+        scale: i.scale ?? 1,
+        flipX: !!i.flipX,
         tag: i.tag,
       };
     })

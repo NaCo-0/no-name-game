@@ -29,6 +29,7 @@ import Phaser from 'phaser';
 import { IsoMath } from '../world/IsoMath.js';
 import { generateShadowTexture } from '../rendering/ShadowTextureGenerator.js';
 import { generateRingPlacements, generateRadialDividers as computeRadialDividers } from '../world/MountainRingGenerator.js';
+import { generateForestPlacements } from '../world/ForestGenerator.js';
 
 const SHADOW_TEXTURE_KEY = 'contact_shadow';
 const INSTANCE_DEPTH_BASE = 1000;
@@ -61,6 +62,9 @@ export class EditorController {
 
     this.snapEnabled = true;
     this.armedTypeId = null;
+
+    /** Passages (ring gaps, wall entrances) that forests must leave open. tag -> [{x,y,r}] */
+    this.corridors = new Map();
 
     this._dragInstanceId = null;
     this._dragStartMoved = false;
@@ -197,10 +201,12 @@ export class EditorController {
   }
 
   _applyTypeToInstance(inst, type) {
-    const scale = type.displayHeight / type.naturalHeight;
+    const instScale = inst.scale ?? 1; // per-instance size variation (forests use this)
+    const scale = (type.displayHeight / type.naturalHeight) * instScale;
     inst.sprite.setTexture(type.textureKey);
     inst.sprite.setOrigin(type.anchorX, type.anchorY);
     inst.sprite.setScale(scale);
+    inst.sprite.setFlipX(!!inst.flipX);
     inst.sprite.setTint(type.tint);
 
     if (type.shadowEnabled) {
@@ -209,7 +215,7 @@ export class EditorController {
         inst.shadowSprite.setBlendMode(Phaser.BlendModes.MULTIPLY);
       }
       inst.shadowSprite.setVisible(true);
-      inst.shadowSprite.setDisplaySize(type.shadowWidth, type.shadowHeight);
+      inst.shadowSprite.setDisplaySize(type.shadowWidth * instScale, type.shadowHeight * instScale);
       inst.shadowSprite.setAlpha(type.shadowAlpha);
       inst.shadowSprite.setDepth(inst.sprite.depth - 0.5);
     } else if (inst.shadowSprite) {
@@ -266,8 +272,10 @@ export class EditorController {
    *   so a whole generated batch can be cleared/regenerated together
    *   without touching manually-placed instances. Purely bookkeeping —
    *   doesn't affect rendering or export.
+   * @param {{scale?:number, flipX?:boolean}} [extra] - per-instance size
+   *   multiplier and horizontal flip (used by forests for natural variety)
    */
-  placeInstanceAtTile(typeId, tileX, tileY, tag = null) {
+  placeInstanceAtTile(typeId, tileX, tileY, tag = null, extra = {}) {
     const type = this.objectTypes.get(typeId);
     if (!type) return null;
 
@@ -278,9 +286,17 @@ export class EditorController {
     sprite.setInteractive({ useHandCursor: true });
     sprite.setDepth(INSTANCE_DEPTH_BASE + tileX + tileY);
 
-    const inst = { id, typeId, tileX, tileY, sprite, shadowSprite: null, tag };
+    const inst = { id, typeId, tileX, tileY, sprite, shadowSprite: null, tag, scale: extra.scale ?? 1, flipX: !!extra.flipX };
     this.instances.set(id, inst);
     this._applyTypeToInstance(inst, type);
+
+    // Auto-clear trees under placed buildings/objects
+    if (tag !== 'forest') {
+      const clearR = (type && type.blockRadius > 0)
+        ? Math.max(2.5, type.blockRadius + 1.2)
+        : Math.max(2.0, (type?.displayHeight || 64) / 40);
+      this.clearTreesNear(tileX, tileY, clearR);
+    }
 
     sprite.on('pointerdown', (pointer) => {
       this._dragInstanceId = id;
@@ -289,6 +305,28 @@ export class EditorController {
     });
 
     return inst;
+  }
+
+  /**
+   * Removes any forest tree instances within radius of (tileX, tileY).
+   * Ensures buildings and objects have a clear footprint.
+   */
+  clearTreesNear(tileX, tileY, radius = 2.0) {
+    const r2 = radius * radius;
+    const toRemove = [];
+    for (const [id, inst] of this.instances) {
+      if (inst.tag === 'forest') {
+        const dx = inst.tileX - tileX;
+        const dy = inst.tileY - tileY;
+        if (dx * dx + dy * dy <= r2) {
+          toRemove.push(id);
+        }
+      }
+    }
+    for (const id of toRemove) {
+      this.removeInstance(id);
+    }
+    return toRemove.length;
   }
 
   /**
@@ -311,6 +349,20 @@ export class EditorController {
     for (const p of placements) {
       this.placeInstanceAtTile(typeId, p.tileX, p.tileY, tag);
     }
+
+    // Remember where the gaps are so forests don't grow back into them.
+    const { centerTileX, centerTileY, radiusTiles, gapAngleDeg = 16, startAngleDeg = 0 } = ringParams;
+    const gapCount = ringParams.gapCount ?? 4;
+    const gaps = [];
+    for (let i = 0; i < gapCount; i++) {
+      const a = ((startAngleDeg + (360 / gapCount) * i) * Math.PI) / 180;
+      gaps.push({
+        x: centerTileX + radiusTiles * Math.cos(a),
+        y: centerTileY + radiusTiles * Math.sin(a),
+        r: (radiusTiles * gapAngleDeg * (Math.PI / 180)) / 2 + 2,
+      });
+    }
+    this.corridors.set(tag, gaps);
     return placements.length;
   }
 
@@ -331,11 +383,86 @@ export class EditorController {
     for (const p of placements) {
       this.placeInstanceAtTile(typeId, p.tileX, p.tileY, tag);
     }
+
+    // Wall entrances stay free of trees too.
+    const d = dividerParams;
+    if (d.entranceRadiusTiles != null) {
+      const step = 360 / d.sectionCount;
+      const entrances = [];
+      for (let i = 0; i < d.sectionCount; i++) {
+        const a = (((d.startAngleDeg ?? 0) + step * i) * Math.PI) / 180;
+        entrances.push({
+          x: d.centerTileX + d.entranceRadiusTiles * Math.cos(a),
+          y: d.centerTileY + d.entranceRadiusTiles * Math.sin(a),
+          r: (d.entranceWidthTiles ?? 0) / 2 + 3,
+        });
+      }
+      this.corridors.set(tag, entrances);
+    }
     return placements.length;
+  }
+
+  /**
+   * Scatters trees into forests (see ForestGenerator). Re-generating first
+   * removes the previous forest batch (same tag); manually placed trees and
+   * everything else are untouched. Trees keep away from every instance
+   * whose type blocks movement (the mountains) and from the passages the
+   * mountain generators cut open.
+   *
+   * @param {string} tag
+   * @param {{resolveTypeId: (spot:object) => string|null}} types
+   *   resolveTypeId picks the object type for a tree spot (see TreePalettes.js)
+   * @param {object} params - forwarded to generateForestPlacements
+   *   (obstacles/corridors are filled in here)
+   * @returns {{count:number, singles:number, clusters:number, bushes:number, stats:object}}
+   */
+  generateForest(tag, { resolveTypeId }, params) {
+    this.clearTag(tag);
+    if (!resolveTypeId) return { count: 0, singles: 0, clusters: 0, bushes: 0, stats: {} };
+
+    const obstacles = [];
+    for (const inst of this.instances.values()) {
+      if (inst.tag === tag) continue;
+      const type = this.objectTypes.get(inst.typeId);
+      const r = (type && type.blockRadius > 0)
+        ? Math.max(params.obstacleClearance ?? 2.5, type.blockRadius + 1.0)
+        : Math.max(2.0, (type?.displayHeight || 64) / 40);
+      obstacles.push({ x: inst.tileX, y: inst.tileY, r });
+    }
+    const corridors = [...this.corridors.values()].flat();
+
+    const { trees, stats } = generateForestPlacements({
+      gridWidth: this.gridWidth,
+      gridHeight: this.gridHeight,
+      ...params,
+      obstacles,
+      corridors,
+    });
+
+    let singles = 0;
+    let clusters = 0;
+    let bushes = 0;
+    for (const t of trees) {
+      const typeId = resolveTypeId({
+        kind: t.kind,
+        tileX: t.tileX,
+        tileY: t.tileY,
+        pick: t.pick,
+        groveX: t.groveX,
+        groveY: t.groveY,
+      });
+      if (!typeId) continue;
+      if (t.kind === 'cluster') clusters++;
+      else if (t.kind === 'bush') bushes++;
+      else singles++;
+      this.placeInstanceAtTile(typeId, t.tileX, t.tileY, tag, { scale: t.scale, flipX: t.flipX });
+    }
+    return { count: singles + clusters + bushes, singles, clusters, bushes, stats };
   }
 
   /** Removes every instance previously placed with the given tag. */
   clearTag(tag) {
+    this.corridors.delete(tag);
     for (const inst of [...this.instances.values()]) {
       if (inst.tag === tag) this.removeInstance(inst.id);
     }
@@ -412,6 +539,14 @@ export class EditorController {
         inst.tileX = snapped.x;
         inst.tileY = snapped.y;
         this._positionInstance(inst);
+
+        if (inst.tag !== 'forest') {
+          const type = this.objectTypes.get(inst.typeId);
+          const clearR = (type && type.blockRadius > 0)
+            ? Math.max(2.5, type.blockRadius + 1.2)
+            : Math.max(2.0, (type?.displayHeight || 64) / 40);
+          this.clearTreesNear(inst.tileX, inst.tileY, clearR);
+        }
       } else {
         // Was a plain click on the instance — select it.
         this.selectInstance(instanceId);
@@ -463,6 +598,8 @@ export class EditorController {
       typeId: i.typeId,
       tileX: Math.round(i.tileX * 100) / 100,
       tileY: Math.round(i.tileY * 100) / 100,
+      scale: Math.round((i.scale ?? 1) * 100) / 100,
+      flipX: !!i.flipX,
     }));
     return JSON.stringify({ objectTypes, placedInstances }, null, 2);
   }

@@ -62,11 +62,6 @@ export class TerrainStreamingManager {
   }
 
   _displayTile(tile) {
-    // The RenderTexture created in the painter IS the display object
-    // (Phaser's add.renderTexture returns a drawable GameObject already
-    // in the scene). Nothing further needed here, but tile.image is kept
-    // as an extension point in case a separate lightweight Image proxy is
-    // preferred later (e.g. to pool RenderTextures instead of recreating).
     tile.renderTexture.setDepth(0);
   }
 

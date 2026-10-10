@@ -48,6 +48,8 @@ export function serializeProject(editor) {
     tileX: i.tileX,
     tileY: i.tileY,
     tag: i.tag,
+    scale: i.scale ?? 1,
+    flipX: !!i.flipX,
   }));
 
   return {
@@ -98,7 +100,7 @@ export async function loadProject(editor, data) {
   for (const inst of data.instances) {
     const type = idMap.get(inst.typeId);
     if (!type) continue;
-    editor.placeInstanceAtTile(type.id, inst.tileX, inst.tileY, inst.tag ?? null);
+    editor.placeInstanceAtTile(type.id, inst.tileX, inst.tileY, inst.tag ?? null, { scale: inst.scale ?? 1, flipX: !!inst.flipX });
     placed++;
   }
 

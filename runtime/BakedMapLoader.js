@@ -129,7 +129,9 @@ export class BakedMap {
       if (!t) continue;
       const sprite = this.scene.add.image(o.x, o.y, `${p}obj_${t.id}`);
       sprite.setOrigin(t.anchor.x, t.anchor.y);
-      sprite.setScale(t.displayHeight / t.naturalHeight);
+      const k = o.scale ?? 1; // per-instance size variation (trees)
+      sprite.setScale((t.displayHeight / t.naturalHeight) * k);
+      sprite.setFlipX(!!o.flipX);
       sprite.setTint(t.tint);
       sprite.setDepth(o.depth);
       this.objectSprites.push(sprite);
@@ -137,7 +139,7 @@ export class BakedMap {
       if (t.shadow) {
         const sh = this.scene.add.image(o.x, o.y - t.shadow.height * 0.15, p + 'shadow');
         sh.setBlendMode(Phaser.BlendModes.MULTIPLY);
-        sh.setDisplaySize(t.shadow.width, t.shadow.height);
+        sh.setDisplaySize(t.shadow.width * k, t.shadow.height * k);
         sh.setAlpha(t.shadow.alpha);
         sh.setDepth(o.depth - 0.5);
         this.objectSprites.push(sh);

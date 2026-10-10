@@ -9,6 +9,7 @@
  */
 import Phaser from 'phaser';
 import { WorldConfig } from '../config/WorldConfig.js';
+import { TREE_DISPLAY_SCALE, listTreeAssets, createTreeResolver } from '../config/TreePalettes.js';
 import { SeededNoiseField } from '../world/SeededNoiseField.js';
 import { BiomeMap } from '../world/BiomeMap.js';
 import { TerritoryMap } from '../world/TerritoryMap.js';
@@ -38,6 +39,9 @@ export class TerrainDemoScene extends Phaser.Scene {
 
   preload() {
     for (const asset of MOUNTAIN_ASSETS) {
+      this.load.image(asset.key, asset.path);
+    }
+    for (const asset of listTreeAssets()) {
       this.load.image(asset.key, asset.path);
     }
   }
@@ -154,6 +158,7 @@ export class TerrainDemoScene extends Phaser.Scene {
     });
 
     this._setupMountainRings();
+    this._setupForests();
 
     // Single unified pointer-interaction owner: drag distance is tracked
     // here (needed to distinguish camera pans from clicks), then handed
@@ -229,6 +234,14 @@ export class TerrainDemoScene extends Phaser.Scene {
     // neighboring mountains overlap heavily and read as one continuous
     // range. Gap width narrowed (28deg -> 14deg) per feedback that
     // entrances should be smaller.
+    // Biome-aligned layout (territory boundaries are at 0, 60, 120... deg;
+    // biome CENTERS are at 30, 90, 150... deg):
+    //  - ring 1 (r=50): 6 gaps at biome centers -> each biome has a way
+    //    inward to the empty center.
+    //  - ring 2 (r=150, the last ring): 12 gaps. Gaps at biome centers
+    //    (30, 90...) = entrance from the outer biome into the inner band.
+    //    Gaps at the biome BOUNDARIES (0, 60...) line up with the divider
+    //    entrances below = a passage to the neighbouring biome.
     const ringDefaults = [
       {
         tag: 'ring1',
@@ -236,8 +249,9 @@ export class TerrainDemoScene extends Phaser.Scene {
         centerTileY,
         radiusTiles: 50,
         spacingTiles: 0.9,
-        gapCount: 3,
+        gapCount: 6,
         gapAngleDeg: 14,
+        startAngleDeg: 30,
         radiusJitterTiles: 1.5,
         angleJitterDeg: 1,
         seed: WorldConfig.seed ^ 0x4d1,
@@ -250,8 +264,9 @@ export class TerrainDemoScene extends Phaser.Scene {
         centerTileY,
         radiusTiles: 150,
         spacingTiles: 0.9,
-        gapCount: 5,
-        gapAngleDeg: 14,
+        gapCount: 12,
+        gapAngleDeg: 10,
+        startAngleDeg: 0,
         radiusJitterTiles: 3,
         angleJitterDeg: 1,
         seed: WorldConfig.seed ^ 0x4d2,
@@ -285,10 +300,62 @@ export class TerrainDemoScene extends Phaser.Scene {
       spacingTiles: 0.9,
       startAngleDeg: territoryCfg.startAngleDeg,
       lateralJitterTiles: 1.5,
-      entranceRadiusTiles: 170,
-      entranceWidthTiles: 10,
+      // Passage between neighbouring biomes sits right on the last ring (r=150),
+      // where the ring's boundary gap lines up with it.
+      entranceRadiusTiles: 150,
+      entranceWidthTiles: 14,
       seed: WorldConfig.seed ^ 0x4d3,
       typeId: typeA.id,
+      autoGenerate: true,
+    });
+  }
+
+  /**
+   * Registers the tree types and builds the "Forests" panel section, then
+   * generates a first forest layout. Runs AFTER _setupMountainRings so the
+   * mountains (and their entrances) already exist and trees can avoid them.
+   * Trees are decorative (blockRadius 0): they don't change the baked
+   * collision map. Set a blockRadius on a tree type in the Objects list if
+   * forests should block movement.
+   */
+  _setupForests() {
+    // One editor type per tree sprite (59 of them). Sizes come from the
+    // sprite's own proportions times TREE_DISPLAY_SCALE (TreePalettes.js),
+    // so tall cypresses stay tall and bushes stay low. Shadows follow the
+    // sprite width.
+    const typeIdByKey = new Map();
+    for (const a of listTreeAssets()) {
+      const src = this.textures.get(a.key).getSourceImage();
+      const type = this.editor.registerBuiltinType({
+        name: a.name,
+        textureKey: a.key,
+        displayHeight: Math.round(src.height * TREE_DISPLAY_SCALE),
+        blockRadius: 0,
+      });
+      const displayWidth = src.width * TREE_DISPLAY_SCALE;
+      type.group = 'trees'; // the panel folds these into one collapsible list
+      type.shadowWidth = Math.max(24, Math.round(displayWidth * (a.role === 'bush' ? 0.85 : 0.55)));
+      type.shadowHeight = Math.max(10, Math.round(type.shadowWidth * 0.38));
+      typeIdByKey.set(a.key, type.id);
+      this.panel._addTypeCard(type);
+    }
+
+    const sectionAt = (tx, ty) => {
+      const w = IsoMath.tileToWorld(tx, ty);
+      return this.territoryMap.getSectionAt(w.x, w.y);
+    };
+    const { resolveTypeId, bushBiasAt } = createTreeResolver(typeIdByKey, sectionAt);
+
+    const terr = WorldConfig.territories;
+    this.panel.buildForestSection({
+      tag: 'forest',
+      resolveTypeId,
+      bushBiasAt,
+      seed: WorldConfig.seed ^ 0x7ee5,
+      territoryNames: terr.sectionNames,
+      territoryDensity: terr.treeDensity,
+      neutralDensity: terr.neutralTreeDensity,
+      sectionAt,
       autoGenerate: true,
     });
   }
@@ -302,7 +369,9 @@ export class TerrainDemoScene extends Phaser.Scene {
     });
 
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
-      const zoom = Phaser.Math.Clamp(this.cameras.main.zoom - deltaY * 0.001, 0.2, 1.5);
+      // Smooth scaling proportional to current zoom: allows zooming out down to 0.04
+      const step = deltaY * 0.001 * this.cameras.main.zoom;
+      const zoom = Phaser.Math.Clamp(this.cameras.main.zoom - step, 0.04, 2.0);
       this.cameras.main.setZoom(zoom);
     });
   }

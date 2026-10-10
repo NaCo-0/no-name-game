@@ -58,6 +58,12 @@ export const WorldConfig = {
     // (see BiomeRegistry).
     sectionBiomeIds: [BiomeId.PERSIA, BiomeId.STEPPE, BiomeId.ARABIA, BiomeId.JAPAN, BiomeId.ROME, BiomeId.VIKING],
     sectionNames: ['Persia', 'Mongol Steppe', 'Arabia', 'Japan', 'Rome', 'Viking'],
+    // Starting tree density (0..1) per territory, same order as sectionNames,
+    // and for the neutral center. Dry regions get few trees. Only a default:
+    // the Forests panel sliders override it live.
+    treeDensity: [0.8, 0.55, 0.3, 1.0, 1.0, 1.0],
+    // Center of the map: no trees at all.
+    neutralTreeDensity: 0,
   },
 };
 

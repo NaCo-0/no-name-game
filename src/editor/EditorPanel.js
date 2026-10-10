@@ -362,12 +362,36 @@ export class EditorPanel {
     });
     card.appendChild(deleteBtn);
 
-    this.typeListEl.appendChild(card);
+    this._typeCardParent(type).appendChild(card);
+  }
+
+  /**
+   * Where a type's card goes: normally the Objects list, but types with a
+   * `group` (the ~60 forest sprites) share one collapsible list so they
+   * don't bury the rest of the panel.
+   */
+  _typeCardParent(type) {
+    if (!type.group) return this.typeListEl;
+    if (!this._typeGroups) this._typeGroups = new Map();
+    let g = this._typeGroups.get(type.group);
+    if (!g) {
+      const details = document.createElement('details');
+      details.className = 'editor-type-group';
+      const summary = document.createElement('summary');
+      details.appendChild(summary);
+      this.typeListEl.appendChild(details);
+      g = { details, summary, count: 0 };
+      this._typeGroups.set(type.group, g);
+    }
+    g.count += 1;
+    g.summary.textContent = `Forest sprites (${g.count}) - click to expand`;
+    return g.details;
   }
 
   /** Re-renders every type card from the controller's current types (used after Load). */
   rebuildTypeList() {
     this.typeListEl.innerHTML = '';
+    this._typeGroups = new Map();
     this.hideSelectedInstance();
     for (const type of this.controller.objectTypes.values()) this._addTypeCard(type);
   }
@@ -500,6 +524,7 @@ export class EditorPanel {
           spacingTiles: state.spacingTiles,
           gapCount: state.gapCount,
           gapAngleDeg: state.gapAngleDeg,
+          startAngleDeg: state.startAngleDeg ?? 0,
           radiusJitterTiles: state.radiusJitterTiles,
           angleJitterDeg: state.angleJitterDeg,
           seed: ring.seed,
@@ -657,5 +682,130 @@ export class EditorPanel {
     this.container.appendChild(section);
 
     if (defaults.autoGenerate) runGenerate();
+  }
+
+  /**
+   * Builds the "Forests" section: scatters trees (single + cluster sprites)
+   * into natural forest masses via controller.generateForest, avoiding the
+   * mountains and the passages cut through them. Same live-slider +
+   * Generate/Clear pattern as the mountain sections. Trees are ordinary
+   * editor instances (tag = cfg.tag), so they can be selected, dragged or
+   * deleted by hand, and they save/bake like everything else.
+   *
+   * @param {object} cfg
+   * @param {string} cfg.tag
+   * @param {(kind:string, tx:number, ty:number, roll:number) => string|null} cfg.resolveTypeId - picks the sprite type for a tree spot
+   * @param {(tx:number, ty:number) => number} [cfg.bushBiasAt] - per-location multiplier for bush spots
+   * @param {number} cfg.seed
+   * @param {string[]} cfg.territoryNames
+   * @param {number[]} cfg.territoryDensity - starting tree density (0..1) per territory
+   * @param {number} cfg.neutralDensity - density in the neutral center zone
+   * @param {(tx:number, ty:number) => number|null} cfg.sectionAt - territory index at a tile (null = neutral)
+   * @param {boolean} [cfg.autoGenerate]
+   */
+  buildForestSection(cfg) {
+    const section = document.createElement('div');
+    section.className = 'editor-section';
+    section.innerHTML = `<h3>Forests</h3>`;
+
+    const box = document.createElement('div');
+    box.className = 'editor-type-card';
+
+    const state = {
+      seed: cfg.seed,
+      coveragePct: 80,
+      forestScaleTiles: 12,
+      spacingTiles: 0.85,
+      foothillPct: 70,
+      clusterChancePct: 40,
+      loneTreePct: 20,
+      bushPct: 30,
+      clearanceTiles: 2.2,
+      maxTrees: 6000,
+      density: [...cfg.territoryDensity],
+      neutralDensity: cfg.neutralDensity,
+    };
+
+    box.appendChild(this._slider('Grove frequency in plains (%)', 5, 90, 1, state.coveragePct, (v) => { state.coveragePct = v; }));
+    box.appendChild(this._slider('Grove spacing in plains (tiles)', 6, 30, 1, state.forestScaleTiles, (v) => { state.forestScaleTiles = v; }));
+    box.appendChild(this._slider('Tree spacing in grove (tiles)', 0.5, 2.5, 0.05, state.spacingTiles, (v) => { state.spacingTiles = v; }));
+    box.appendChild(this._slider('Mountain foothill groves (%)', 0, 100, 1, state.foothillPct, (v) => { state.foothillPct = v; }));
+    box.appendChild(this._slider('Cluster sprites in groves (%)', 0, 60, 1, state.clusterChancePct, (v) => { state.clusterChancePct = v; }));
+    box.appendChild(this._slider('Mini copses (1-2 trees) (%)', 0, 50, 1, state.loneTreePct, (v) => { state.loneTreePct = v; }));
+    box.appendChild(this._slider('Bushes at grove edges (%)', 0, 80, 1, state.bushPct, (v) => { state.bushPct = v; }));
+    box.appendChild(this._slider('Keep away from obstacles (tiles)', 1, 6, 0.5, state.clearanceTiles, (v) => { state.clearanceTiles = v; }));
+    box.appendChild(this._slider('Max trees (cap)', 500, 20000, 100, state.maxTrees, (v) => { state.maxTrees = v; }));
+
+    const densTitle = document.createElement('div');
+    densTitle.className = 'editor-readout';
+    densTitle.textContent = 'Tree density per territory (%)';
+    box.appendChild(densTitle);
+    box.appendChild(this._slider('Neutral center', 0, 100, 1, Math.round(state.neutralDensity * 100), (v) => { state.neutralDensity = v / 100; }));
+    cfg.territoryNames.forEach((name, i) => {
+      box.appendChild(this._slider(name, 0, 100, 1, Math.round(state.density[i] * 100), (v) => { state.density[i] = v / 100; }));
+    });
+
+    const readout = document.createElement('div');
+    readout.className = 'editor-readout';
+    readout.textContent = 'Not generated yet';
+    box.appendChild(readout);
+
+    const runGenerate = () => {
+      const densityAt = (tx, ty) => {
+        const idx = cfg.sectionAt(tx, ty);
+        return idx == null ? state.neutralDensity : state.density[idx] ?? 1;
+      };
+      const res = this.controller.generateForest(
+        cfg.tag,
+        { resolveTypeId: cfg.resolveTypeId },
+        {
+          seed: state.seed,
+          coverage: state.coveragePct / 100,
+          forestScaleTiles: state.forestScaleTiles,
+          spacingTiles: state.spacingTiles,
+          foothillCoverage: state.foothillPct / 100,
+          clusterChance: state.clusterChancePct / 100,
+          loneTreeChance: state.loneTreePct / 100,
+          bushChance: state.bushPct / 100,
+          bushBiasAt: cfg.bushBiasAt,
+          obstacleClearance: state.clearanceTiles,
+          maxTrees: state.maxTrees,
+          densityAt,
+        }
+      );
+      const grovesStr = res.stats.groveCount ? ` across ${res.stats.groveCount} groves` : '';
+      let text = `${res.count} trees${grovesStr} (${res.singles} single + ${res.clusters} group + ${res.bushes} bush)`;
+      if (res.stats.thinned) text += ` — capped from ${res.stats.beforeCap}`;
+      readout.textContent = text;
+    };
+
+    const genBtn = document.createElement('button');
+    genBtn.className = 'editor-btn';
+    genBtn.textContent = 'Generate / Regenerate';
+    genBtn.addEventListener('click', runGenerate);
+    box.appendChild(genBtn);
+
+    const rerollBtn = document.createElement('button');
+    rerollBtn.className = 'editor-btn';
+    rerollBtn.textContent = 'New random layout';
+    rerollBtn.addEventListener('click', () => {
+      state.seed = (state.seed + 7919) >>> 0;
+      runGenerate();
+    });
+    box.appendChild(rerollBtn);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'editor-btn editor-btn-danger';
+    clearBtn.textContent = 'Clear forests';
+    clearBtn.addEventListener('click', () => {
+      this.controller.clearTag(cfg.tag);
+      readout.textContent = 'Cleared';
+    });
+    box.appendChild(clearBtn);
+
+    section.appendChild(box);
+    this.container.appendChild(section);
+
+    if (cfg.autoGenerate) runGenerate();
   }
 }
