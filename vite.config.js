@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { createGameServer } from './server/gameServer.js';
 
 /**
  * Bake server (dev + preview only)
@@ -192,8 +193,25 @@ function bakeServerPlugin() {
   };
 }
 
+/**
+ * Local online mode: several tabs / devices share one world (see server/gameServer.js).
+ * Dev + preview only, like the bake server.
+ */
+function gameServerPlugin() {
+  const game = createGameServer({ root: ROOT });
+  return {
+    name: 'game-server-plugin',
+    configureServer(server) {
+      server.middlewares.use(game.middleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(game.middleware);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [bakeServerPlugin()],
+  plugins: [bakeServerPlugin(), gameServerPlugin()],
   server: {
     port: 5173,
     host: true,
@@ -202,7 +220,7 @@ export default defineConfig({
       // here. Vite learns which files exist in public/ from this watcher;
       // if it can't see freshly baked files it answers requests for them
       // with the index page (HTTP 200, text/html) instead of the image.
-      ignored: ['**/.bake-staging/**', '**/dist/**'],
+      ignored: ['**/.bake-staging/**', '**/dist/**', '**/.game-data/**'],
     },
   },
   build: {

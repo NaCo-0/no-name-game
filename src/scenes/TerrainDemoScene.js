@@ -22,6 +22,7 @@ import { EditorController } from '../editor/EditorController.js';
 import { EditorPanel } from '../editor/EditorPanel.js';
 import { serializeProject, loadProject, downloadBlob } from '../export/ProjectIO.js';
 import { bakeExport } from '../export/BakeExporter.js';
+import { startPlayerSession } from '../../runtime/PlayerSession.js';
 
 // Bundled mountain assets (see the "Mountain Rings" editor section) — not
 // user-uploaded, so they're loaded like any other static asset via
@@ -225,6 +226,8 @@ export class TerrainDemoScene extends Phaser.Scene {
       displayHeight: 460,
       blockRadius: 0.8,
     });
+    typeA.shadowEnabled = false; // mountains: no shadow
+    typeB.shadowEnabled = false;
     this.panel._addTypeCard(typeA);
     this.panel._addTypeCard(typeB);
 
@@ -334,6 +337,9 @@ export class TerrainDemoScene extends Phaser.Scene {
       });
       const displayWidth = src.width * TREE_DISPLAY_SCALE;
       type.group = 'trees'; // the panel folds these into one collapsible list
+      type.shadowCast = true; // trees cast a shadow from their own silhouette
+      type.shadowLift = 0.02;
+      type.shadowCastAlpha = 0.4;
       type.shadowWidth = Math.max(24, Math.round(displayWidth * (a.role === 'bush' ? 0.85 : 0.55)));
       type.shadowHeight = Math.max(10, Math.round(type.shadowWidth * 0.38));
       typeIdByKey.set(a.key, type.id);

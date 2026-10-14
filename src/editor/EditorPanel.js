@@ -43,6 +43,16 @@ export class EditorPanel {
     });
     mapControls.appendChild(snapRow);
 
+    mapControls.appendChild(this._slider('Light: shadow sideways', -1.5, 1.5, 0.05, this.controller.light.dx, (v) => {
+      this.controller.setLight({ dx: v });
+    }));
+    mapControls.appendChild(this._slider('Light: shadow depth', -0.8, 0.8, 0.05, this.controller.light.dy, (v) => {
+      this.controller.setLight({ dy: v });
+    }));
+    mapControls.appendChild(this._slider('Light: shadow softness', 0, 8, 0.5, this.controller.light.blur, (v) => {
+      this.controller.setLight({ blur: v });
+    }));
+
     this.tileInspectorReadout = document.createElement('div');
     this.tileInspectorReadout.className = 'editor-readout';
     this.tileInspectorReadout.textContent = 'Click a tile to inspect it';
@@ -320,14 +330,12 @@ export class EditorPanel {
     tintRow.appendChild(tintInput);
     card.appendChild(tintRow);
 
-    card.appendChild(
-      this._checkboxRow('Contact shadow', type.shadowEnabled, (checked) => {
-        this.controller.updateTypeParam(type.id, 'shadowEnabled', checked);
-        shadowWidthRow.style.display = checked ? '' : 'none';
-        shadowHeightRow.style.display = checked ? '' : 'none';
-        shadowAlphaRow.style.display = checked ? '' : 'none';
-      })
-    );
+    const castRow = this._slider('Cast shadow opacity', 0, 1, 0.05, type.shadowCastAlpha, (v) => {
+      this.controller.updateTypeParam(type.id, 'shadowCastAlpha', v);
+    });
+    const liftRow = this._slider('Shadow start height', 0, 0.4, 0.01, type.shadowLift, (v) => {
+      this.controller.updateTypeParam(type.id, 'shadowLift', v);
+    });
     const shadowWidthRow = this._slider('Shadow width', 10, 800, 5, type.shadowWidth, (v) => {
       this.controller.updateTypeParam(type.id, 'shadowWidth', v);
     });
@@ -337,14 +345,30 @@ export class EditorPanel {
     const shadowAlphaRow = this._slider('Shadow opacity', 0, 1, 0.05, type.shadowAlpha, (v) => {
       this.controller.updateTypeParam(type.id, 'shadowAlpha', v);
     });
+    const syncShadowRows = () => {
+      const on = type.shadowEnabled, cast = type.shadowCast;
+      castRow.style.display = on && cast ? '' : 'none';
+      liftRow.style.display = on && cast ? '' : 'none';
+      for (const r of [shadowWidthRow, shadowHeightRow, shadowAlphaRow]) r.style.display = on && !cast ? '' : 'none';
+    };
+    card.appendChild(
+      this._checkboxRow('Shadow', type.shadowEnabled, (checked) => {
+        this.controller.updateTypeParam(type.id, 'shadowEnabled', checked);
+        syncShadowRows();
+      })
+    );
+    card.appendChild(
+      this._checkboxRow('Cast shadow (from sprite shape)', type.shadowCast, (checked) => {
+        this.controller.updateTypeParam(type.id, 'shadowCast', checked);
+        syncShadowRows();
+      })
+    );
+    card.appendChild(castRow);
+    card.appendChild(liftRow);
     card.appendChild(shadowWidthRow);
     card.appendChild(shadowHeightRow);
     card.appendChild(shadowAlphaRow);
-    if (!type.shadowEnabled) {
-      shadowWidthRow.style.display = 'none';
-      shadowHeightRow.style.display = 'none';
-      shadowAlphaRow.style.display = 'none';
-    }
+    syncShadowRows();
 
     // Collision footprint used by the bake export (0 = decorative only).
     card.appendChild(

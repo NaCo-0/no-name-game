@@ -23,6 +23,12 @@
  */
 import Phaser from 'phaser';
 
+/** All ground shadows share this depth (above terrain = 0, below every object >= 1000),
+ *  so the MULTIPLY blend mode is switched once per frame instead of once per object. */
+export const SHADOW_DEPTH = 1;
+/** Below this zoom, shadows are skipped (invisible at that size anyway). */
+const SHADOW_MIN_ZOOM = 0.12;
+
 export class BakedMap {
   /**
    * @param {Phaser.Scene} scene
@@ -60,6 +66,7 @@ export class BakedMap {
     this.tileFiles = new Map(t.tiles.map((x) => [`${x.col},${x.row}`, x.file]));
     this.terrain = new Map(); // key -> { state:'loading'|'ready', image? }
     this.objectSprites = [];
+    this._cullList = []; // { s: sprite, r: radius, shadow: bool } - see _cullObjects()
   }
 
   // ---- coordinates --------------------------------------------------------
@@ -135,14 +142,16 @@ export class BakedMap {
       sprite.setTint(t.tint);
       sprite.setDepth(o.depth);
       this.objectSprites.push(sprite);
+      this._cullList.push({ s: sprite, r: Math.max(sprite.displayWidth, sprite.displayHeight), shadow: false });
 
       if (t.shadow) {
         const sh = this.scene.add.image(o.x, o.y - t.shadow.height * 0.15, p + 'shadow');
         sh.setBlendMode(Phaser.BlendModes.MULTIPLY);
         sh.setDisplaySize(t.shadow.width * k, t.shadow.height * k);
         sh.setAlpha(t.shadow.alpha);
-        sh.setDepth(o.depth - 0.5);
+        sh.setDepth(SHADOW_DEPTH);
         this.objectSprites.push(sh);
+        this._cullList.push({ s: sh, r: Math.max(sh.displayWidth, sh.displayHeight), shadow: true });
       }
     }
   }
@@ -154,6 +163,8 @@ export class BakedMap {
     const t = this.manifest.terrain;
     const view = this.scene.cameras.main.worldView;
     const size = t.tileWorldSize;
+
+    this._cullObjects(view);
 
     const c0 = Math.floor((view.x - t.origin.x) / size) - this.margin;
     const c1 = Math.floor((view.right - t.origin.x) / size) + this.margin;
@@ -175,6 +186,41 @@ export class BakedMap {
       if (entry.state === 'ready') this._dropTile(key);
       // 'loading' tiles are discarded when they finish (see _startTile)
     }
+  }
+
+  /**
+   * Phaser's WebGL renderer does not skip off-screen sprites by itself, so with
+   * thousands of trees/mountains every one of them would be processed every
+   * frame. Here only the ones near the camera stay visible.
+   */
+  _cullObjects(view) {
+    const zoom = this.scene.cameras.main.zoom || 1;
+    const pad = 200 / zoom; // worldView is one frame old: small safety margin
+    const x0 = view.x - pad;
+    const x1 = view.right + pad;
+    const y0 = view.y - pad;
+    const y1 = view.bottom + pad;
+    const shadows = zoom >= SHADOW_MIN_ZOOM;
+    const list = this._cullList;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      const s = c.s;
+      const vis =
+        (shadows || !c.shadow) &&
+        c.r * zoom >= 3 && // smaller than 3 screen pixels: not worth drawing
+        s.x + c.r >= x0 &&
+        s.x - c.r <= x1 &&
+        s.y + c.r >= y0 &&
+        s.y - c.r <= y1;
+      if (s.visible !== vis) s.setVisible(vis);
+    }
+  }
+
+  /** How many map objects (not shadows) are currently drawn. For the ?fps overlay. */
+  visibleObjectCount() {
+    let n = 0;
+    for (const c of this._cullList) if (!c.shadow && c.s.visible) n++;
+    return n;
   }
 
   _startTile(key, col, row) {
@@ -216,5 +262,6 @@ export class BakedMap {
     for (const key of [...this.terrain.keys()]) this._dropTile(key);
     for (const s of this.objectSprites) s.destroy();
     this.objectSprites.length = 0;
+    this._cullList.length = 0;
   }
 }

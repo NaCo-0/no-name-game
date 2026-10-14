@@ -28,6 +28,7 @@
 import Phaser from 'phaser';
 import { IsoMath } from '../world/IsoMath.js';
 import { generateShadowTexture } from '../rendering/ShadowTextureGenerator.js';
+import { getCastShadow, clearCastShadowCache } from '../rendering/CastShadowGenerator.js';
 import { generateRingPlacements, generateRadialDividers as computeRadialDividers } from '../world/MountainRingGenerator.js';
 import { generateForestPlacements } from '../world/ForestGenerator.js';
 
@@ -62,6 +63,9 @@ export class EditorController {
 
     this.snapEnabled = true;
     this.armedTypeId = null;
+
+    /** Global light for cast shadows: screen-space shadow direction per unit of height. */
+    this.light = { dx: -0.7, dy: 0.1, blur: 2 };
 
     /** Passages (ring gaps, wall entrances) that forests must leave open. tag -> [{x,y,r}] */
     this.corridors = new Map();
@@ -166,6 +170,9 @@ export class EditorController {
       shadowWidth: 90,
       shadowHeight: 38,
       shadowAlpha: 0.85,
+      shadowCast: true, // shadow = projected silhouette of the sprite (false = round contact shadow)
+      shadowCastAlpha: 0.45,
+      shadowLift: 0.1, // 0..0.4 of sprite height: moves the shadow's start point up into the footprint
       // Radius (in tiles) around an instance that is marked NOT walkable in
       // the baked collision map. 0 = purely decorative.
       blockRadius: 0,
@@ -192,6 +199,16 @@ export class EditorController {
     if (this.armedTypeId === typeId) this.armedTypeId = null;
   }
 
+  /** Changes the global light direction/softness and re-bakes all cast shadows. */
+  setLight(partial) {
+    Object.assign(this.light, partial);
+    clearCastShadowCache(this.scene);
+    for (const inst of this.instances.values()) {
+      const type = this.objectTypes.get(inst.typeId);
+      if (type && type.shadowCast) this._applyTypeToInstance(inst, type);
+    }
+  }
+
   _refreshInstancesOfType(typeId) {
     const type = this.objectTypes.get(typeId);
     if (!type) return;
@@ -210,13 +227,28 @@ export class EditorController {
     inst.sprite.setTint(type.tint);
 
     if (type.shadowEnabled) {
+      let shadowKey = SHADOW_TEXTURE_KEY;
+      let origin = { x: 0.5, y: 0.5 };
+      if (type.shadowCast) {
+        const c = getCastShadow(this.scene, type.textureKey, type.anchorX, type.anchorY, !!inst.flipX, this.light, type.shadowLift);
+        shadowKey = c.key;
+        origin = { x: c.originX, y: c.originY };
+      }
       if (!inst.shadowSprite) {
-        inst.shadowSprite = this.scene.add.image(0, 0, SHADOW_TEXTURE_KEY);
+        inst.shadowSprite = this.scene.add.image(0, 0, shadowKey);
         inst.shadowSprite.setBlendMode(Phaser.BlendModes.MULTIPLY);
       }
+      inst.shadowSprite.setTexture(shadowKey);
       inst.shadowSprite.setVisible(true);
-      inst.shadowSprite.setDisplaySize(type.shadowWidth * instScale, type.shadowHeight * instScale);
-      inst.shadowSprite.setAlpha(type.shadowAlpha);
+      if (type.shadowCast) {
+        inst.shadowSprite.setOrigin(origin.x, origin.y);
+        inst.shadowSprite.setScale(scale);
+        inst.shadowSprite.setAlpha(type.shadowCastAlpha);
+      } else {
+        inst.shadowSprite.setOrigin(0.5, 0.5);
+        inst.shadowSprite.setDisplaySize(type.shadowWidth * instScale, type.shadowHeight * instScale);
+        inst.shadowSprite.setAlpha(type.shadowAlpha);
+      }
       inst.shadowSprite.setDepth(inst.sprite.depth - 0.5);
     } else if (inst.shadowSprite) {
       inst.shadowSprite.setVisible(false);
@@ -477,7 +509,7 @@ export class EditorController {
       const type = this.objectTypes.get(inst.typeId);
       const shadowH = type ? type.shadowHeight : 38;
       inst.shadowSprite.x = worldPos.x;
-      inst.shadowSprite.y = worldPos.y - shadowH * 0.15;
+      inst.shadowSprite.y = (type && type.shadowCast) ? worldPos.y : worldPos.y - shadowH * 0.15;
       inst.shadowSprite.setDepth(inst.sprite.depth - 0.5);
     }
   }

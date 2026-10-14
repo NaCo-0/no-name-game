@@ -99,6 +99,9 @@
   .world-map-wrap { position: absolute; inset: 0; overflow: hidden; background: #090c10; cursor: grab; }
   .world-map-wrap:active { cursor: grabbing; }
   #world-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .phaser-host { position: absolute; inset: 0; }
+  .phaser-host canvas { display: block; touch-action: none; }
+  .world-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; pointer-events: none; color: #64748b; font: 600 14px Inter, sans-serif; }
 
   /* Minimap Radar */
   .minimap-radar {
@@ -269,7 +272,14 @@
 <body>
 <div id="root"><div style="height:100%;display:flex;align-items:center;justify-content:center;color:#9fb3c2;font:600 14px Inter,sans-serif">Loading kingdom & world...</div></div>
 
-<script>
+<script type="module">
+import Phaser from 'phaser';
+import { BakedMap } from './runtime/BakedMapLoader.js';
+import { startPlayerSession } from './runtime/PlayerSession.js';
+import { probeOnline, startOnlineSession } from './runtime/OnlineSession.js';
+import { makeRng } from './runtime/SpawnPlanner.js';
+import { civById, civByTerritory } from './runtime/civilizations.js';
+
 const { useState, useEffect, useRef, useCallback } = React;
 const e = React.createElement;
 
@@ -587,435 +597,432 @@ function MenuSheet({ open, onClose, soundEnabled, onToggleSound }) {
 }
 
 // ==========================================
-// WORLD MAP ENGINE COMPONENT (CANVAS STREAMER)
+// WORLD MAP  (Phaser scene + React overlay)
 // ==========================================
-function WorldMapView({ culture, onSelectCulture, onSwitchToCity, marches, onAddMarch }) {
-  const canvasRef = useRef(null);
-  const radarRef = useRef(null);
-  const stateRef = useRef({
-    camX: 0, camY: 19200, zoom: 0.18, targetX: 0, targetY: 19200, targetZoom: 0.18,
-    isDragging: false, dragStartX: 0, dragStartY: 0, camStartX: 0, camStartY: 0,
-    manifest: null, tilesMap: new Map(), loadedImages: new Map(), minimapImg: null,
-    targetMarker: null,
-    objectTypes: new Map(), objectImages: new Map(), shadowImg: null,
-    citadelImages: {}, objectGrid: new Map()
-  });
+// The map itself (terrain streaming, mountains/trees, castles, camera, input)
+// is a Phaser scene. React only draws what sits on top of it: radar, zoom
+// buttons, territory label and the "dispatch scout" popup.
+//
+// Files used (served by Vite from public/):
+//   /map.json, /terrain/*, /objects/*, /minimap.png   <- written by "Bake map"
+//   /assets/objects/castles/<civ>.png                 <- castle images (see CASTLE_ASSET_BASE)
 
-  const [activeTerritory, setActiveTerritory] = useState("World Map");
-  const [hudCoords, setHudCoords] = useState("0, 0");
-  const [actionPop, setActionPop] = useState(null);
+const MAP_BASE_URL = '/';                              // folder that contains map.json
+const CASTLE_ASSET_BASE = '/assets/objects/castles/';  // public/assets/objects/castles/
+const WORLD_SEED = 1337;                               // fixed seed = same castle layout on every reload.
+                                                       // Use Math.random for a different layout each time.
+const MIN_ZOOM = 0.08;
+const MAX_ZOOM = 1.4;
 
-  // Initialize and load manifest, tiles, objects & minimap
-  useEffect(() => {
-    const s = stateRef.current;
-    fetch('/map.json').then(r => r.json()).then(m => {
-      s.manifest = m;
-      m.terrain.tiles.forEach(t => s.tilesMap.set(`${t.col},${t.row}`, t.file));
+// runtime/civilizations.js ids  ->  culture keys used in this file
+const CIV_TO_CULTURE = { persia: 'persian', mongol: 'mongol', arab: 'arabian', japan: 'japanese', rome: 'roman', viking: 'viking' };
+const cssHex = (n) => '#' + n.toString(16).padStart(6, '0');
 
-      // 1. Preload object types & images (mountains, etc.)
-      s.objectTypes = new Map((m.objectTypes || []).map(t => [t.id, t]));
-      s.objectImages = new Map();
-      (m.objectTypes || []).forEach(t => {
-        const img = new Image();
-        img.src = '/' + t.image;
-        s.objectImages.set(t.id, img);
-      });
+class WorldScene extends Phaser.Scene {
+  constructor(bridge) {
+    super('world');
+    this.bridge = bridge;                              // React <-> Phaser callbacks
+    this.map = null;                                   // BakedMap (after loading)
+    this.session = null;                               // { player, npcs, layer, civ } (after the join screen)
+    this.focus = { x: 0, y: 19200, zoom: 0.18 };       // what the camera shows now
+    this.goal = { x: 0, y: 19200, zoom: 0.18 };        // where it is moving to (smoothed)
+    this.marker = null;                                // tapped spot on the terrain
+    this._drag = null;
+    this._viewT = 0;
+  }
 
-      const sh = new Image();
-      sh.src = '/' + (m.shadowTexture || 'objects/_shadow.png');
-      s.shadowImg = sh;
+  preload() {
+    // Whole-world picture drawn under the streamed tiles (cheap far-zoom view).
+    this.load.image('world_minimap', '/minimap.png');
+  }
 
-      // 2. Preload citadels for the 6 capitals
-      s.citadelImages = {
-        persian: new Image(),
-        roman: new Image(),
-        japanese: new Image(),
-        arabian: new Image(),
-        mongol: new Image(),
-        viking: new Image()
-      };
-      s.citadelImages.persian.src = '/kingdom_art/Layer 3.png';
-      s.citadelImages.roman.src = '/kingdom_art/Layer 1.png';
-      s.citadelImages.japanese.src = '/kingdom_art/Layer 2.png';
-      s.citadelImages.viking.src = '/kingdom_art/Layer 12.png';
-      s.citadelImages.arabian.src = '/kingdom_art/Layer 3.png';
-      s.citadelImages.mongol.src = '/kingdom_art/Layer 1.png';
+  create() {
+    const cam = this.cameras.main;
+    cam.setBackgroundColor('#060a0f');
+    cam.setZoom(this.focus.zoom);
+    cam.centerOn(this.focus.x, this.focus.y);
 
-      // 3. Build spatial chunk grid for fast frustum culling of 2400+ objects
-      const CHUNK = 2048;
-      s.objectGrid = new Map();
-      (m.objects || []).forEach(o => {
-        const cx = Math.floor(o.x / CHUNK);
-        const cy = Math.floor(o.y / CHUNK);
-        const key = `${cx},${cy}`;
-        if (!s.objectGrid.has(key)) s.objectGrid.set(key, []);
-        s.objectGrid.get(key).push(o);
-      });
+    this.overlay = this.add.graphics().setDepth(200000); // marches + target marker
+    this._bindInput();
 
-      // Focus on selected culture
-      if (CAPITALS[culture]) {
-        s.camX = s.targetX = CAPITALS[culture].x;
-        s.camY = s.targetY = CAPITALS[culture].y;
-        s.zoom = s.targetZoom = 0.28;
-      }
-    }).catch(err => console.log('Serving from static path or fallback:', err));
+    this._boot().catch((err) => {
+      console.error('[WorldScene] could not start the world:', err);
+      this.bridge.onError(err);
+    });
+  }
 
-    const mini = new Image();
-    mini.src = '/minimap.png';
-    mini.onload = () => { s.minimapImg = mini; };
-  }, []);
-
-  // Camera fly when culture changes
-  useEffect(() => {
-    const s = stateRef.current;
-    if (CAPITALS[culture]) {
-      s.targetX = CAPITALS[culture].x;
-      s.targetY = CAPITALS[culture].y;
-      s.targetZoom = 0.32;
-      sound.playFly();
+  async _boot() {
+    // 1. the baked map (terrain streaming + objects)
+    this.map = await BakedMap.create(this, MAP_BASE_URL);
+    const t = this.map.manifest.terrain;
+    if (this.textures.exists('world_minimap')) {
+      this.add.image(t.origin.x, t.origin.y, 'world_minimap')
+        .setOrigin(0, 0)
+        .setDisplaySize(t.worldSize.width, t.worldSize.height)
+        .setDepth(-10);
     }
-  }, [culture]);
+    this.bridge.onMapReady();
 
-  // Main Render Loop
+    // 2. the runtime: join screen -> player castle + the other castles.
+    //    ui:false = we keep this game's own React interface instead of runtime/ui.
+    //    ONLINE when the game server (vite.config.js) answers, otherwise OFFLINE.
+    //    Add ?offline to the address to force offline mode.
+    const common = { ui: false, centerCamera: false, assetBase: CASTLE_ASSET_BASE };
+    if (!new URLSearchParams(window.location.search).has('offline') && (await probeOnline())) {
+      try {
+        this.session = await startOnlineSession(this, this.map, { ...common, onNotice: (m) => this.bridge.onNotice(m) });
+      } catch (err) {
+        console.warn('[WorldScene] online mode failed, playing offline:', err);
+        this.bridge.onNotice('Online mode failed (' + ((err && err.message) || err) + ') - playing offline');
+      }
+    }
+    if (!this.session) {
+      this.session = await startPlayerSession(this, this.map, { ...common, rand: makeRng(WORLD_SEED) });
+    }
+
+    this.session.layer.events.on('select', (castle) => {
+      this.session.layer.setSelected(castle.id);
+      this.bridge.onCastleSelect(castle);
+    });
+
+    // 3. look at the player's castle
+    const p = this.session.player;
+    const startZoom = Math.min(0.8, Math.max(0.45, window.innerWidth / 1100));
+    this.flyTo(p.worldX, p.worldY - 120, startZoom, true);
+    this.bridge.onJoin(this.session);
+  }
+
+  // ---- camera API (called from React) -------------------------------------
+
+  flyTo(x, y, zoom, instant = false) {
+    this.goal.x = x;
+    this.goal.y = y;
+    if (zoom != null) this.goal.zoom = Phaser.Math.Clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+    if (instant) Object.assign(this.focus, this.goal);
+  }
+
+  zoomBy(factor) {
+    this.goal.zoom = Phaser.Math.Clamp(this.goal.zoom * factor, MIN_ZOOM, MAX_ZOOM);
+  }
+
+  clearMarker() {
+    this.marker = null;
+  }
+
+  // ---- input ----------------------------------------------------------------
+
+  _bindInput() {
+    const input = this.input;
+
+    input.on('pointerdown', (pointer) => {
+      this._drag = { px: pointer.x, py: pointer.y, gx: this.focus.x, gy: this.focus.y, zoom: this.cameras.main.zoom };
+      this.goal.x = this.focus.x;
+      this.goal.y = this.focus.y;
+    });
+
+    input.on('pointermove', (pointer) => {
+      if (!this._drag || !pointer.isDown) return;
+      const d = this._drag;
+      this.goal.x = d.gx - (pointer.x - d.px) / d.zoom;
+      this.goal.y = d.gy - (pointer.y - d.py) / d.zoom;
+    });
+
+    input.on('pointerup', (pointer, over) => {
+      this._drag = null;
+      if (over && over.length) return;                 // a castle was clicked, not the ground
+      if (pointer.getDistance() >= 6) return;          // it was a drag, not a tap
+      const wp = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      this.marker = { x: wp.x, y: wp.y };
+      this.bridge.onTerrainTap({ screenX: pointer.x, screenY: pointer.y, worldX: wp.x, worldY: wp.y });
+    });
+
+    input.on('wheel', (pointer, over, dx, dy) => this.zoomBy(dy < 0 ? 1.2 : 0.82));
+  }
+
+  // ---- per frame ------------------------------------------------------------
+
+  update(time, delta) {
+    const cam = this.cameras.main;
+
+    // Smooth camera (same feel as the old 0.1 lerp, but independent of frame rate).
+    const k = Math.min(1, 1 - Math.pow(0.9, delta / 16.667));
+    this.focus.x += (this.goal.x - this.focus.x) * k;
+    this.focus.y += (this.goal.y - this.focus.y) * k;
+    this.focus.zoom += (this.goal.zoom - this.focus.zoom) * k;
+    cam.setZoom(this.focus.zoom);
+    cam.centerOn(this.focus.x, this.focus.y);
+
+    if (this.map) this.map.update();                   // streams terrain tiles in/out
+    this._drawOverlay();
+    this._reportView(time);
+  }
+
+  _dashed(g, x1, y1, x2, y2, dash) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    if (len < 1) return;
+    const n = Math.ceil(len / (dash * 2));
+    if (n > 300) { g.lineBetween(x1, y1, x2, y2); return; }
+    const ux = (x2 - x1) / len;
+    const uy = (y2 - y1) / len;
+    for (let i = 0; i < n; i++) {
+      const a = i * dash * 2;
+      const b = Math.min(a + dash, len);
+      g.lineBetween(x1 + ux * a, y1 + uy * a, x1 + ux * b, y1 + uy * b);
+    }
+  }
+
+  // Marches and the target marker. Sizes are divided by zoom so they keep the
+  // same size on screen at every zoom level.
+  _drawOverlay() {
+    const g = this.overlay;
+    const z = this.focus.zoom;
+    g.clear();
+
+    for (const m of this.bridge.getMarches()) {
+      g.lineStyle(2 / z, 0xf0c95a, 0.7);
+      this._dashed(g, m.originX, m.originY, m.x, m.y, 4 / z);
+      g.fillStyle(0xf0c95a, 1);
+      g.fillCircle(m.x, m.y, 7 / z);
+      g.fillStyle(0x0a0d14, 1);
+      g.fillCircle(m.x, m.y, 4 / z);
+    }
+
+    if (this.marker) {
+      const { x, y } = this.marker;
+      g.lineStyle(2.5 / z, 0xf0c95a, 1);
+      g.strokeCircle(x, y, 12 / z);
+      g.lineBetween(x - 18 / z, y, x + 18 / z, y);
+      g.lineBetween(x, y - 18 / z, x, y + 18 / z);
+    }
+  }
+
+  // Tells React which tile / territory is in the middle of the screen (4x per second).
+  _reportView(time) {
+    if (!this.map || time - this._viewT < 250) return;
+    this._viewT = time;
+    const tile = this.map.worldToTile(this.focus.x, this.focus.y);
+    const tx = Math.round(tile.x);
+    const ty = Math.round(tile.y);
+    this.bridge.onView({ tileX: tx, tileY: ty, territory: this.map.territoryAt(tx, ty) });
+  }
+}
+
+function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onNotice, marches, onAddMarch }) {
+  const hostRef = useRef(null);
+  const radarRef = useRef(null);
+  const gameRef = useRef(null);
+  const sceneRef = useRef(null);
+  const sleptRef = useRef(false);
+  const marchesRef = useRef(marches);
+  const activeRef = useRef(active);
+  const cbRef = useRef({});
+  const lastCultureRef = useRef(culture);
+
+  const [mapReady, setMapReady] = useState(false);
+  const [error, setError] = useState("");
+  const [view, setView] = useState({ tileX: 0, tileY: 0, territory: 255 });
+  const [actionPop, setActionPop] = useState(null);
+  const [online, setOnline] = useState(false);
+  const showFps = useRef(new URLSearchParams(window.location.search).has('fps')).current; // add ?fps to the address
+  const [fps, setFps] = useState("");
+
+  // Always-fresh copies for the Phaser side (which is created only once).
+  marchesRef.current = marches;
+  activeRef.current = active;
+  cbRef.current = { onJoin, onCastleSelect, onOpenCity, onNotice };
+
+  // Create the Phaser game once; destroy it when the component goes away.
   useEffect(() => {
-    let animId;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    const radar = radarRef.current;
-    const rctx = radar ? radar.getContext('2d') : null;
-
-    const render = () => {
-      animId = requestAnimationFrame(render);
-      const s = stateRef.current;
-
-      // Smooth camera interpolation
-      s.camX += (s.targetX - s.camX) * 0.1;
-      s.camY += (s.targetY - s.camY) * 0.1;
-      s.zoom += (s.targetZoom - s.zoom) * 0.1;
-
-      const w = canvas.width = canvas.clientWidth;
-      const h = canvas.height = canvas.clientHeight;
-
-      ctx.fillStyle = '#060a0f';
-      ctx.fillRect(0, 0, w, h);
-
-      if (!s.manifest) {
-        ctx.fillStyle = '#64748b';
-        ctx.font = '600 14px Inter';
-        ctx.textAlign = 'center';
-        ctx.fillText('Loading baked isometric world & objects...', w / 2, h / 2);
-        return;
-      }
-
-      const t = s.manifest.terrain;
-      const size = t.tileWorldSize;
-      const originX = t.origin.x;
-      const originY = t.origin.y;
-
-      // Viewport bounds in world coords
-      const vLeft = s.camX - (w / s.zoom) / 2;
-      const vRight = s.camX + (w / s.zoom) / 2;
-      const vTop = s.camY - (h / s.zoom) / 2;
-      const vBottom = s.camY + (h / s.zoom) / 2;
-
-      // Always draw minimap as underlying base LOD
-      if (s.minimapImg && s.minimapImg.complete) {
-        const miniScreenX = (originX - s.camX) * s.zoom + w / 2;
-        const miniScreenY = (originY - s.camY) * s.zoom + h / 2;
-        const miniScreenW = t.worldSize.width * s.zoom;
-        const miniScreenH = t.worldSize.height * s.zoom;
-        ctx.drawImage(s.minimapImg, miniScreenX, miniScreenY, miniScreenW, miniScreenH);
-      }
-
-      // 1. Tile streaming
-      const c0 = Math.max(0, Math.floor((vLeft - originX) / size));
-      const c1 = Math.min(t.cols - 1, Math.floor((vRight - originX) / size));
-      const r0 = Math.max(0, Math.floor((vTop - originY) / size));
-      const r1 = Math.min(t.rows - 1, Math.floor((vBottom - originY) / size));
-
-      for (let r = r0; r <= r1; r++) {
-        for (let c = c0; c <= c1; c++) {
-          const key = `${c},${r}`;
-          if (!s.tilesMap.has(key)) continue;
-
-          let img = s.loadedImages.get(key);
-          if (!img) {
-            img = new Image();
-            img.src = '/' + s.tilesMap.get(key);
-            s.loadedImages.set(key, img);
-          }
-
-          if (img.complete && img.naturalWidth > 0) {
-            const sx = (originX + c * size - s.camX) * s.zoom + w / 2;
-            const sy = (originY + r * size - s.camY) * s.zoom + h / 2;
-            const sw = size * s.zoom + 1; // +1 to eliminate seams
-            const sh = size * s.zoom + 1;
-            ctx.drawImage(img, sx, sy, sw, sh);
-          }
+    const bridge = {
+      getMarches: () => marchesRef.current,
+      onMapReady: () => setMapReady(true),
+      onError: (err) => setError(String((err && err.message) || err)),
+      onView: (v) => setView((p) => (p.tileX === v.tileX && p.tileY === v.tileY && p.territory === v.territory ? p : v)),
+      onTerrainTap: (tap) => { setActionPop(tap); sound.playClick(); },
+      onJoin: (session) => {
+        const c = CIV_TO_CULTURE[session.civ.id];
+        if (c) {
+          lastCultureRef.current = c;      // the camera is already on the castle: don't fly to the capital
+          cbRef.current.onJoin(c, session.player, !!session.online);
         }
-      }
-
-      // 2. Draw Objects (Mountains, Rocks, Structures) with Depth Sorting
-      if (s.zoom > 0.05 && s.objectGrid) {
-        const CHUNK = 2048;
-        const cX0 = Math.floor((vLeft - 1000) / CHUNK);
-        const cX1 = Math.floor((vRight + 1000) / CHUNK);
-        const cY0 = Math.floor((vTop - 1000) / CHUNK);
-        const cY1 = Math.floor((vBottom + 1000) / CHUNK);
-
-        const visibleItems = [];
-
-        // Collect visible objects from spatial grid
-        for (let cy = cY0; cy <= cY1; cy++) {
-          for (let cx = cX0; cx <= cX1; cx++) {
-            const list = s.objectGrid.get(`${cx},${cy}`);
-            if (!list) continue;
-            for (let i = 0; i < list.length; i++) {
-              const o = list[i];
-              if (o.x >= vLeft - 700 && o.x <= vRight + 700 && o.y >= vTop - 700 && o.y <= vBottom + 700) {
-                visibleItems.push(o);
-              }
-            }
-          }
-        }
-
-        // Add visible citadels to depth-sorted queue
-        Object.entries(CAPITALS).forEach(([k, cap]) => {
-          if (cap.x >= vLeft - 800 && cap.x <= vRight + 800 && cap.y >= vTop - 800 && cap.y <= vBottom + 800) {
-            visibleItems.push({
-              isCitadel: true,
-              cultureKey: k,
-              x: cap.x,
-              y: cap.y,
-              depth: cap.y,
-              color: cap.color,
-              name: cap.name,
-              title: cap.title
-            });
-          }
-        });
-
-        // Depth sort back to front (smaller depth/y first)
-        visibleItems.sort((a, b) => (a.depth || a.y) - (b.depth || b.y));
-
-        // Render each visible item
-        for (let i = 0; i < visibleItems.length; i++) {
-          const item = visibleItems[i];
-          const sx = (item.x - s.camX) * s.zoom + w / 2;
-          const sy = (item.y - s.camY) * s.zoom + h / 2;
-
-          if (item.isCitadel) {
-            // Draw Citadel on terrain
-            // 1. Glowing ground aura
-            ctx.save();
-            ctx.fillStyle = item.color + '33';
-            ctx.strokeStyle = item.color;
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.ellipse(sx, sy, 140 * s.zoom, 70 * s.zoom, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
-
-            // 2. Citadel Fortress Sprite
-            const citImg = s.citadelImages[item.cultureKey];
-            if (citImg && citImg.complete && citImg.naturalWidth > 0) {
-              const citScale = (500 / citImg.naturalHeight) * s.zoom;
-              const citW = citImg.naturalWidth * citScale;
-              const citH = citImg.naturalHeight * citScale;
-              ctx.drawImage(citImg, sx - citW / 2, sy - citH * 0.95, citW, citH);
-            }
-          } else {
-            // Mountain / Placed Object
-            const type = s.objectTypes.get(item.typeId);
-            const img = s.objectImages.get(item.typeId);
-            if (!type || !img || !img.complete || img.naturalWidth === 0) continue;
-
-            const scale = (type.displayHeight / type.naturalHeight) * s.zoom;
-            const drawW = type.naturalWidth * scale;
-            const drawH = type.displayHeight * s.zoom;
-            const drawX = sx - drawW * (type.anchor ? type.anchor.x : 0.5);
-            const drawY = sy - drawH * (type.anchor ? type.anchor.y : 1.0);
-
-            // Contact shadow
-            if (type.shadow && s.shadowImg && s.shadowImg.complete) {
-              const shW = (type.shadow.width || 120) * 3.5 * s.zoom;
-              const shH = (type.shadow.height || 50) * 3.5 * s.zoom;
-              ctx.globalAlpha = type.shadow.alpha || 0.75;
-              ctx.drawImage(s.shadowImg, sx - shW / 2, sy - shH * 0.7, shW, shH);
-              ctx.globalAlpha = 1.0;
-            }
-
-            // Mountain Sprite
-            ctx.drawImage(img, drawX, drawY, drawW, drawH);
-          }
-        }
-      }
-
-      // 3. Draw active Marches & Scouts
-      marches.forEach(m => {
-        const sx = (m.x - s.camX) * s.zoom + w / 2;
-        const sy = (m.y - s.camY) * s.zoom + h / 2;
-
-        ctx.strokeStyle = 'rgba(240, 201, 90, 0.7)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        const startX = (m.originX - s.camX) * s.zoom + w / 2;
-        const startY = (m.originY - s.camY) * s.zoom + h / 2;
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(sx, sy);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Unit marker
-        ctx.fillStyle = '#f0c95a';
-        ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#0a0d14';
-        ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill();
-      });
-
-      // 4. Target Waypoint Marker
-      if (s.targetMarker) {
-        const mx = (s.targetMarker.x - s.camX) * s.zoom + w / 2;
-        const my = (s.targetMarker.y - s.camY) * s.zoom + h / 2;
-        ctx.strokeStyle = '#f0c95a';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.arc(mx, my, 12, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(mx - 18, my); ctx.lineTo(mx + 18, my); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(mx, my - 18); ctx.lineTo(mx, my + 18); ctx.stroke();
-      }
-
-      // 5. Render Radar Minimap
-      if (rctx && s.minimapImg && s.minimapImg.complete) {
-        const rw = radar.width = radar.clientWidth;
-        const rh = radar.height = radar.clientHeight;
-        rctx.drawImage(s.minimapImg, 0, 0, rw, rh);
-
-        // Viewport frustum rectangle
-        const rx = ((s.camX - originX) / t.worldSize.width) * rw;
-        const ry = ((s.camY - originY) / t.worldSize.height) * rh;
-        const rvw = ((w / s.zoom) / t.worldSize.width) * rw;
-        const rvh = ((h / s.zoom) / t.worldSize.height) * rh;
-
-        rctx.strokeStyle = '#fff';
-        rctx.lineWidth = 1.5;
-        rctx.strokeRect(rx - rvw/2, ry - rvh/2, rvw, rvh);
-
-        // Capital dots
-        Object.entries(CAPITALS).forEach(([k, cap]) => {
-          const cx = ((cap.x - originX) / t.worldSize.width) * rw;
-          const cy = ((cap.y - originY) / t.worldSize.height) * rh;
-          rctx.fillStyle = cap.color;
-          rctx.beginPath(); rctx.arc(cx, cy, 3, 0, Math.PI * 2); rctx.fill();
-        });
-      }
+        setOnline(!!session.online);
+      },
+      onNotice: (msg) => { if (cbRef.current.onNotice) cbRef.current.onNotice(msg); },
+      onCastleSelect: (castle) => {
+        sound.playClick();
+        if (castle.isPlayer) cbRef.current.onOpenCity();
+        else cbRef.current.onCastleSelect(castle);
+      },
     };
 
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, [marches]);
+    const scene = new WorldScene(bridge);
+    const game = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: hostRef.current,
+      backgroundColor: '#060a0f',
+      scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
+      render: { antialias: true, antialiasGL: false, pixelArt: false }, // antialiasGL:false = no MSAA, lighter on the GPU
+      scene: [scene],
+    });
+    sceneRef.current = scene;
+    gameRef.current = game;
 
-  // Pointer Drag & Pan
-  const handlePointerDown = (ev) => {
-    const s = stateRef.current;
-    s.isDragging = true;
-    s.dragStartX = ev.clientX;
-    s.dragStartY = ev.clientY;
-    s.camStartX = s.camX;
-    s.camStartY = s.camY;
-    s.targetX = s.camX;
-    s.targetY = s.camY;
-  };
+    // The stage can change size without a window resize (HUD wraps, rotation...).
+    const ro = new ResizeObserver(() => game.scale.refresh());
+    ro.observe(hostRef.current);
 
-  const handlePointerMove = (ev) => {
-    const s = stateRef.current;
-    if (!s.isDragging) return;
-    const dx = ev.clientX - s.dragStartX;
-    const dy = ev.clientY - s.dragStartY;
-    s.targetX = s.camStartX - dx / s.zoom;
-    s.targetY = s.camStartY - dy / s.zoom;
+    return () => {
+      ro.disconnect();
+      if (scene.session && scene.session.close) scene.session.close();
+      game.destroy(true);
+      gameRef.current = null;
+      sceneRef.current = null;
+    };
+  }, []);
 
-    // Update territory HUD coordinates
-    const tileX = Math.round((s.targetX / 64 + s.targetY / 32) / 2);
-    const tileY = Math.round((s.targetY / 32 - s.targetX / 64) / 2);
-    setHudCoords(`${tileX}, ${tileY}`);
-  };
-
-  const handlePointerUp = (ev) => {
-    const s = stateRef.current;
-    const dist = Math.hypot(ev.clientX - s.dragStartX, ev.clientY - s.dragStartY);
-    s.isDragging = false;
-
-    // Clicked terrain to set action marker
-    if (dist < 6) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const clickX = ev.clientX - rect.left;
-      const clickY = ev.clientY - rect.top;
-      const worldX = s.camX + (clickX - rect.width / 2) / s.zoom;
-      const worldY = s.camY + (clickY - rect.height / 2) / s.zoom;
-
-      s.targetMarker = { x: worldX, y: worldY };
-      setActionPop({ screenX: clickX, screenY: clickY, worldX, worldY });
-      sound.playClick();
+  // Hidden (City view) -> stop rendering to save battery; visible again -> resume.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    if (!active) {
+      game.loop.sleep();
+      sleptRef.current = true;
+    } else if (sleptRef.current) {
+      sleptRef.current = false;
+      game.loop.wake();
+      game.scale.refresh();
     }
-  };
+  }, [active]);
 
-  const handleWheel = (ev) => {
-    ev.preventDefault();
-    const s = stateRef.current;
-    const factor = ev.deltaY < 0 ? 1.2 : 0.82;
-    s.targetZoom = Math.max(0.08, Math.min(1.4, s.targetZoom * factor));
-  };
+  // Optional frame-rate readout (open the game with ?fps in the address).
+  useEffect(() => {
+    if (!showFps) return;
+    const iv = setInterval(() => {
+      const gm = gameRef.current;
+      const sc = sceneRef.current;
+      if (gm && sc) setFps("fps " + Math.round(gm.loop.actualFps) + " · objects drawn " + (sc.map ? sc.map.visibleObjectCount() : 0));
+    }, 500);
+    return () => clearInterval(iv);
+  }, []);
 
-  const zoomIn = () => { const s = stateRef.current; s.targetZoom = Math.min(1.4, s.targetZoom * 1.3); sound.playClick(); };
-  const zoomOut = () => { const s = stateRef.current; s.targetZoom = Math.max(0.08, s.targetZoom * 0.75); sound.playClick(); };
+  // Culture tab changed by the player -> fly to that territory.
+  useEffect(() => {
+    if (culture === lastCultureRef.current) return;
+    lastCultureRef.current = culture;
+    const scene = sceneRef.current;
+    const cap = CAPITALS[culture];
+    if (!scene || !cap) return;
+    scene.flyTo(cap.x, cap.y, 0.32);
+    if (activeRef.current) sound.playFly();
+  }, [culture]);
+
+  // Radar (10 fps): minimap image + camera rectangle + castle dots.
+  useEffect(() => {
+    if (!active || !mapReady) return;
+    const mini = new Image();
+    mini.src = '/minimap.png';
+    let raf = 0;
+    let last = 0;
+    const draw = (ts) => {
+      raf = requestAnimationFrame(draw);
+      if (ts - last < 100) return;
+      last = ts;
+      const scene = sceneRef.current;
+      const radar = radarRef.current;
+      if (!scene || !scene.map || !radar) return;
+      const ctx = radar.getContext('2d');
+      const rw = radar.clientWidth;
+      const rh = radar.clientHeight;
+      if (radar.width !== rw) radar.width = rw;
+      if (radar.height !== rh) radar.height = rh;
+      ctx.clearRect(0, 0, rw, rh);
+
+      const t = scene.map.manifest.terrain;
+      const W = t.worldSize.width;
+      const H = t.worldSize.height;
+      if (mini.complete && mini.naturalWidth > 0) ctx.drawImage(mini, 0, 0, rw, rh);
+
+      // Castles
+      if (scene.session) {
+        for (const c of scene.session.layer.getCastles()) {
+          const civ = civById(c.civId);
+          const cx = ((c.worldX - t.origin.x) / W) * rw;
+          const cy = ((c.worldY - t.origin.y) / H) * rh;
+          ctx.fillStyle = c.isPlayer ? '#ffd34d' : cssHex(civ ? civ.color : 0xffffff);
+          ctx.beginPath();
+          ctx.arc(cx, cy, c.isPlayer ? 4 : 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          if (c.isPlayer) { ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); }
+        }
+      }
+
+      // Camera rectangle
+      const v = scene.cameras.main.worldView;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(((v.x - t.origin.x) / W) * rw, ((v.y - t.origin.y) / H) * rh, (v.width / W) * rw, (v.height / H) * rh);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [active, mapReady]);
+
+  const zoomIn = () => { const s = sceneRef.current; if (s) s.zoomBy(1.3); sound.playClick(); };
+  const zoomOut = () => { const s = sceneRef.current; if (s) s.zoomBy(0.75); sound.playClick(); };
   const resetCamera = () => {
-    const s = stateRef.current;
-    if (CAPITALS[culture]) {
-      s.targetX = CAPITALS[culture].x;
-      s.targetY = CAPITALS[culture].y;
-      s.targetZoom = 0.28;
-      sound.playFly();
-    }
-  };
-
-  // Minimap Click Teleport
-  const handleRadarClick = (ev) => {
-    const s = stateRef.current;
-    if (!s.manifest) return;
-    const rect = radarRef.current.getBoundingClientRect();
-    const rx = (ev.clientX - rect.left) / rect.width;
-    const ry = (ev.clientY - rect.top) / rect.height;
-    const t = s.manifest.terrain;
-    s.targetX = t.origin.x + rx * t.worldSize.width;
-    s.targetY = t.origin.y + ry * t.worldSize.height;
+    const s = sceneRef.current;
+    if (!s) return;
+    const p = s.session && s.session.player;
+    if (p) s.flyTo(p.worldX, p.worldY - 120, 0.45);
+    else if (CAPITALS[culture]) s.flyTo(CAPITALS[culture].x, CAPITALS[culture].y, 0.28);
     sound.playFly();
   };
 
+  // Minimap click teleport
+  const handleRadarClick = (ev) => {
+    const s = sceneRef.current;
+    if (!s || !s.map) return;
+    const rect = radarRef.current.getBoundingClientRect();
+    const t = s.map.manifest.terrain;
+    s.flyTo(
+      t.origin.x + ((ev.clientX - rect.left) / rect.width) * t.worldSize.width,
+      t.origin.y + ((ev.clientY - rect.top) / rect.height) * t.worldSize.height
+    );
+    sound.playFly();
+  };
+
+  // Scouts leave from the player's castle (or the culture's capital before joining).
   const dispatchScout = () => {
     if (!actionPop) return;
+    const s = sceneRef.current;
+    const p = s && s.session && s.session.player;
     const cap = CAPITALS[culture];
+    const ox = p ? p.worldX : cap.x;
+    const oy = p ? p.worldY : cap.y;
     onAddMarch({
       id: Date.now(),
       title: "Scout to (" + Math.round(actionPop.worldX) + ")",
-      originX: cap.x,
-      originY: cap.y,
-      x: cap.x,
-      y: cap.y,
+      originX: ox,
+      originY: oy,
+      x: ox,
+      y: oy,
       targetX: actionPop.worldX,
       targetY: actionPop.worldY,
       speed: 300,
       timeLeft: 12
     });
     setActionPop(null);
-    stateRef.current.targetMarker = null;
+    if (s) s.clearMarker();
     sound.playUpgrade();
   };
 
-  return e("div", { className: "world-map-wrap", onPointerDown: handlePointerDown, onPointerMove: handlePointerMove, onPointerUp: handlePointerUp, onWheel: handleWheel },
-    e("canvas", { ref: canvasRef, id: "world-canvas" }),
-    
+  const terr = view.territory === 255 ? null : civByTerritory(view.territory);
+
+  return e("div", { className: "world-map-wrap", style: active ? undefined : { visibility: "hidden", pointerEvents: "none" } },
+    e("div", { className: "phaser-host", ref: hostRef }),
+
+    !mapReady && !error && e("div", { className: "world-loading" }, "Loading baked isometric world & objects..."),
+    error && e("div", { className: "world-loading", style: { color: "#f08a8a" } }, "Couldn't start the world: " + error),
+
     // Minimap Radar
     e("div", { className: "minimap-radar", onClick: handleRadarClick },
       e("canvas", { ref: radarRef }),
@@ -1025,47 +1032,23 @@ function WorldMapView({ culture, onSelectCulture, onSwitchToCity, marches, onAdd
     e("div", { className: "world-controls" },
       e("button", { className: "world-btn", onClick: zoomIn, "aria-label": "Zoom in" }, Icon("plus")),
       e("button", { className: "world-btn", onClick: zoomOut, "aria-label": "Zoom out" }, Icon("minus")),
-      e("button", { className: "world-btn", onClick: resetCamera, "aria-label": "Center capital" }, Icon("locate"))),
+      e("button", { className: "world-btn", onClick: resetCamera, "aria-label": "Center my castle" }, Icon("locate"))),
 
-    // Territory Info HUD
+    // Territory Info HUD (territory under the middle of the screen)
     e("div", { className: "territory-hud" },
-      e("span", { className: "territory-dot", style: { background: CAPITALS[culture]?.color || "#21879e" } }),
-      CAPITALS[culture]?.name || "Neutral Territory",
-      e("span", { style: { opacity: 0.6 } }, "· Tile: " + hudCoords)),
+      e("span", { className: "territory-dot", style: { background: terr ? cssHex(terr.color) : "#8a94a3" } }),
+      terr ? terr.name : "Neutral Territory",
+      e("span", { style: { opacity: 0.6 } }, "· Tile: " + view.tileX + ", " + view.tileY),
+      online && e("span", { style: { color: "#6fe3a1", fontWeight: 700 } }, "· ONLINE")),
 
-    // Citadels on World Map
-    Object.entries(CAPITALS).map(([k, cap]) => {
-      const s = stateRef.current;
-      const w = canvasRef.current?.width || window.innerWidth;
-      const h = canvasRef.current?.height || window.innerHeight;
-      const screenX = (cap.x - s.camX) * s.zoom + w / 2;
-      const screenY = (cap.y - s.camY) * s.zoom + h / 2;
-
-      // Only show when on screen
-      if (screenX < -100 || screenX > w + 100 || screenY < -100 || screenY > h + 100) return null;
-
-      return e("div", {
-        key: k, className: "citadel-marker",
-        style: { left: screenX + "px", top: screenY + "px" },
-        onClick: (ev) => {
-          ev.stopPropagation();
-          onSelectCulture(k);
-          sound.playClick();
-          if (k === culture) onSwitchToCity();
-        }
-      },
-        e("div", { className: "citadel-icon-wrap", style: { borderColor: cap.color, boxShadow: "0 0 14px " + cap.color } }, Icon("hall")),
-        e("div", { className: "citadel-banner" },
-          e("span", { className: "tag" }, "CAPITAL"),
-          cap.title));
-    }),
+    showFps && e("div", { style: { position: "absolute", left: 6, top: 6, zIndex: 5, padding: "2px 6px", background: "rgba(0,0,0,.65)", color: "#7cfc9a", font: "12px monospace", pointerEvents: "none" } }, fps),
 
     // Action popup on map click
     actionPop && e("div", { className: "action-target-pop", style: { left: actionPop.screenX + "px", top: actionPop.screenY + "px" } },
       e("b", null, "Uncharted Terrain"),
       e("span", { className: "coord" }, Math.round(actionPop.worldX) + ", " + Math.round(actionPop.worldY)),
       e("button", { className: "march-btn", onClick: dispatchScout }, Icon("sword"), "Dispatch Scout"),
-      e("button", { className: "action-btn secondary", style: { padding: "4px", fontSize: "10px" }, onClick: () => setActionPop(null) }, "Cancel"))
+      e("button", { className: "action-btn secondary", style: { padding: "4px", fontSize: "10px" }, onClick: () => { setActionPop(null); if (sceneRef.current) sceneRef.current.clearMarker(); } }, "Cancel"))
   );
 }
 
@@ -1255,14 +1238,19 @@ function App() {
 
     // Main Stage Area (Dual View)
     e("div", { className: "stage", ref: stageRef },
-      viewMode === "world" ?
-        e(WorldMapView, {
-          culture,
-          onSelectCulture: setCulture,
-          onSwitchToCity: () => setViewMode("city"),
-          marches,
-          onAddMarch: (m) => setMarches((prev) => [...prev, m])
-        }) :
+      // The world map stays mounted (hidden) while you are in the city, so the
+      // castles and the map don't reload every time you switch views.
+      e(WorldMapView, {
+        active: viewMode === "world",
+        culture,
+        onJoin: (c, player, online) => { setCulture(c); showToast("Welcome, " + player.name + "! (" + (online ? "online" : "offline") + ")"); },
+        onNotice: showToast,
+        onCastleSelect: (castle) => showToast(castle.name + " · " + ((civById(castle.civId) || {}).name || castle.civId)),
+        onOpenCity: () => setViewMode("city"),
+        marches,
+        onAddMarch: (m) => setMarches((prev) => [...prev, m])
+      }),
+      viewMode === "city" &&
         e("div", { className: "city-container", ref: scrollerRef, onScroll: () => setHintVisible(false) },
           e("div", { className: "city-inner", style: { "--u": (mapH / 100) + "px", height: mapH + "px" } },
             e("img", { src: `./kingdom_art/${culture}.jpg`, alt: theme.kingdomName, draggable: false }),
