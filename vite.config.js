@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { createGameServer } from './server/gameServer.js';
 
 /**
  * Bake server (dev + preview only)
@@ -89,7 +88,9 @@ function readBody(req) {
 function findMissingFiles(manifest) {
   const wanted = [];
   for (const t of (manifest.terrain && manifest.terrain.tiles) || []) wanted.push(t.file);
-  for (const o of manifest.objectTypes || []) wanted.push(o.image);
+  for (const o of manifest.objectTypes || []) {
+    wanted.push(o.image);
+  }
   if (manifest.shadowTexture) wanted.push(manifest.shadowTexture);
   if (manifest.terrain && manifest.terrain.minimap) wanted.push(manifest.terrain.minimap.file);
   for (const d of Object.values(manifest.data || {})) wanted.push(d.file);
@@ -193,25 +194,8 @@ function bakeServerPlugin() {
   };
 }
 
-/**
- * Local online mode: several tabs / devices share one world (see server/gameServer.js).
- * Dev + preview only, like the bake server.
- */
-function gameServerPlugin() {
-  const game = createGameServer({ root: ROOT });
-  return {
-    name: 'game-server-plugin',
-    configureServer(server) {
-      server.middlewares.use(game.middleware);
-    },
-    configurePreviewServer(server) {
-      server.middlewares.use(game.middleware);
-    },
-  };
-}
-
 export default defineConfig({
-  plugins: [bakeServerPlugin(), gameServerPlugin()],
+  plugins: [bakeServerPlugin()],
   server: {
     port: 5173,
     host: true,
@@ -220,7 +204,7 @@ export default defineConfig({
       // here. Vite learns which files exist in public/ from this watcher;
       // if it can't see freshly baked files it answers requests for them
       // with the index page (HTTP 200, text/html) instead of the image.
-      ignored: ['**/.bake-staging/**', '**/dist/**', '**/.game-data/**'],
+      ignored: ['**/.bake-staging/**', '**/dist/**'],
     },
   },
   build: {

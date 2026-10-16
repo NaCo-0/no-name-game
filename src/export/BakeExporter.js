@@ -38,6 +38,7 @@ import { WorldConfig } from '../config/WorldConfig.js';
 import { IsoMath } from '../world/IsoMath.js';
 import { BiomeId } from '../world/BiomeRegistry.js';
 import { textureToDataURL, downloadBlob } from './ProjectIO.js';
+import { getCastShadow } from '../rendering/CastShadowGenerator.js';
 
 const INSTANCE_DEPTH_BASE = 1000; // keep in sync with EditorController
 const SHADOW_TEXTURE_KEY = 'contact_shadow';
@@ -93,6 +94,56 @@ async function commitBake() {
   const res = await fetch('/api/bake-commit', { method: 'POST' });
   if (!res.ok) throw new Error(`Bake was not applied: ${await readError(res)}`);
   return res.json();
+}
+
+/**
+ * One entry per placed object that has a shadow: the image to draw plus where
+ * it lands in world pixels. Cast shadows use the projected-silhouette canvas,
+ * the others use the round contact-shadow texture.
+ */
+function collectShadowItems(scene, editor) {
+  const items = [];
+  const contactImg = scene.textures.get(SHADOW_TEXTURE_KEY).getSourceImage();
+  for (const inst of editor.instances.values()) {
+    const t = editor.objectTypes.get(inst.typeId);
+    if (!t || !t.shadowEnabled) continue;
+    const w = IsoMath.tileToWorld(inst.tileX, inst.tileY);
+    const instScale = inst.scale ?? 1;
+    let img, dw, dh, left, top, alpha;
+    if (t.shadowCast) {
+      const c = getCastShadow(scene, t.textureKey, t.anchorX, t.anchorY, !!inst.flipX, editor.light, t.shadowLift);
+      img = scene.textures.get(c.key).getSourceImage();
+      const k = (t.displayHeight / t.naturalHeight) * instScale;
+      dw = img.width * k;
+      dh = img.height * k;
+      left = w.x - c.originX * dw;
+      top = w.y - c.originY * dh;
+      alpha = t.shadowCastAlpha;
+    } else {
+      img = contactImg;
+      dw = t.shadowWidth * instScale;
+      dh = t.shadowHeight * instScale;
+      left = w.x - dw / 2;
+      top = w.y - t.shadowHeight * 0.15 - dh / 2;
+      alpha = t.shadowAlpha;
+    }
+    items.push({ img, left, top, dw, dh, alpha });
+  }
+  return items;
+}
+
+/** Multiplies every shadow overlapping this terrain tile onto its canvas. */
+function paintShadowsOnto(canvas, worldX, worldY, worldSize, scale, items) {
+  const ctx = canvas.getContext('2d');
+  ctx.globalCompositeOperation = 'multiply';
+  for (const it of items) {
+    if (it.left > worldX + worldSize || it.left + it.dw < worldX) continue;
+    if (it.top > worldY + worldSize || it.top + it.dh < worldY) continue;
+    ctx.globalAlpha = it.alpha;
+    ctx.drawImage(it.img, (it.left - worldX) * scale, (it.top - worldY) * scale, it.dw * scale, it.dh * scale);
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 /** Marks every tile whose center is within an instance's blockRadius. */
@@ -200,10 +251,17 @@ export async function bakeExport(
       displayHeight: t.displayHeight,
       anchor: { x: t.anchorX, y: t.anchorY },
       tint: t.tint,
-      shadow: t.shadowEnabled ? { width: t.shadowWidth, height: t.shadowHeight, alpha: t.shadowAlpha } : null,
+      // Shadows of placed objects are painted INTO the terrain tiles at bake time
+      // (zero runtime cost), so the runtime must not draw any shadow sprites.
+      shadow: null,
+      shadowBaked: !!t.shadowEnabled,
       blockRadius: t.blockRadius,
     });
   }
+
+  // ---- shadows that get painted into the terrain tiles -------------------
+  const shadowItems = collectShadowItems(scene, editor);
+
   await saveFile('objects/_shadow.png', await dataURLToBlob(textureToDataURL(scene, SHADOW_TEXTURE_KEY)));
 
   const objects = [...editor.instances.values()]
@@ -274,6 +332,14 @@ export async function bakeExport(
         scale
       );
       if (!canvas) continue;
+      paintShadowsOnto(
+        canvas,
+        originX + col * tileWorldSize,
+        originY + row * tileWorldSize,
+        tileWorldSize,
+        scale,
+        shadowItems
+      );
       const file = `terrain/t_${col}_${row}.${ext}`;
       await saveFile(file, await canvasToBlob(canvas, mime, quality));
       tiles.push({ col, row, file });

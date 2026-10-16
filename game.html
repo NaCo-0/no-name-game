@@ -276,6 +276,7 @@
 import Phaser from 'phaser';
 import { BakedMap } from './runtime/BakedMapLoader.js';
 import { startPlayerSession } from './runtime/PlayerSession.js';
+import { createProvinceLayer } from './runtime/ProvinceLayer.js';
 import { probeOnline, startOnlineSession } from './runtime/OnlineSession.js';
 import { makeRng } from './runtime/SpawnPlanner.js';
 import { civById, civByTerritory } from './runtime/civilizations.js';
@@ -663,6 +664,14 @@ class WorldScene extends Phaser.Scene {
     }
     this.bridge.onMapReady();
 
+    // 1b. provinces of the outer band: faint outlines, central buildings, names.
+    //     Must come BEFORE the castle session (it blocks the ground under the capitals).
+    try {
+      this.provinces = await createProvinceLayer(this, this.map, { assetBase: '/assets/provinces/' });
+    } catch (err) {
+      console.warn('[WorldScene] provinces could not be created:', err);
+    }
+
     // 2. the runtime: join screen -> player castle + the other castles.
     //    ui:false = we keep this game's own React interface instead of runtime/ui.
     //    ONLINE when the game server (vite.config.js) answers, otherwise OFFLINE.
@@ -990,6 +999,12 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onN
     sound.playFly();
   };
 
+  // Map tile under a tap (world pixels are meaningless to players).
+  const tapTile = (pop) => {
+    const m = sceneRef.current && sceneRef.current.map;
+    return m ? m.worldToTile(pop.worldX, pop.worldY) : { x: 0, y: 0 };
+  };
+
   // Scouts leave from the player's castle (or the culture's capital before joining).
   const dispatchScout = () => {
     if (!actionPop) return;
@@ -1000,7 +1015,7 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onN
     const oy = p ? p.worldY : cap.y;
     onAddMarch({
       id: Date.now(),
-      title: "Scout to (" + Math.round(actionPop.worldX) + ")",
+      title: "Scout to (" + Math.round(tapTile(actionPop).x) + ", " + Math.round(tapTile(actionPop).y) + ")",
       originX: ox,
       originY: oy,
       x: ox,
@@ -1046,7 +1061,7 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onN
     // Action popup on map click
     actionPop && e("div", { className: "action-target-pop", style: { left: actionPop.screenX + "px", top: actionPop.screenY + "px" } },
       e("b", null, "Uncharted Terrain"),
-      e("span", { className: "coord" }, Math.round(actionPop.worldX) + ", " + Math.round(actionPop.worldY)),
+      e("span", { className: "coord" }, "Tile " + Math.round(tapTile(actionPop).x) + ", " + Math.round(tapTile(actionPop).y)),
       e("button", { className: "march-btn", onClick: dispatchScout }, Icon("sword"), "Dispatch Scout"),
       e("button", { className: "action-btn secondary", style: { padding: "4px", fontSize: "10px" }, onClick: () => { setActionPop(null); if (sceneRef.current) sceneRef.current.clearMarker(); } }, "Cancel"))
   );

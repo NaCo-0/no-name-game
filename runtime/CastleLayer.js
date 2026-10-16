@@ -16,12 +16,12 @@ import Phaser from 'phaser';
 import { CIVILIZATIONS, civById } from './civilizations.js';
 
 /** Castle width on screen at zoom 1, in pixels (a mountain is ~730px wide). */
-export const CASTLE_DISPLAY_WIDTH = 420;
+export const CASTLE_DISPLAY_WIDTH = 260;
 /** Must match INSTANCE_DEPTH_BASE in the editor / exporter. */
 const DEPTH_BASE = 1000;
 const LABEL_DEPTH = 100000;
 /** Tiles around a castle that become non-walkable. */
-const FOOTPRINT_RADIUS_TILES = 2.4;
+const FOOTPRINT_RADIUS_TILES = 1.5;
 
 export class CastleLayer {
   /**

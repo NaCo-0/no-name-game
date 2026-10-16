@@ -22,7 +22,6 @@ import { EditorController } from '../editor/EditorController.js';
 import { EditorPanel } from '../editor/EditorPanel.js';
 import { serializeProject, loadProject, downloadBlob } from '../export/ProjectIO.js';
 import { bakeExport } from '../export/BakeExporter.js';
-import { startPlayerSession } from '../../runtime/PlayerSession.js';
 
 // Bundled mountain assets (see the "Mountain Rings" editor section) — not
 // user-uploaded, so they're loaded like any other static asset via

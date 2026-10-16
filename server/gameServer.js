@@ -25,6 +25,9 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { SpawnPlanner, makeRng } from '../runtime/SpawnPlanner.js';
+import { buildProvinces, blockCapitalFootprints } from '../runtime/ProvinceMap.js';
+import { PROVINCE_CONFIG, PROVINCES_PER_CIV } from '../runtime/provinces.js';
+import { CIVILIZATIONS as PROVINCE_CIVS } from '../runtime/civilizations.js';
 import { CIVILIZATIONS, civById, randomName } from '../runtime/civilizations.js';
 
 const API = '/api/game/';
@@ -122,11 +125,22 @@ export function createGameServer({ root, publicDir = 'public', dataDir = '.game-
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const bin = (d) => new Uint8Array(fs.readFileSync(path.join(PUBLIC, d.file)));
+    // Province capitals block their ground, exactly like on the client, so
+    // new castles never land on top of one.
+    const gw = manifest.grid.width;
+    const gh = manifest.grid.height;
+    const collision = bin(manifest.data.collision);
+    const territory = bin(manifest.data.territory);
+    const { provinces } = buildProvinces(
+      { width: gw, height: gh, territory, collision, objects: manifest.objects ?? [] },
+      { civCount: PROVINCE_CIVS.length, perCiv: PROVINCES_PER_CIV, sectionCount: 6, startAngleDeg: 0, config: PROVINCE_CONFIG }
+    );
+    blockCapitalFootprints(collision, gw, gh, provinces, PROVINCE_CONFIG.capitalFootprintRadiusTiles);
     const planner = new SpawnPlanner({
-      width: manifest.grid.width,
-      height: manifest.grid.height,
-      collision: bin(manifest.data.collision),
-      territory: bin(manifest.data.territory),
+      width: gw,
+      height: gh,
+      collision,
+      territory,
       objects: manifest.objects ?? [],
     });
     mapCache = { mtime: st.mtimeMs, planner, key: String(st.mtimeMs) };

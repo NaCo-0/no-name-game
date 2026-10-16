@@ -1,82 +1,103 @@
 {
- "mapKey": "1791764957459.906",
+ "mapKey": "1792004125904.4365",
  "players": {
+  "bahram": {
+   "id": "u_bahram",
+   "name": "Bahram",
+   "civId": "persia",
+   "tileX": 506.5,
+   "tileY": 386.5
+  },
+  "xerxes": {
+   "id": "u_xerxes",
+   "name": "Xerxes",
+   "civId": "persia",
+   "tileX": 504.5,
+   "tileY": 452.5
+  },
+  "zal": {
+   "id": "u_zal",
+   "name": "Zal",
+   "civId": "persia",
+   "tileX": 560.5,
+   "tileY": 348.5
+  },
+  "vahid": {
+   "id": "u_vahid",
+   "name": "Vahid",
+   "civId": "persia",
+   "tileX": 468.5,
+   "tileY": 498.5
+  },
+  "vahid daios": {
+   "id": "u_vahid daios",
+   "name": "Vahid daios",
+   "civId": "persia",
+   "tileX": 546.5,
+   "tileY": 394.5
+  },
   "mitra": {
    "id": "u_mitra",
    "name": "Mitra",
    "civId": "persia",
-   "tileX": 468.5,
+   "tileX": 514.5,
+   "tileY": 344.5
+  },
+  "sven": {
+   "id": "u_sven",
+   "name": "Sven",
+   "civId": "viking",
+   "tileX": 444.5,
+   "tileY": 142.5
+  },
+  "salim": {
+   "id": "u_salim",
+   "name": "Salim",
+   "civId": "arab",
+   "tileX": 156.5,
+   "tileY": 494.5
+  },
+  "borte": {
+   "id": "u_borte",
+   "name": "Borte",
+   "civId": "mongol",
+   "tileX": 362.5,
+   "tileY": 532.5
+  },
+  "camilla": {
+   "id": "u_camilla",
+   "name": "Camilla",
+   "civId": "rome",
+   "tileX": 292.5,
+   "tileY": 230.5
+  },
+  "tolui": {
+   "id": "u_tolui",
+   "name": "Tolui",
+   "civId": "mongol",
+   "tileX": 224.5,
    "tileY": 504.5
   },
-  "remus": {
-   "id": "u_remus",
-   "name": "Remus",
-   "civId": "rome",
-   "tileX": 346.5,
-   "tileY": 42.5
-  },
-  "naco hastam": {
-   "id": "u_naco hastam",
-   "name": "NaCo hastam",
-   "civId": "persia",
-   "tileX": 456.5,
-   "tileY": 410.5
-  },
-  "nazari": {
-   "id": "u_nazari",
-   "name": "nazari",
-   "civId": "mongol",
-   "tileX": 330.5,
-   "tileY": 406.5
-  },
-  "anahita": {
-   "id": "u_anahita",
-   "name": "Anahita",
-   "civId": "persia",
-   "tileX": 370.5,
-   "tileY": 320.5
-  },
-  "sag": {
-   "id": "u_sag",
-   "name": "Sag",
-   "civId": "persia",
-   "tileX": 496.5,
-   "tileY": 440.5
-  },
-  "ogedei": {
-   "id": "u_ogedei",
-   "name": "Ogedei",
-   "civId": "mongol",
-   "tileX": 246.5,
-   "tileY": 480.5
-  },
-  "astrid": {
-   "id": "u_astrid",
-   "name": "Astrid",
-   "civId": "viking",
-   "tileX": 492.5,
-   "tileY": 216.5
-  },
-  "marcus": {
-   "id": "u_marcus",
-   "name": "Marcus",
-   "civId": "rome",
-   "tileX": 282.5,
-   "tileY": 194.5
-  },
-  "hakim": {
-   "id": "u_hakim",
-   "name": "Hakim",
+  "omar": {
+   "id": "u_omar",
+   "name": "Omar",
    "civId": "arab",
-   "tileX": 86.5,
-   "tileY": 444.5
+   "tileX": 218.5,
+   "tileY": 332.5
   },
-  "sora": {
-   "id": "u_sora",
-   "name": "Sora",
-   "civId": "japan",
-   "tileX": 222.5,
-   "tileY": 214.5
+  "bayar": {
+   "id": "u_bayar",
+   "name": "Bayar",
+   "civId": "mongol",
+   "tileX": 356.5,
+   "tileY": 498.5
+  },
+  "mehrdad": {
+   "id": "u_mehrdad",
+   "name": "Mehrdad",
+   "civId": "persia",
+   "tileX": 428.5,
+   "tileY": 450.5
   }
  },
  "npcs": [
@@ -84,127 +105,127 @@
    "id": "npc_persia_0",
    "name": "Shirin",
    "civId": "persia",
-   "tileX": 402.5,
-   "tileY": 340.5
+   "tileX": 372.5,
+   "tileY": 342.5
   },
   {
    "id": "npc_persia_1",
    "name": "Roshanak",
    "civId": "persia",
-   "tileX": 420.5,
+   "tileX": 466.5,
    "tileY": 444.5
   },
   {
    "id": "npc_persia_2",
-   "name": "Anahita",
+   "name": "Kaveh",
    "civId": "persia",
-   "tileX": 508.5,
-   "tileY": 370.5
+   "tileX": 476.5,
+   "tileY": 364.5
   },
   {
    "id": "npc_mongol_0",
    "name": "Arghun",
    "civId": "mongol",
-   "tileX": 268.5,
-   "tileY": 512.5
-  },
-  {
-   "id": "npc_mongol_1",
-   "name": "Jebe",
-   "civId": "mongol",
-   "tileX": 308.5,
-   "tileY": 528.5
-  },
-  {
-   "id": "npc_mongol_2",
-   "name": "Tolui",
-   "civId": "mongol",
-   "tileX": 358.5,
+   "tileX": 262.5,
    "tileY": 504.5
   },
   {
+   "id": "npc_mongol_1",
+   "name": "Tsetseg",
+   "civId": "mongol",
+   "tileX": 308.5,
+   "tileY": 502.5
+  },
+  {
+   "id": "npc_mongol_2",
+   "name": "Hulagu",
+   "civId": "mongol",
+   "tileX": 290.5,
+   "tileY": 402.5
+  },
+  {
    "id": "npc_arab_0",
-   "name": "Malik",
+   "name": "Harun",
    "civId": "arab",
-   "tileX": 90.5,
-   "tileY": 346.5
+   "tileX": 192.5,
+   "tileY": 360.5
   },
   {
    "id": "npc_arab_1",
-   "name": "Omar",
+   "name": "Idris",
    "civId": "arab",
-   "tileX": 136.5,
-   "tileY": 398.5
+   "tileX": 106.5,
+   "tileY": 444.5
   },
   {
    "id": "npc_arab_2",
-   "name": "Rashid",
+   "name": "Layla",
    "civId": "arab",
-   "tileX": 232.5,
-   "tileY": 346.5
+   "tileX": 122.5,
+   "tileY": 398.5
   },
   {
    "id": "npc_japan_0",
-   "name": "Akira",
+   "name": "Ryu",
    "civId": "japan",
-   "tileX": 174.5,
-   "tileY": 170.5
+   "tileX": 116.5,
+   "tileY": 154.5
   },
   {
    "id": "npc_japan_1",
-   "name": "Mizuki",
+   "name": "Kenji",
    "civId": "japan",
-   "tileX": 206.5,
-   "tileY": 244.5
+   "tileX": 146.5,
+   "tileY": 212.5
   },
   {
    "id": "npc_japan_2",
-   "name": "Hideo",
+   "name": "Mizuki",
    "civId": "japan",
-   "tileX": 96.5,
-   "tileY": 154.5
+   "tileX": 102.5,
+   "tileY": 206.5
   },
   {
    "id": "npc_rome_0",
    "name": "Livia",
    "civId": "rome",
-   "tileX": 306.5,
-   "tileY": 108.5
+   "tileX": 316.5,
+   "tileY": 188.5
   },
   {
    "id": "npc_rome_1",
-   "name": "Sulla",
+   "name": "Flavia",
    "civId": "rome",
-   "tileX": 240.5,
-   "tileY": 60.5
+   "tileX": 372.5,
+   "tileY": 54.5
   },
   {
    "id": "npc_rome_2",
-   "name": "Titus",
+   "name": "Cato",
    "civId": "rome",
-   "tileX": 226.5,
-   "tileY": 96.5
+   "tileX": 202.5,
+   "tileY": 62.5
   },
   {
    "id": "npc_viking_0",
-   "name": "Sigrid",
+   "name": "Olaf",
    "civId": "viking",
-   "tileX": 540.5,
-   "tileY": 192.5
+   "tileX": 506.5,
+   "tileY": 166.5
   },
   {
    "id": "npc_viking_1",
-   "name": "Bjorn",
+   "name": "Thora",
    "civId": "viking",
-   "tileX": 458.5,
-   "tileY": 100.5
+   "tileX": 470.5,
+   "tileY": 106.5
   },
   {
    "id": "npc_viking_2",
-   "name": "Ivar",
+   "name": "Helga",
    "civId": "viking",
-   "tileX": 512.5,
-   "tileY": 168.5
+   "tileX": 494.5,
+   "tileY": 224.5
   }
  ]
 }
