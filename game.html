@@ -267,6 +267,43 @@
   .menu-item .icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent-color); }
   .toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(10px); background: #14100c; color: #f0e9dc; padding: 10px 20px; border-radius: 999px; font-size: 12.5px; font-weight: 600; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; border: 1px solid rgba(255,255,255,.15); white-space: nowrap; display: flex; align-items: center; gap: 7px; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- Barracks (troop training) ---------- */
+  .barracks { position: fixed; inset: 0; z-index: 92; display: flex; flex-direction: column; background: #0b0d12 center bottom / cover no-repeat; color: #f4efe3; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+  .barracks.open { opacity: 1; pointer-events: auto; }
+  .barracks::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 38%, rgba(8,10,14,.88) 66%, rgba(8,10,14,.96) 100%); pointer-events: none; }
+  .barracks > * { position: relative; }
+  .bk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 6px; }
+  .bk-title { font-weight: 800; font-size: 16px; letter-spacing: .04em; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+  .bk-title small { display: block; font-size: 11px; font-weight: 600; opacity: .8; letter-spacing: .08em; }
+  .bk-stage { flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; }
+  .bk-hero { height: 100%; max-height: 100%; width: auto; max-width: 70%; object-fit: contain; filter: drop-shadow(0 10px 14px rgba(0,0,0,.55)); }
+  .bk-panel { padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px)); max-width: 560px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+  .bk-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .bk-tab { flex: 1; padding: 7px 4px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.07); color: #f4efe3; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .bk-tab.active { background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); border-color: var(--accent-color); }
+  .bk-cards { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .bk-card { flex: 0 0 auto; width: 78px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); cursor: pointer; padding: 4px 4px 5px; text-align: center; position: relative; color: inherit; }
+  .bk-card.active { border-color: var(--highlight-color); background: rgba(240,201,90,.14); }
+  .bk-card.special { border-color: rgba(240,201,90,.55); }
+  .bk-card img { width: 100%; height: 76px; object-fit: contain; object-position: center top; display: block; }
+  .bk-card span { display: block; font-size: 10px; font-weight: 700; line-height: 1.15; margin-top: 3px; }
+  .bk-lv { position: absolute; top: 3px; left: 3px; font-size: 9px; font-weight: 800; background: rgba(0,0,0,.7); border-radius: 6px; padding: 1px 5px; }
+  .bk-card.special .bk-lv { background: var(--highlight-color); color: #1a1408; }
+  .bk-own { position: absolute; top: 3px; right: 3px; font-size: 9px; font-weight: 800; background: var(--accent-color); border-radius: 6px; padding: 1px 5px; }
+  .bk-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 2px 6px; }
+  .bk-info b { font-size: 14px; }
+  .bk-info small { opacity: .75; font-size: 11px; }
+  .bk-train { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bk-qty { display: flex; align-items: center; gap: 4px; }
+  .bk-qty button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1); color: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+  .bk-qty button.max { width: auto; padding: 0 9px; font-size: 11px; }
+  .bk-qty b { min-width: 34px; text-align: center; font-size: 15px; }
+  .bk-train .cost-chip { background: rgba(0,0,0,.45); }
+  .bk-go { margin-left: auto; padding: 9px 18px; border-radius: 10px; border: 1px solid var(--accent-color); background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); color: #fff; font-weight: 800; cursor: pointer; }
+  .bk-go:disabled { opacity: .45; cursor: not-allowed; }
+  .bk-queue { margin-top: 8px; font-size: 11.5px; opacity: .92; display: flex; flex-direction: column; gap: 3px; }
+  .bk-queue div { display: flex; justify-content: space-between; background: rgba(255,255,255,.07); border-radius: 7px; padding: 4px 8px; }
 </style>
 </head>
 <body>
@@ -473,6 +510,102 @@ function DetailSheet({ building, theme, resources, onClose, onCollect, onUpgrade
         e("div", { className: "action-row" }, e("button", { className: "action-btn primary", disabled: !canAfford, onClick: () => onUpgrade(building, cost) }, Icon("arrowUp"), "Upgrade"))),
       e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
     ));
+}
+
+
+// ---------- Troops & Barracks ----------
+// Unit art lives in /assets/troops/<id>.webp, barracks backdrops in /assets/barracks/<culture>.webp.
+// Classes: spear / sword / cav / archer. 3 general levels each (shared by every culture) + a level-4
+// special troop; every culture has exactly 2 special troops (in two different classes).
+const TROOP_CLASSES = [
+  { id: "spear", name: "Spearmen" }, { id: "sword", name: "Swordsmen" },
+  { id: "cav", name: "Cavalry" }, { id: "archer", name: "Archers" }
+];
+const GENERAL_TROOPS = [
+  { id: "spearman", name: "Spearman", cls: "spear", level: 1 },
+  { id: "shieldbearer", name: "Shieldbearer", cls: "spear", level: 2 },
+  { id: "guard", name: "Guard", cls: "spear", level: 3 },
+  { id: "light_swordsman", name: "Light Swordsman", cls: "sword", level: 1 },
+  { id: "swordsman", name: "Swordsman", cls: "sword", level: 2 },
+  { id: "linebreaker", name: "Linebreaker", cls: "sword", level: 3 },
+  { id: "light_cavalry", name: "Light Cavalry", cls: "cav", level: 1 },
+  { id: "cavalry", name: "Cavalry", cls: "cav", level: 2 },
+  { id: "armored_cavalry", name: "Armored Cavalry", cls: "cav", level: 3 },
+  { id: "skirmisher", name: "Skirmisher", cls: "archer", level: 1 },
+  { id: "archer", name: "Archer", cls: "archer", level: 2 },
+  { id: "elite_archer", name: "Elite Archer", cls: "archer", level: 3 }
+];
+const SPECIAL_TROOPS = {
+  roman:    [{ id: "legionnaire", name: "Legionnaire", cls: "sword" }, { id: "praetorian_cavalry", name: "Praetorian Cavalry", cls: "cav" }],
+  persian:  [{ id: "immortal_guard", name: "Immortal Guard", cls: "spear" }, { id: "cataphract", name: "Cataphract", cls: "cav" }],
+  mongol:   [{ id: "keshik", name: "Keshik", cls: "cav" }, { id: "mangudai", name: "Mangudai", cls: "archer" }],
+  japanese: [{ id: "samurai", name: "Samurai", cls: "sword" }, { id: "yumi_archer", name: "Yumi Archer", cls: "archer" }],
+  arabian:  [{ id: "ansar_warrior", name: "Ansar Warrior", cls: "spear" }, { id: "arab_archer", name: "Arab Archer", cls: "archer" }],
+  viking:   [{ id: "berserker", name: "Berserker", cls: "sword" }, { id: "huscarl", name: "Huscarl", cls: "spear" }]
+};
+// PLACEHOLDER balance - edit freely. cost = base * LEVEL_MULT[level-1]; time (seconds per unit) by level.
+const TROOP_BASE_COST = {
+  spear:  { food: 20, wood: 25 }, sword: { food: 20, iron: 20 },
+  cav:    { food: 35, iron: 25 }, archer: { food: 20, wood: 30 }
+};
+const TROOP_LEVEL_MULT = [1, 2.2, 4.5, 9];
+const TROOP_LEVEL_TIME = [5, 12, 25, 45];
+function troopsFor(culture, cls) {
+  const g = GENERAL_TROOPS.filter((t) => t.cls === cls);
+  const sp = (SPECIAL_TROOPS[culture] || []).filter((t) => t.cls === cls).map((t) => ({ ...t, level: 4, special: true }));
+  return [...g, ...sp];
+}
+function allTroopsFor(culture) { return TROOP_CLASSES.flatMap((c) => troopsFor(culture, c.id)); }
+function troopUnitCost(t) {
+  const m = TROOP_LEVEL_MULT[t.level - 1], out = {};
+  for (const [r, v] of Object.entries(TROOP_BASE_COST[t.cls])) out[r] = Math.round(v * m);
+  return out;
+}
+function troopUnitTime(t) { return TROOP_LEVEL_TIME[t.level - 1]; }
+function fmtTime(sec) { sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return (h ? h + "h " : "") + (h || m ? m + "m " : "") + s + "s"; }
+
+function BarracksSheet({ open, building, culture, theme, resources, army, onClose, onTrain }) {
+  const [cls, setCls] = useState("spear");
+  const [pick, setPick] = useState(null);
+  const [qty, setQty] = useState(1);
+  const [, tick] = useState(0);
+  useEffect(() => { if (!open) return; const iv = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(iv); }, [open]);
+  useEffect(() => { setPick(null); setQty(1); }, [cls, culture, open]);
+
+  const list = troopsFor(culture, cls);
+  const troop = list.find((t) => t.id === pick) || list[0];
+  const owned = (army.troops[culture] || {});
+  const queue = (army.queue[culture] || []);
+  const unit = troopUnitCost(troop);
+  const maxQty = Math.max(0, Math.min(...Object.entries(unit).map(([r, v]) => Math.floor((resources[r] || 0) / v))));
+  const q = Math.max(1, Math.min(qty, Math.max(1, maxQty)));
+  const canTrain = maxQty >= 1;
+  const bg = { backgroundImage: "url(/assets/barracks/" + culture + ".webp)" };
+
+  return e("div", { className: "barracks" + (open ? " open" : ""), style: bg },
+    e("div", { className: "bk-top" },
+      e("div", { className: "bk-title" }, ((theme.labels && theme.labels[building && building.id]) || { name: "Barracks" }).name, e("small", null, "TRAIN TROOPS" + (building ? " · LV " + building.level : ""))),
+      e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+    e("div", { className: "bk-stage" }, open && e("img", { className: "bk-hero", key: troop.id, src: "/assets/troops/" + troop.id + ".webp", alt: troop.name, draggable: false })),
+    e("div", { className: "bk-panel" },
+      e("div", { className: "bk-tabs" }, TROOP_CLASSES.map((c) => e("button", { key: c.id, className: "bk-tab" + (c.id === cls ? " active" : ""), onClick: () => { sound.playClick(); setCls(c.id); } }, c.name))),
+      e("div", { className: "bk-cards" }, list.map((t) => e("button", { key: t.id, className: "bk-card" + (t.id === troop.id ? " active" : "") + (t.special ? " special" : ""), onClick: () => { sound.playClick(); setPick(t.id); setQty(1); } },
+        e("span", { className: "bk-lv" }, t.special ? "SPECIAL" : "Lv " + t.level),
+        (owned[t.id] || 0) > 0 && e("span", { className: "bk-own" }, fmt(owned[t.id])),
+        e("img", { src: "/assets/troops/" + t.id + ".webp", alt: t.name, loading: "lazy", draggable: false }),
+        e("span", null, t.name)))),
+      e("div", { className: "bk-info" }, e("b", null, troop.name + (troop.special ? " (Level 4)" : " (Level " + troop.level + ")")), e("small", null, "Owned " + fmt(owned[troop.id] || 0) + " · " + fmtTime(troopUnitTime(troop)) + " each")),
+      e("div", { className: "bk-train" },
+        e("div", { className: "bk-qty" },
+          e("button", { onClick: () => setQty(Math.max(1, q - 1)) }, "−"), e("b", null, q),
+          e("button", { onClick: () => setQty(Math.min(Math.max(1, maxQty), q + 1)) }, "+"),
+          e("button", { className: "max", onClick: () => setQty(Math.max(1, maxQty)) }, "MAX")),
+        Object.entries(unit).map(([r, v]) => e("div", { key: r, className: "cost-chip" + ((resources[r] || 0) < v * q ? " insufficient" : "") }, Icon(RES_ICON[r]), fmt(v * q))),
+        e("button", { className: "bk-go", disabled: !canTrain, onClick: () => { onTrain(troop, q, unit); setQty(1); } }, "Train · " + fmtTime(troopUnitTime(troop) * q))),
+      queue.length > 0 && e("div", { className: "bk-queue" }, queue.map((j, i) => {
+        const t = allTroopsFor(culture).find((x) => x.id === j.troopId) || { name: j.troopId };
+        return e("div", { key: j.id }, e("span", null, j.count + " × " + t.name), e("span", null, i === 0 ? fmtTime((j.endsAt - Date.now()) / 1000) : "queued"));
+      }))));
 }
 
 // ---------- Chat Panel ----------
@@ -1108,6 +1241,34 @@ function App() {
     return m;
   });
 
+  // Troops: { troops: {culture: {troopId: count}}, queue: {culture: [{id, troopId, count, endsAt}]} }
+  const [army, setArmy] = useState(() => {
+    try { const sv = localStorage.getItem("kingdom_army_v1"); if (sv) return JSON.parse(sv); } catch (err) {}
+    return { troops: {}, queue: {} };
+  });
+  useEffect(() => { localStorage.setItem("kingdom_army_v1", JSON.stringify(army)); }, [army]);
+  // Finish batches whose time is up (also catches batches that finished while the game was closed).
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setArmy((prev) => {
+        const now = Date.now();
+        let changed = false;
+        const troops = { ...prev.troops }, queue = { ...prev.queue };
+        for (const c of Object.keys(queue)) {
+          const done = queue[c].filter((j) => j.endsAt <= now);
+          if (!done.length) continue;
+          changed = true;
+          const mine = { ...(troops[c] || {}) };
+          for (const j of done) mine[j.troopId] = (mine[j.troopId] || 0) + j.count;
+          troops[c] = mine;
+          queue[c] = queue[c].filter((j) => j.endsAt > now);
+        }
+        return changed ? { troops, queue } : prev;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
   const themes = window.__THEMES__ || {};
   const theme = themes[culture] || {
     name: "Persian", kingdomName: "The Persian Empire", panel: "#14233a", panelDeep: "#0d1a2b",
@@ -1213,6 +1374,22 @@ function App() {
     showToast((theme.labels[building.id] || { name: building.id }).name + " → Level " + (building.level + 1));
   };
 
+  const train = (troop, count, unitCost) => {
+    sound.playUpgrade();
+    setRByC((prev) => {
+      const r = { ...prev[culture] };
+      for (const [k, v] of Object.entries(unitCost)) r[k] = r[k] - v * count;
+      return { ...prev, [culture]: r };
+    });
+    setArmy((prev) => {
+      const q = prev.queue[culture] || [];
+      const start = q.length ? q[q.length - 1].endsAt : Date.now();
+      const job = { id: Date.now() + "_" + Math.random().toString(36).slice(2, 6), troopId: troop.id, count, endsAt: start + troopUnitTime(troop) * count * 1000 };
+      return { ...prev, queue: { ...prev.queue, [culture]: [...q, job] } };
+    });
+    showToast("Training " + count + " × " + troop.name);
+  };
+
   const toggleSound = () => {
     const next = !soundEnabled;
     sound.enabled = next;
@@ -1297,7 +1474,8 @@ function App() {
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setRanksOpen(true); } }, e("div", { className: "nic" }, Icon("trophy")), e("span", null, "Ranks"))),
 
     // Sheets & Overlays
-    e(DetailSheet, { building: selected, theme, resources, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
+    e(DetailSheet, { building: selected && selected.category !== "barracks" ? selected : null, theme, resources, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
+    e(BarracksSheet, { open: !!selected && selected.category === "barracks", building: selected, culture, theme, resources, army, onClose: () => setSelectedId(null), onTrain: train }),
     e(ChatPanel, { open: chatOpen, onClose: () => setChatOpen(false) }),
     e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme }),
     e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, onNewMarch: (m) => setMarches(p => [...p, m]) }),
