@@ -97,4 +97,11 @@ export function flushSave(save) {
   }
 }
 
+/** NPC camps. The server decides everything; the game must save first and sends its save version (baseVersion). */
+export const getExpeditions = () => request('GET', '/api/game/expeditions');
+/** @param {{campId:string, troops:Object<string,number>, baseVersion:number}} a  -> { expedition, save:{version, troops}, now } */
+export const attackCamp = (a) => request('POST', '/api/game/attack', a);
+/** Armies that are back hand over survivors + loot. -> { save:{version, troops, resources}, reports, now } */
+export const claimExpeditions = (baseVersion) => request('POST', '/api/game/expeditions/claim', { baseVersion });
+
 export const eventsUrl = () => `/api/game/events?token=${encodeURIComponent(getToken())}`;

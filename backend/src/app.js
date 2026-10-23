@@ -4,6 +4,10 @@ import { hashPassword, verifyPassword, newToken, hashToken, createLimiter } from
 import { CIV_TO_CULTURE, CIV_IDS, USERNAME_RE, PASSWORD_MIN, PASSWORD_MAX } from './constants.js';
 import { sanitizeSave, assertOnlyCulture, publicSave } from './save.js';
 import { httpError } from './httpError.js';
+import { troopFor } from './troops.js';
+import { fight, armyPower } from './battle.js';
+import { rollLevel, makeCampArmy, makeCampLoot, newCampKey } from './camps.js';
+import * as NPC from './npcConfig.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -13,8 +17,9 @@ const DAY = 24 * 60 * 60 * 1000;
  * @param {object} o.config
  * @param {{mapKey():string|null, pickSpot(civId:string, placed:object[]):{tileX:number,tileY:number}|null, makeNpcs():object[]}} o.spawner
  */
-export function createApp({ db, config, spawner }) {
-  const { User, GameSave, Castle, AuthToken, Meta } = db.models;
+export function createApp({ db, config, spawner, npc = {} }) {
+  const { User, GameSave, Castle, NpcCamp, Expedition, AuthToken, Meta } = db.models;
+  const N = { campsPerType: NPC.CAMPS_PER_TYPE, respawnMs: NPC.RESPAWN_MS, marchMsPerTile: NPC.MARCH_MS_PER_TILE, marchMinMs: NPC.MARCH_MIN_MS, maxActive: NPC.MAX_ACTIVE_EXPEDITIONS, ...npc };
   const app = express();
   app.disable('x-powered-by');
 
@@ -30,7 +35,19 @@ export function createApp({ db, config, spawner }) {
     return run;
   };
 
+  const npcRules = { marchMsPerTile: N.marchMsPerTile, marchMinMs: N.marchMinMs, maxActive: N.maxActive, unitPower: NPC.UNIT_POWER };
+  const campJson = (c) => ({
+    id: c.key, type: c.type, name: NPC.CAMP_TYPES[c.type].name, level: c.level, tileX: c.tileX, tileY: c.tileY,
+    army: c.army, power: Math.round(armyPower(c.army, {})), loot: c.loot,
+  });
+  const expJson = (e, now = Date.now()) => ({
+    id: e.id, campId: e.campKey, campType: e.campType, campLevel: e.campLevel, troops: e.troops,
+    from: { tileX: e.fromX, tileY: e.fromY }, to: { tileX: e.toX, tileY: e.toY },
+    arriveAt: e.arriveAt, returnAt: e.returnAt, status: e.status, claimed: e.claimed,
+    report: now >= e.arriveAt ? e.report : null, // the result stays secret until the army arrives
+  });
   const castleJson = (c) => ({ id: c.key, name: c.name, civId: c.civId, tileX: c.tileX, tileY: c.tileY });
+  const sendToUser = (userId, event, data) => { for (const [res, id] of streams) if (id === userId) send(res, event, data); };
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
   // ---- events ---------------------------------------------------------------------
@@ -59,6 +76,71 @@ export function createApp({ db, config, spawner }) {
     }
     await Meta.upsert({ key: 'mapKey', value: key });
   }
+
+
+  // ---- NPC camps --------------------------------------------------------------------
+  const rand = Math.random;
+  const respawnTimers = new Set();
+  const notifiedHome = new Set(); // expedition ids already announced as "home" (in memory is enough: the game also asks on start)
+
+  async function spawnCamp(type) {
+    const placed = [...(await Castle.findAll()), ...(await NpcCamp.findAll())];
+    const spot = spawner.pickAnySpot(placed);
+    if (!spot) return null;
+    const level = rollLevel(rand);
+    const camp = await NpcCamp.create({
+      key: newCampKey(type, rand), type, level, tileX: spot.tileX, tileY: spot.tileY,
+      army: makeCampArmy(type, level, rand), loot: makeCampLoot(type, level),
+    });
+    broadcast('camp', campJson(camp));
+    return camp;
+  }
+
+  /** Called at every server start: all camps are thrown away and spread again, randomly. */
+  async function syncCamps() {
+    if (!spawner.mapKey()) return;
+    await NpcCamp.destroy({ where: {} });
+    for (const type of Object.keys(NPC.CAMP_TYPES)) {
+      for (let i = 0; i < N.campsPerType; i++) await spawnCamp(type);
+    }
+    console.log(`[game] ${await NpcCamp.count()} NPC camps placed`);
+  }
+
+  // ---- expeditions (attacks on camps) -------------------------------------------------
+  /**
+   * Moves expeditions forward: arrived armies fight (oldest arrival first), and the result is stored.
+   * Run by the 1 s ticker and before every attack / claim, always one at a time.
+   */
+  function resolveDue(now = Date.now()) {
+    return serial(async () => {
+      const arrived = await Expedition.findAll({ where: { status: 'marching', arriveAt: { [Op.lte]: now } }, order: [['arriveAt', 'ASC']] });
+      for (const e of arrived) {
+        const camp = await NpcCamp.findOne({ where: { key: e.campKey } });
+        let report;
+        if (!camp) {
+          report = { gone: true, win: false, survivors: e.troops, losses: {}, loot: {} }; // somebody else was faster
+        } else {
+          const r = fight(e.troops, camp.army);
+          report = { gone: false, win: r.win, attackerPower: r.attackerPower, defenderPower: r.defenderPower, survivors: r.attackerSurvivors, losses: r.attackerLosses, loot: r.win ? camp.loot : {} };
+          if (r.win) {
+            await camp.destroy();
+            broadcast('campGone', { id: camp.key });
+            const t = setTimeout(() => { respawnTimers.delete(t); serial(() => spawnCamp(camp.type)).catch(() => {}); }, N.respawnMs);
+            t.unref?.();
+            respawnTimers.add(t);
+          }
+        }
+        await e.update({ status: 'returning', report });
+        sendToUser(e.userId, 'expedition', { id: e.id, phase: 'arrived' });
+      }
+      const home = await Expedition.findAll({ where: { status: 'returning', claimed: false, returnAt: { [Op.lte]: now } } });
+      for (const e of home) if (!notifiedHome.has(e.id)) { notifiedHome.add(e.id); sendToUser(e.userId, 'expedition', { id: e.id, phase: 'home' }); }
+    });
+  }
+
+  const tickTimer = { id: null };
+  const startTicker = (ms = 1000) => { if (!tickTimer.id) { tickTimer.id = setInterval(() => resolveDue().catch((err) => console.error('[tick]', err)), ms); tickTimer.id.unref?.(); } };
+  const stopTicker = () => { clearInterval(tickTimer.id); tickTimer.id = null; for (const t of respawnTimers) clearTimeout(t); respawnTimers.clear(); };
 
   // ---- auth --------------------------------------------------------------------------
   async function issueToken(userId) {
@@ -173,11 +255,12 @@ export function createApp({ db, config, spawner }) {
     });
     const castles = await Castle.findAll();
     const save = await GameSave.findOne({ where: { userId: req.user.id } });
-    res.json({ ok: true, token: req.token, returning: out.returning, you: castleJson(out.castle), castles: castles.map(castleJson), save: publicSave(save) });
+    const camps = await NpcCamp.findAll();
+    res.json({ ok: true, token: req.token, returning: out.returning, you: castleJson(out.castle), castles: castles.map(castleJson), camps: camps.map(campJson), rules: npcRules, save: publicSave(save), now: Date.now() });
   }));
 
   game.get('/world', requireAuth(), wrap(async (_req, res) => {
-    res.json({ ok: true, castles: (await Castle.findAll()).map(castleJson) });
+    res.json({ ok: true, castles: (await Castle.findAll()).map(castleJson), camps: (await NpcCamp.findAll()).map(campJson), rules: npcRules });
   }));
 
   game.get('/save', requireAuth(), wrap(async (req, res) => {
@@ -201,6 +284,107 @@ export function createApp({ db, config, spawner }) {
   });
   game.put('/save', requireAuth(), saveHandler);
   game.post('/save', requireAuth({ allowQuery: true }), saveHandler);
+
+
+  // ---- attacks on NPC camps ---------------------------------------------------------------
+  const expeditionsOf = async (userId) => {
+    const now = Date.now();
+    const list = await Expedition.findAll({ where: { userId, claimed: false }, order: [['id', 'ASC']] });
+    return { now, expeditions: list.map((e) => expJson(e, now)) };
+  };
+
+  game.get('/expeditions', requireAuth(), wrap(async (req, res) => {
+    await resolveDue();
+    res.json({ ok: true, ...(await expeditionsOf(req.user.id)) });
+  }));
+
+  /**
+   * Send troops against a camp. The troops are taken from the SAVED army on the server (so the game must
+   * have saved first and sends `baseVersion`), and the server answers with the new troops + version.
+   * body: { campId, troops: { troopId: count }, baseVersion }
+   */
+  game.post('/attack', requireAuth(), wrap(async (req, res) => {
+    await resolveDue();
+    const body = req.body || {};
+    const out = await serial(async () => {
+      const row = await GameSave.findOne({ where: { userId: req.user.id } });
+      if (!row.culture) throw httpError(409, 'choose a civilization first (POST /api/game/join)');
+      if (Number.isInteger(body.baseVersion) && body.baseVersion !== row.version) {
+        throw httpError(409, 'stale save: save first, then attack', { version: row.version, code: 'stale' });
+      }
+      const camp = await NpcCamp.findOne({ where: { key: String(body.campId || '') } });
+      if (!camp) throw httpError(404, 'this camp does not exist (any more)');
+      if (!body.troops || typeof body.troops !== 'object' || Array.isArray(body.troops)) throw httpError(400, 'troops: choose the troops to send');
+      const have = ((row.army || {}).troops || {})[row.culture] || {};
+      const sent = {};
+      let total = 0;
+      for (const [id, n] of Object.entries(body.troops)) {
+        if (!Number.isInteger(n) || n < 0 || n > 1e6) throw httpError(400, 'troops: counts must be whole numbers');
+        if (n === 0) continue;
+        if (!troopFor(id, row.culture)) throw httpError(400, `troops: unknown troop "${String(id).slice(0, 40)}"`);
+        if ((have[id] || 0) < n) throw httpError(400, `you do not have ${n} x ${id}`);
+        sent[id] = n; total += n;
+      }
+      if (!total) throw httpError(400, 'troops: send at least one soldier');
+      const active = await Expedition.count({ where: { userId: req.user.id, claimed: false } });
+      if (active >= N.maxActive) throw httpError(409, `at most ${N.maxActive} armies can be out at the same time`);
+      const castle = await Castle.findOne({ where: { userId: req.user.id } });
+      if (!castle) throw httpError(409, 'you have no castle yet');
+
+      const dist = Math.hypot(camp.tileX - castle.tileX, camp.tileY - castle.tileY);
+      const oneWay = Math.max(N.marchMinMs, Math.round(dist * N.marchMsPerTile));
+      const now = Date.now();
+      const left = { ...have };
+      for (const [id, n] of Object.entries(sent)) { left[id] -= n; if (left[id] <= 0) delete left[id]; }
+      const army = { ...(row.army || { troops: {}, queue: {} }) };
+      army.troops = { ...(army.troops || {}), [row.culture]: left };
+      const [changed] = await GameSave.update({ army, version: row.version + 1 }, { where: { id: row.id, version: row.version } });
+      if (!changed) throw httpError(409, 'stale save: try again', { version: row.version, code: 'stale' });
+      const e = await Expedition.create({
+        userId: req.user.id, campKey: camp.key, campType: camp.type, campLevel: camp.level, troops: sent,
+        fromX: castle.tileX, fromY: castle.tileY, toX: camp.tileX, toY: camp.tileY,
+        arriveAt: now + oneWay, returnAt: now + 2 * oneWay, status: 'marching',
+      });
+      return { e, version: row.version + 1, troops: left };
+    });
+    res.status(201).json({ ok: true, now: Date.now(), expedition: expJson(out.e), save: { version: out.version, troops: out.troops } });
+  }));
+
+  /**
+   * Armies that are back home hand over survivors and loot. They are added to the SAVED data on the server;
+   * the game must save first (baseVersion) and then uses the returned troops/resources/version.
+   * body: { baseVersion }
+   */
+  game.post('/expeditions/claim', requireAuth(), wrap(async (req, res) => {
+    await resolveDue();
+    const body = req.body || {};
+    const out = await serial(async () => {
+      const row = await GameSave.findOne({ where: { userId: req.user.id } });
+      if (!row.culture) throw httpError(409, 'choose a civilization first (POST /api/game/join)');
+      if (Number.isInteger(body.baseVersion) && body.baseVersion !== row.version) {
+        throw httpError(409, 'stale save: save first, then claim', { version: row.version, code: 'stale' });
+      }
+      const now = Date.now();
+      const home = await Expedition.findAll({ where: { userId: req.user.id, status: 'returning', claimed: false, returnAt: { [Op.lte]: now } }, order: [['id', 'ASC']] });
+      const army = { ...(row.army || { troops: {}, queue: {} }) };
+      const troops = { ...(((army.troops || {})[row.culture]) || {}) };
+      const resources = { food: 0, wood: 0, stone: 0, iron: 0, coin: 0, ...(((row.resources || {})[row.culture]) || {}) };
+      const reports = [];
+      for (const e of home) {
+        const r = e.report || {};
+        for (const [id, n] of Object.entries(r.survivors || {})) troops[id] = Math.min(1e9, (troops[id] || 0) + n);
+        for (const [k, n] of Object.entries(r.loot || {})) if (k in resources) resources[k] = Math.min(1e12, resources[k] + n);
+        reports.push({ id: e.id, campType: e.campType, campLevel: e.campLevel, sent: e.troops, ...r });
+      }
+      if (!home.length) return { version: row.version, troops, resources, reports };
+      army.troops = { ...(army.troops || {}), [row.culture]: troops };
+      const [changed] = await GameSave.update({ army, resources: { ...(row.resources || {}), [row.culture]: resources }, version: row.version + 1 }, { where: { id: row.id, version: row.version } });
+      if (!changed) throw httpError(409, 'stale save: try again', { version: row.version, code: 'stale' });
+      await Expedition.update({ claimed: true }, { where: { id: home.map((e) => e.id) } });
+      return { version: row.version + 1, troops, resources, reports };
+    });
+    res.json({ ok: true, now: Date.now(), save: { version: out.version, troops: out.troops, resources: out.resources }, reports: out.reports });
+  }));
 
   game.get('/events', requireAuth({ allowQuery: true }), (req, res) => {
     res.writeHead(200, {
@@ -237,7 +421,7 @@ export function createApp({ db, config, spawner }) {
 
   return {
     app,
-    syncWorld,
-    closeStreams() { for (const res of streams.keys()) res.end(); streams.clear(); clearTimeout(presenceTimer); },
+    syncWorld, syncCamps, resolveDue, startTicker, stopTicker,
+    closeStreams() { stopTicker(); for (const res of streams.keys()) res.end(); streams.clear(); clearTimeout(presenceTimer); },
   };
 }

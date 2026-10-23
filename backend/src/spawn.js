@@ -48,6 +48,11 @@ export function createMapSpawner({ root, publicDir = 'public', seed = 1337, npcP
       if (!civ) throw httpError(400, 'unknown civilization');
       return planner.pickSpot(civ.territory, Math.random, placed) ?? planner.pickSpot(null, Math.random, placed) ?? null;
     },
+    /** A random good spot anywhere (not in the neutral area), away from `placed` things. Used for NPC camps. */
+    pickAnySpot(placed) {
+      const { planner } = load();
+      return planner.pickSpot(null, Math.random, placed) ?? null;
+    },
     makeNpcs() {
       const { planner } = load();
       const rand = makeRng(seed);

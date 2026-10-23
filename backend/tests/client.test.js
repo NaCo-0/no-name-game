@@ -101,3 +101,21 @@ test('client: wrong password and unreachable server give clear errors', async ()
   assert.equal(await api.probeServer(200), false);
   globalThis.fetch = (url, opts) => realFetch(String(url).startsWith('/') ? t.base + url : url, opts);
 });
+
+test('client: attack a camp, collect survivors + loot (real api.js)', async () => {
+  const j = await api.join();
+  const camp = j.camps.find((c) => c.level === 1);
+  assert.ok(camp);
+  let v = (await api.putSave({ army: { troops: { japanese: { samurai: 200, yumi_archer: 100 } }, queue: {} } }, j.save.version)).version;
+  const r = await api.attackCamp({ campId: camp.id, troops: { samurai: 200, yumi_archer: 100 }, baseVersion: v });
+  assert.equal(r.save.troops.samurai, undefined);
+  const list = await api.getExpeditions();
+  assert.equal(list.expeditions.length, 1);
+  assert.equal(list.expeditions[0].report, null);
+  // the army is still on its way: nothing to collect, the save stays untouched
+  const c = await api.claimExpeditions(r.save.version);
+  assert.equal(c.reports.length, 0);
+  assert.equal(c.save.version, r.save.version);
+  // a stale version is refused
+  await assert.rejects(api.attackCamp({ campId: camp.id, troops: { samurai: 1 }, baseVersion: v }), (e) => e.status === 409);
+});

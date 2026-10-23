@@ -7,6 +7,7 @@ export function fakeSpawner() {
   return {
     mapKey: () => 'test-map',
     pickSpot: (civId, placed) => ({ tileX: 100 + placed.length * 10, tileY: 200 }),
+    pickAnySpot: (placed) => ({ tileX: 300 + placed.length * 7, tileY: 400 }),
     makeNpcs: () => [{ key: 'npc_persia_0', name: 'Npc One', civId: 'persia', tileX: 50, tileY: 50 }],
   };
 }
@@ -14,8 +15,9 @@ export function fakeSpawner() {
 export async function boot(extra = {}) {
   const db = await createDb({ storage: ':memory:' });
   const config = { tokenTtlDays: 30, prod: false, ...extra.config };
-  const { app, syncWorld, closeStreams } = createApp({ db, config, spawner: extra.spawner || fakeSpawner() });
+  const { app, syncWorld, syncCamps, resolveDue, closeStreams } = createApp({ db, config, spawner: extra.spawner || fakeSpawner(), npc: extra.npc });
   await syncWorld();
+  await syncCamps();
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, r));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -31,7 +33,7 @@ export async function boot(extra = {}) {
   const register = async (username, password = 'password123') => (await call('POST', '/api/auth/register', { body: { username, password } })).json;
 
   return {
-    db, base, call, register,
+    db, base, call, register, resolveDue,
     async close() {
       closeStreams();
       server.closeAllConnections?.();

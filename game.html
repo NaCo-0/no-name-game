@@ -693,8 +693,74 @@ function StorageSheet({ open, onClose, resources, buildings, theme }) {
     ));
 }
 
+// ---------- NPC camp: pick troops and attack ----------
+const TROOP_BY_ID = (() => {
+  const m = {};
+  for (const t of GENERAL_TROOPS) m[t.id] = { ...t };
+  for (const list of Object.values(SPECIAL_TROOPS)) for (const t of list) m[t.id] = { ...t, level: 4 };
+  return m;
+})();
+const troopName = (id) => (TROOP_BY_ID[id] ? TROOP_BY_ID[id].name : id);
+const lootText = (loot) => Object.entries(loot || {}).filter(([, n]) => n > 0).map(([k, n]) => n + " " + k).join(" · ") || "nothing";
+const troopsText = (t) => Object.entries(t || {}).filter(([, n]) => n > 0).map(([id, n]) => n + "× " + troopName(id)).join(", ") || "none";
+
+function CampSheet({ camp, home, rules, troops, activeCount, onClose, onAttack }) {
+  const [sel, setSel] = useState({});
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setSel({}); setBusy(false); }, [camp && camp.id]);
+  if (!camp) return null;
+  const owned = Object.entries(troops || {}).filter(([, n]) => n > 0);
+  const unitPower = (rules && rules.unitPower) || { 1: 10, 2: 22, 3: 45, 4: 90 };
+  const myPower = Object.entries(sel).reduce((sum, [id, n]) => sum + n * (unitPower[(TROOP_BY_ID[id] || {}).level] || 0), 0);
+  const total = Object.values(sel).reduce((a, b) => a + b, 0);
+  const dist = home ? Math.hypot(camp.tileX - home.tileX, camp.tileY - home.tileY) : 0;
+  const oneWay = rules ? Math.max(rules.marchMinMs, dist * rules.marchMsPerTile) : 0;
+  const full = rules && activeCount >= rules.maxActive;
+  const setN = (id, n, max) => setSel((p) => ({ ...p, [id]: Math.max(0, Math.min(max, Math.floor(Number(n) || 0))) }));
+  const go = async () => { setBusy(true); const ok = await onAttack(camp, Object.fromEntries(Object.entries(sel).filter(([, n]) => n > 0))); if (!ok) setBusy(false); };
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" },
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("sword")),
+          e("div", null, e("h2", null, camp.name), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, "Level " + camp.level)))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      e("p", { className: "sheet-desc" }, "Defenders: " + troopsText(camp.army)),
+      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "Enemy power"), e("div", { className: "prod-amount" }, "≈ " + camp.power)),
+      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "Loot if you win"), e("div", { className: "prod-amount", style: { fontSize: "12px" } }, lootText(camp.loot))),
+      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "March (one way)"), e("div", { className: "prod-amount" }, fmtTime(oneWay / 1000))),
+      owned.length === 0 ? e("div", { style: { padding: "16px 0", textAlign: "center", color: "var(--inksoft-color)" } }, "You have no troops. Train some in the Barracks first.") :
+        owned.map(([id, n]) => e("div", { key: id, className: "prod-row" },
+          e("div", { className: "prod-info" }, troopName(id) + " (" + n + ")"),
+          e("div", { style: { display: "flex", gap: "6px", alignItems: "center" } },
+            e("input", { type: "number", min: 0, max: n, value: sel[id] || 0, style: { width: "70px" }, onChange: (ev) => setN(id, ev.target.value, n) }),
+            e("button", { className: "action-btn secondary", style: { flex: "none", minWidth: 0, padding: "6px 10px" }, onClick: () => setN(id, n, n) }, "All")))),
+      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "Your power (before class bonuses)"), e("div", { className: "prod-amount" }, "≈ " + myPower)),
+      full && e("p", { className: "sheet-desc" }, "All " + rules.maxActive + " armies are already out."),
+      e("div", { className: "action-row" },
+        e("button", { className: "action-btn primary", disabled: busy || total === 0 || full, onClick: go }, Icon("sword"), busy ? "Sending…" : "Attack"),
+        e("button", { className: "action-btn secondary", onClick: onClose }, "Cancel"))));
+}
+
+function ReportSheet({ reports, onClose }) {
+  if (!reports || !reports.length) return null;
+  return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
+    e("div", { className: "sheet" },
+      e("div", { className: "sheet-head" },
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("scroll")), e("div", null, e("h2", null, "Battle report"))),
+        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
+      reports.map((r) => e("div", { key: r.id, style: { padding: "10px 0", borderBottom: "1px solid var(--border-color)" } },
+        e("div", { style: { fontWeight: 700, color: r.gone ? "var(--inksoft-color)" : r.win ? "#7bd88f" : "#e8574a" } },
+          (r.gone ? "Camp already destroyed" : r.win ? "Victory" : "Defeat") + " · " + (r.campType || "") + " Lv " + (r.campLevel || "")),
+        !r.gone && e("div", { className: "sheet-desc" }, "Power " + r.attackerPower + " vs " + r.defenderPower),
+        e("div", { className: "sheet-desc" }, "Sent: " + troopsText(r.sent)),
+        e("div", { className: "sheet-desc" }, "Lost: " + troopsText(r.losses)),
+        e("div", { className: "sheet-desc" }, "Returned: " + troopsText(r.survivors)),
+        e("div", { className: "sheet-desc" }, "Loot: " + lootText(r.loot)))),
+      e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))));
+}
+
 // ---------- Battle / Marches Sheet ----------
-function BattleSheet({ open, onClose, marches, onNewMarch }) {
+function BattleSheet({ open, onClose, marches, onNewMarch, expeds, serverNow }) {
   if (!open) return null;
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
     e("div", { className: "sheet" },
@@ -703,7 +769,15 @@ function BattleSheet({ open, onClose, marches, onNewMarch }) {
           e("div", null, e("h2", null, "War Room & Expeditions"), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, marches.length + " Active Marches")))),
         e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
       e("p", { className: "sheet-desc" }, "Scouts and armies marching across the isometric world territories."),
-      marches.length === 0 ? e("div", { style: { padding: "20px 0", textAlign: "center", color: "var(--inksoft-color)" } }, "No active marches. Tap on the World Map to dispatch scouts.") :
+      (expeds || []).map((x) => {
+        const t = serverNow();
+        const label = t < x.arriveAt ? "Marching to " + x.campType + " camp (Lv " + x.campLevel + ")" : t < x.returnAt ? "Returning from " + x.campType + " camp" + (x.report ? (x.report.win ? " · victory" : x.report.gone ? " · camp already gone" : " · defeat") : "") : "Home - collecting…";
+        const left = t < x.arriveAt ? x.arriveAt - t : x.returnAt - t;
+        return e("div", { key: "x" + x.id, className: "prod-row" },
+          e("div", { className: "prod-info" }, Icon("sword"), label),
+          e("div", { className: "prod-amount", style: { fontSize: "12px", color: "var(--highlight-color)" } }, fmtTime(left / 1000)));
+      }),
+      marches.length === 0 && (!expeds || expeds.length === 0) ? e("div", { style: { padding: "20px 0", textAlign: "center", color: "var(--inksoft-color)" } }, "No active marches. Tap an NPC camp on the World Map to attack it.") :
         marches.map(m => e("div", { key: m.id, className: "prod-row" },
           e("div", { className: "prod-info" }, Icon("sword"), m.title),
           e("div", { className: "prod-amount", style: { fontSize: "12px", color: "var(--highlight-color)" } }, Math.max(0, Math.ceil(m.timeLeft)) + "s"))),
@@ -837,6 +911,14 @@ class WorldScene extends Phaser.Scene {
       this.bridge.onCastleSelect(castle);
     });
 
+    // NPC camps: tap one to open the attack sheet
+    this.session.campLayer.events.on('select', (camp) => {
+      this.session.layer.setSelected(null);
+      this.session.campLayer.setSelected(camp.id);
+      this.bridge.onCampSelect(camp, { rules: this.session.rules, home: this.session.player });
+    });
+    this.session.layer.events.on('select', () => this.session.campLayer.setSelected(null));
+
     // 3. look at the player's castle
     const p = this.session.player;
     const startZoom = Math.min(0.8, Math.max(0.45, window.innerWidth / 1100));
@@ -939,6 +1021,25 @@ class WorldScene extends Phaser.Scene {
       g.fillCircle(m.x, m.y, 4 / z);
     }
 
+    // Armies sent against NPC camps (positions are calculated from the server's times)
+    const ex = this.bridge.getExpeditions();
+    for (const e of ex.list) {
+      const t = Date.now() + ex.offset;
+      const a = this.map.tileToWorld(e.from.tileX, e.from.tileY);
+      const b = this.map.tileToWorld(e.to.tileX, e.to.tileY);
+      const oneWay = Math.max(1, e.returnAt - e.arriveAt);
+      const out = t < e.arriveAt;
+      const f = Phaser.Math.Clamp(out ? 1 - (e.arriveAt - t) / oneWay : (t - e.arriveAt) / oneWay, 0, 1);
+      const p = out ? { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f } : { x: b.x + (a.x - b.x) * f, y: b.y + (a.y - b.y) * f };
+      const color = out ? 0xe8574a : (e.report && e.report.win ? 0x7bd88f : 0xb0b6c0);
+      g.lineStyle(2 / z, color, 0.7);
+      this._dashed(g, a.x, a.y, b.x, b.y, 4 / z);
+      g.fillStyle(color, 1);
+      g.fillCircle(p.x, p.y, 8 / z);
+      g.fillStyle(0x0a0d14, 1);
+      g.fillCircle(p.x, p.y, 4 / z);
+    }
+
     if (this.marker) {
       const { x, y } = this.marker;
       g.lineStyle(2.5 / z, 0xf0c95a, 1);
@@ -959,7 +1060,7 @@ class WorldScene extends Phaser.Scene {
   }
 }
 
-function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onNotice, onAuthLost, marches, onAddMarch }) {
+function WorldMapView({ active, culture, onJoin, onCastleSelect, onCampSelect, onOpenCity, onNotice, onAuthLost, marches, onAddMarch, expeds, expOffset }) {
   const hostRef = useRef(null);
   const radarRef = useRef(null);
   const gameRef = useRef(null);
@@ -980,13 +1081,17 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onN
 
   // Always-fresh copies for the Phaser side (which is created only once).
   marchesRef.current = marches;
+  const expRef = useRef({ list: [], offset: 0 });
+  expRef.current = { list: expeds || [], offset: expOffset || 0 };
   activeRef.current = active;
-  cbRef.current = { onJoin, onCastleSelect, onOpenCity, onNotice, onAuthLost };
+  cbRef.current = { onJoin, onCastleSelect, onCampSelect, onOpenCity, onNotice, onAuthLost };
 
   // Create the Phaser game once; destroy it when the component goes away.
   useEffect(() => {
     const bridge = {
       getMarches: () => marchesRef.current,
+      getExpeditions: () => expRef.current,
+      onCampSelect: (camp, extra) => { sound.playClick(); cbRef.current.onCampSelect(camp, extra); },
       getCivId: () => CULTURE_TO_CIV[lastCultureRef.current],
       onAuthLost: () => { if (cbRef.current.onAuthLost) cbRef.current.onAuthLost(); },
       onMapReady: () => setMapReady(true),
@@ -1111,6 +1216,16 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onOpenCity, onN
           ctx.arc(cx, cy, c.isPlayer ? 4 : 2.5, 0, Math.PI * 2);
           ctx.fill();
           if (c.isPlayer) { ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); }
+        }
+      }
+
+      // NPC camps (red squares)
+      if (scene.session && scene.session.campLayer) {
+        ctx.fillStyle = '#e8574a';
+        for (const c of scene.session.campLayer.getCamps()) {
+          const cx = ((c.worldX - t.origin.x) / W) * rw;
+          const cy = ((c.worldY - t.origin.y) / H) * rh;
+          ctx.fillRect(cx - 2, cy - 2, 4, 4);
         }
       }
 
@@ -1417,6 +1532,99 @@ function App({ account, onLogout, onAuthLost }) {
     onLogout();
   };
 
+  // ===== NPC CAMPS: attacks are decided by the SERVER =====
+  // The game saves first, then asks the server; the server takes the troops from the saved army and later
+  // hands back survivors + loot. We adopt what it answers (troops, resources, version).
+  const [expeds, setExpeds] = useState([]);
+  const expOffsetRef = useRef(0);               // serverNow - Date.now()
+  const [expOffset, setExpOffset] = useState(0);
+  const [campSel, setCampSel] = useState(null); // { camp, home, rules }
+  const [reports, setReports] = useState(null);
+  const expBusyRef = useRef(false);
+  const lastFetchRef = useRef(0);
+  const serverNow = useCallback(() => Date.now() + expOffsetRef.current, []);
+  const syncClock = (now) => { if (now) { expOffsetRef.current = now - Date.now(); setExpOffset(expOffsetRef.current); } };
+
+  const flushSaved = useCallback(async () => {
+    for (let i = 0; i < 50; i++) {
+      if (stoppedRef.current) return false;
+      if (!inflightRef.current && revRef.current === savedRevRef.current) return true;
+      if (!inflightRef.current) await saveNow(); else await new Promise((r) => setTimeout(r, 100));
+    }
+    return false;
+  }, [saveNow]);
+
+  const adoptServer = useCallback((save) => {
+    verRef.current = save.version;
+    setArmy((prev) => ({ ...prev, troops: { ...prev.troops, [culture]: save.troops } }));
+    if (save.resources) setRByC((prev) => ({ ...prev, [culture]: { ...(prev[culture] || {}), ...save.resources } }));
+  }, [culture]);
+
+  const handleApiError = useCallback((err) => {
+    if (err.status === 401) { stoppedRef.current = true; onAuthLost(); }
+    else if (err.status === 409 && err.data && err.data.code === "stale") { stoppedRef.current = true; setConflict(true); }
+    else showToast(err.message || "Something went wrong");
+  }, [onAuthLost, showToast]);
+
+  const refreshExpeds = useCallback(async () => {
+    lastFetchRef.current = Date.now();
+    try { const r = await api.getExpeditions(); syncClock(r.now); setExpeds(r.expeditions); } catch (err) { if (err.status === 401) onAuthLost(); }
+  }, [onAuthLost]);
+
+  const claimHome = useCallback(async () => {
+    if (expBusyRef.current || stoppedRef.current) return;
+    expBusyRef.current = true;
+    try {
+      if (!(await flushSaved())) return;
+      const r = await api.claimExpeditions(verRef.current);
+      syncClock(r.now);
+      if (r.reports.length) {
+        adoptServer(r.save);
+        setReports(r.reports);
+        const won = r.reports.filter((x) => x.win).length;
+        showToast(won ? "Victory! Loot has been added to your storage" : "Your army is back");
+        await refreshExpeds();
+      }
+    } catch (err) { handleApiError(err); } finally { expBusyRef.current = false; }
+  }, [flushSaved, adoptServer, showToast, refreshExpeds, handleApiError]);
+
+  const attackCamp = useCallback(async (camp, troops) => {
+    if (expBusyRef.current) return false;
+    expBusyRef.current = true;
+    try {
+      if (!(await flushSaved())) { showToast("Saving… try again in a moment"); return false; }
+      const r = await api.attackCamp({ campId: camp.id, troops, baseVersion: verRef.current });
+      syncClock(r.now);
+      adoptServer(r.save);
+      setExpeds((prev) => [...prev, r.expedition]);
+      setCampSel(null);
+      showToast("Army sent to " + camp.name);
+      return true;
+    } catch (err) { handleApiError(err); return false; } finally { expBusyRef.current = false; }
+  }, [flushSaved, adoptServer, showToast, handleApiError]);
+
+  useEffect(() => { refreshExpeds(); }, [refreshExpeds]);
+  useEffect(() => {
+    const onEvt = () => { refreshExpeds().then(claimHome); };
+    window.addEventListener("kingdoms:expedition", onEvt);
+    return () => window.removeEventListener("kingdoms:expedition", onEvt);
+  }, [refreshExpeds, claimHome]);
+  // 1 s: an army that is home is collected; one that has just arrived gets its report; slow fallback poll
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setClockTick((n) => n + 1);
+      const t = serverNow();
+      const list = expedsRef.current;
+      if (list.some((x) => t >= x.returnAt + 500)) claimHome();
+      else if (list.some((x) => t >= x.arriveAt + 1500 && !x.report) && Date.now() - lastFetchRef.current > 3000) refreshExpeds();
+      else if (Date.now() - lastFetchRef.current > 30000) refreshExpeds();
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [serverNow, claimHome, refreshExpeds]);
+  const expedsRef = useRef([]);
+  expedsRef.current = expeds;
+
   // City image dimensions calculation
   useEffect(() => {
     const el = stageRef.current; if (!el) return;
@@ -1560,6 +1768,8 @@ function App({ account, onLogout, onAuthLost }) {
         onNotice: showToast,
         onAuthLost,
         onCastleSelect: (castle) => showToast(castle.name + " · " + ((civById(castle.civId) || {}).name || castle.civId)),
+        onCampSelect: (camp, extra) => setCampSel({ camp, home: extra.home, rules: extra.rules }),
+        expeds, expOffset,
         onOpenCity: (origin) => goView("city", origin),
         marches,
         onAddMarch: (m) => setMarches((prev) => [...prev, m])
@@ -1587,7 +1797,7 @@ function App({ account, onLogout, onAuthLost }) {
       e("button", { className: "nav-btn" + (viewMode === "city" ? " active" : ""), onClick: () => { sound.playClick(); goView("city"); } }, e("div", { className: "nic" }, Icon("hall")), e("span", null, "City")),
       e("button", { className: "nav-btn" + (viewMode === "world" ? " active" : ""), onClick: () => { sound.playClick(); goView("world"); } }, e("div", { className: "nic" }, Icon("map")), e("span", null, "World Map")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setBattleOpen(true); } },
-        marches.length > 0 && e("span", { className: "badge" }, marches.length),
+        (marches.length + expeds.length) > 0 && e("span", { className: "badge" }, marches.length + expeds.length),
         e("div", { className: "nic" }, Icon("sword")), e("span", null, "Battle")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setStorageOpen(true); } }, e("div", { className: "nic" }, Icon("chest")), e("span", null, "Storage")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setChatOpen(true); } },
@@ -1600,7 +1810,13 @@ function App({ account, onLogout, onAuthLost }) {
     e(BarracksSheet, { open: !!selected && selected.category === "barracks", building: selected, culture, theme, resources, army, onClose: () => setSelectedId(null), onTrain: train }),
     e(ChatPanel, { open: chatOpen, onClose: () => setChatOpen(false) }),
     e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme }),
-    e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, onNewMarch: (m) => setMarches(p => [...p, m]) }),
+    e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, onNewMarch: (m) => setMarches(p => [...p, m]), expeds, serverNow }),
+    e(CampSheet, {
+      camp: campSel && campSel.camp, home: campSel && campSel.home, rules: campSel && campSel.rules,
+      troops: army.troops[culture] || {}, activeCount: expeds.length,
+      onClose: () => setCampSel(null), onAttack: attackCamp
+    }),
+    e(ReportSheet, { reports, onClose: () => setReports(null) }),
     e(RankingsSheet, { open: ranksOpen, onClose: () => setRanksOpen(false), culture, buildingsByCulture: bByC }),
     e(MenuSheet, { open: menuOpen, onClose: () => setMenuOpen(false), soundEnabled, onToggleSound: toggleSound, username: account.user.username, saveState, onLogout: logout }),
     e("div", { className: "toast" + (toast ? " show" : "") }, toast),

@@ -37,6 +37,35 @@ export async function createDb({ storage }) {
     userId: { type: DataTypes.INTEGER, allowNull: true },
   });
 
+  // NPC camps: regenerated at every server start, a defeated camp respawns elsewhere.
+  const NpcCamp = sequelize.define('NpcCamp', {
+    key: { type: DataTypes.STRING(40), allowNull: false, unique: true },
+    type: { type: DataTypes.STRING(16), allowNull: false },
+    level: { type: DataTypes.INTEGER, allowNull: false },
+    tileX: { type: DataTypes.FLOAT, allowNull: false },
+    tileY: { type: DataTypes.FLOAT, allowNull: false },
+    army: { type: DataTypes.JSON, allowNull: false },  // { troopId: count }
+    loot: { type: DataTypes.JSON, allowNull: false },  // { food, wood, stone, iron, coin }
+  });
+
+  // One attack of a player on a camp. The server decides everything; the client only reads it.
+  const Expedition = sequelize.define('Expedition', {
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    campKey: { type: DataTypes.STRING(40), allowNull: false },
+    campType: { type: DataTypes.STRING(16), allowNull: false },
+    campLevel: { type: DataTypes.INTEGER, allowNull: false },
+    troops: { type: DataTypes.JSON, allowNull: false },   // sent
+    fromX: { type: DataTypes.FLOAT, allowNull: false },
+    fromY: { type: DataTypes.FLOAT, allowNull: false },
+    toX: { type: DataTypes.FLOAT, allowNull: false },
+    toY: { type: DataTypes.FLOAT, allowNull: false },
+    arriveAt: { type: DataTypes.DOUBLE, allowNull: false }, // ms
+    returnAt: { type: DataTypes.DOUBLE, allowNull: false }, // ms
+    status: { type: DataTypes.STRING(12), allowNull: false, defaultValue: 'marching' }, // marching | returning
+    claimed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    report: { type: DataTypes.JSON, allowNull: true },    // filled when the army arrives
+  });
+
   const Territory = sequelize.define('Territory', {
     civId: { type: DataTypes.STRING(16), allowNull: false, unique: true },
     name: { type: DataTypes.STRING(64), allowNull: false },
@@ -63,6 +92,8 @@ export async function createDb({ storage }) {
   GameSave.belongsTo(User, { foreignKey: 'userId' });
   User.hasMany(Castle, { foreignKey: 'userId', onDelete: 'CASCADE' });
   Castle.belongsTo(User, { foreignKey: 'userId' });
+  User.hasMany(Expedition, { foreignKey: 'userId', onDelete: 'CASCADE' });
+  Expedition.belongsTo(User, { foreignKey: 'userId' });
   User.hasMany(AuthToken, { foreignKey: 'userId', onDelete: 'CASCADE' });
   AuthToken.belongsTo(User, { foreignKey: 'userId' });
 
@@ -72,5 +103,5 @@ export async function createDb({ storage }) {
   if (cols && cols.username && !cols.email) await qi.renameColumn('AdminUsers', 'username', 'email');
 
   await sequelize.sync();
-  return { sequelize, models: { User, GameSave, Castle, Territory, AuthToken, AdminUser, Meta } };
+  return { sequelize, models: { User, GameSave, Castle, NpcCamp, Expedition, Territory, AuthToken, AdminUser, Meta } };
 }

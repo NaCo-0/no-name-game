@@ -12,6 +12,7 @@
  */
 import { civById } from './civilizations.js';
 import { CastleLayer } from './CastleLayer.js';
+import { CampLayer } from './CampLayer.js';
 import * as api from '../src/api.js';
 import { showLoading } from './ui/LoadingScreen.js';
 import { t } from './ui/i18n.js';
@@ -36,6 +37,16 @@ export async function startOnlineSession(scene, map, opts = {}) {
 
   const layer = new CastleLayer(scene, map, { assetBase });
   await layer.loadTextures();
+
+  // NPC camps (attackable). Missing images only give placeholders, never an error.
+  const campLayer = new CampLayer(scene, map, { assetBase: opts.campAssetBase ?? '/assets/npcs/' });
+  await campLayer.loadTextures();
+  const syncCamps = (list) => {
+    const ids = new Set((list || []).map((c) => c.id));
+    for (const c of campLayer.getCamps()) if (!ids.has(c.id)) campLayer.removeCamp(c.id);
+    for (const c of list || []) campLayer.addCamp({ ...c });
+  };
+  syncCamps(joined.camps);
 
   const byId = new Map(); // castle id -> castle data (with worldX / worldY)
   const addCastle = (c) => {
@@ -68,6 +79,10 @@ export async function startOnlineSession(scene, map, opts = {}) {
       const added = addCastle(JSON.parse(ev.data));
       if (added && opts.onNotice) opts.onNotice(`${added.name} joined the world`);
     });
+    es.addEventListener('camp', (ev) => campLayer.addCamp(JSON.parse(ev.data)));
+    es.addEventListener('campGone', (ev) => campLayer.removeCamp(JSON.parse(ev.data).id));
+    // the game (React side) listens to this: an army arrived or is back home
+    es.addEventListener('expedition', (ev) => window.dispatchEvent(new CustomEvent('kingdoms:expedition', { detail: JSON.parse(ev.data) })));
     es.addEventListener('presence', (ev) => applyPresence(JSON.parse(ev.data)));
     es.onerror = () => {
       // EventSource retries by itself while the server is just restarting; once it gives up
@@ -84,6 +99,8 @@ export async function startOnlineSession(scene, map, opts = {}) {
     try {
       joined = await api.join(player.civId);
       for (const c of joined.castles) addCastle(c);
+      syncCamps(joined.camps);
+      window.dispatchEvent(new CustomEvent('kingdoms:expedition', { detail: { phase: 'rejoined' } }));
       watch();
     } catch (err) {
       if (err && err.status === 401) { if (opts.onAuthLost) opts.onAuthLost(); return; }
@@ -98,6 +115,8 @@ export async function startOnlineSession(scene, map, opts = {}) {
     player,
     npcs: [...byId.values()].filter(isNpc),
     layer,
+    campLayer,
+    rules: joined.rules || { marchMsPerTile: 400, marchMinMs: 5000, maxActive: 3, unitPower: { 1: 10, 2: 22, 3: 45, 4: 90 } },
     civ,
     ui: null,
     online: true,

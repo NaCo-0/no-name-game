@@ -265,6 +265,7 @@ export class ProvinceLayer {
       color: '#f4efe0',
       stroke: '#000000',
       strokeThickness: 4,
+      resolution: scene.dpr || 1, // sharp text on high-density screens
     });
     text.setOrigin(0.5, 1);
     const padX = 14;
@@ -294,7 +295,7 @@ export class ProvinceLayer {
 
   _onUpdate() {
     const cam = this.scene.cameras.main;
-    const zoom = cam.zoom || 1;
+    const zoom = (cam.zoom || 1) / (this.scene.dpr || 1); // CSS-pixel zoom
     const view = cam.worldView;
     // Graphics are re-issued every frame by Phaser: only draw the ones on screen.
     if (this.outlinesVisible) {

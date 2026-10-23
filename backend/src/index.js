@@ -15,8 +15,9 @@ export async function start(config = loadConfig()) {
   await ensureFirstAdmin(db, config);
 
   const spawner = createMapSpawner({ root: config.projectRoot });
-  const { app: api, syncWorld } = createApp({ db, config, spawner });
-  try { await syncWorld(); } catch (err) { console.warn('[game] world not ready yet:', err.message); }
+  const { app: api, syncWorld, syncCamps, startTicker } = createApp({ db, config, spawner });
+  try { await syncWorld(); await syncCamps(); } catch (err) { console.warn('[game] world not ready yet:', err.message); }
+  startTicker();
 
   const { router: adminRouter, admin } = await buildAdmin({ db, config });
   const app = express();
