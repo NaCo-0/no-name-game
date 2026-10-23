@@ -1,0 +1,22 @@
+{
+  "name": "kingdoms-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test --test-force-exit --test-timeout=120000 tests/*.test.js",
+    "admin": "node src/admin-cli.js"
+  },
+  "dependencies": {
+    "@adminjs/express": "^6.1.1",
+    "@adminjs/sequelize": "^4.1.1",
+    "adminjs": "^7.8.17",
+    "express": "^4.22.3",
+    "express-formidable": "^1.2.0",
+    "express-session": "^1.19.0",
+    "sequelize": "^6.37.8",
+    "sqlite3": "^6.0.1",
+    "ws": "^8.22.0"
+  }
+}

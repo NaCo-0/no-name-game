@@ -2,3 +2,7 @@ node_modules/
 dist/
 .bake-staging/
 *.log
+backend/node_modules/
+backend/data/
+backend/.adminjs/
+.game-data/

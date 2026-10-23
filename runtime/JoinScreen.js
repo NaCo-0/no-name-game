@@ -69,6 +69,7 @@ export function forgetChoice() {
 /**
  * @param {object} [opts]
  * @param {string} [opts.assetBase='assets/objects/castles/']
+ * @param {string} [opts.fixedName] logged-in account name: shown, but cannot be edited or re-rolled
  * @returns {Promise<{civId:string, name:string}>}
  */
 export function showJoinScreen(opts = {}) {
@@ -77,10 +78,11 @@ export function showJoinScreen(opts = {}) {
 
   return new Promise((resolve) => {
     const saved = loadRemembered();
+    const fixedName = opts.fixedName ? sanitizeName(opts.fixedName) : '';
     const state = {
       civId: saved?.civId ?? CIVILIZATIONS[Math.floor(Math.random() * CIVILIZATIONS.length)].id,
-      name: saved?.name ?? '',
-      nameTouched: !!saved?.name,
+      name: fixedName || (saved?.name ?? ''),
+      nameTouched: !!fixedName || !!saved?.name,
     };
     if (!state.name) state.name = randomName(state.civId);
 
@@ -131,7 +133,7 @@ export function showJoinScreen(opts = {}) {
       validate();
       if (startBtn.disabled) return;
       const choice = { civId: state.civId, name: currentName() };
-      remember(choice);
+      if (!fixedName) remember(choice);
       off();
       overlay.remove();
       resolve(choice);
@@ -186,6 +188,7 @@ export function showJoinScreen(opts = {}) {
         spellcheck: 'false',
       });
       input.value = state.name;
+      if (fixedName) input.disabled = true;
       input.addEventListener('input', () => {
         state.nameTouched = true;
         state.name = input.value;
@@ -209,6 +212,7 @@ export function showJoinScreen(opts = {}) {
         },
         icon('dice', 22)
       );
+      if (fixedName) { dice.disabled = true; dice.style.display = 'none'; }
 
       msg = h('div', { class: 'jn-msg', role: 'alert' });
       startBtn = h('button', { class: 'ui-btn primary jn-start', type: 'button', onClick: submit }, t('join.start'), icon('arrow', 20));

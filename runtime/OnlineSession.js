@@ -1,67 +1,36 @@
 /**
  * OnlineSession
  * -------------
- * Same job as PlayerSession.js (join screen -> castles on the map), but the
- * castles come from the game server (server/gameServer.js) and other players'
- * castles appear live.
+ * Same job as PlayerSession.js (castles on the map), but the player is a logged-in
+ * account: the castles come from the backend (backend/src) and other players'
+ * castles appear live. The civilization was chosen once at the first login and the
+ * server's choice always wins.
  *
- *   if (await probeOnline()) {
- *     this.session = await startOnlineSession(this, this.map, { assetBase, ui: false });
- *   } else {
- *     this.session = await startPlayerSession(this, this.map, { ... });   // offline
- *   }
+ *   this.session = await startOnlineSession(this, this.map, { civId: 'persia', assetBase, ui: false });
  *
  * Returns the same shape as startPlayerSession, plus { online: true, close() }.
  */
 import { civById } from './civilizations.js';
 import { CastleLayer } from './CastleLayer.js';
-import { showJoinScreen } from './JoinScreen.js';
+import * as api from '../src/api.js';
 import { showLoading } from './ui/LoadingScreen.js';
 import { t } from './ui/i18n.js';
 import { hex } from './ui/dom.js';
 
 const isNpc = (c) => String(c.id).startsWith('npc_');
 
-/** True when a game server answers on this origin (false on plain static hosting). */
-export async function probeOnline(timeoutMs = 1500) {
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), timeoutMs);
-  try {
-    const r = await fetch('/api/game/status', { signal: ctl.signal, cache: 'no-store' });
-    if (!r.ok) return false;
-    const j = await r.json(); // throws on an HTML page -> not a game server
-    return !!(j && j.ok);
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function postJoin(choice) {
-  const res = await fetch('/api/game/join', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: choice.name, civId: choice.civId }),
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data || !data.token) throw new Error((data && data.error) || `join failed (${res.status})`);
-  return data;
-}
-
 /**
  * @param {Phaser.Scene} scene
  * @param {import('./BakedMapLoader.js').BakedMap} map
  * @param {object} [opts]
  * @param {string} [opts.assetBase='assets/objects/castles/']
- * @param {{civId:string, name:string}} [opts.choice] skip the join screen
+ * @param {string} opts.civId the account's civilization (the server decides if it differs)
  * @param {(message:string) => void} [opts.onNotice] called for things like "Sara joined the world"
+ * @param {() => void} [opts.onAuthLost] the login is no longer valid (expired, banned, logged out elsewhere)
  */
 export async function startOnlineSession(scene, map, opts = {}) {
   const assetBase = opts.assetBase ?? 'assets/objects/castles/';
-  const choice = opts.choice ?? (await showJoinScreen({ assetBase }));
-
-  let joined = await postJoin(choice);
+  let joined = await api.join(opts.civId);
   const civ = civById(joined.you.civId); // the server's civilization wins for a returning account
   const loading = showLoading({ title: t('loading.castle'), accent: hex(civ.color) });
 
@@ -93,8 +62,8 @@ export async function startOnlineSession(scene, map, opts = {}) {
     }
   };
 
-  const watch = (token) => {
-    es = new EventSource(`/api/game/events?token=${encodeURIComponent(token)}`);
+  const watch = () => {
+    es = new EventSource(api.eventsUrl());
     es.addEventListener('castle', (ev) => {
       const added = addCastle(JSON.parse(ev.data));
       if (added && opts.onNotice) opts.onNotice(`${added.name} joined the world`);
@@ -113,15 +82,16 @@ export async function startOnlineSession(scene, map, opts = {}) {
   const rejoin = async () => {
     if (closed) return;
     try {
-      joined = await postJoin({ name: player.name, civId: player.civId });
+      joined = await api.join(player.civId);
       for (const c of joined.castles) addCastle(c);
-      watch(joined.token);
-    } catch {
+      watch();
+    } catch (err) {
+      if (err && err.status === 401) { if (opts.onAuthLost) opts.onAuthLost(); return; }
       setTimeout(rejoin, 3000);
     }
   };
 
-  watch(joined.token);
+  watch();
   await loading.hide();
 
   return {

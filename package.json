@@ -8,7 +8,11 @@
     "game": "vite --open /game.html",
     "build": "vite build",
     "preview": "vite preview",
-    "game:dist": "vite build && vite preview --open /game.html"
+    "game:dist": "vite build && vite preview --open /game.html",
+    "server": "node backend/src/index.js",
+    "server:install": "npm --prefix backend install",
+    "server:test": "npm --prefix backend test",
+    "admin": "node backend/src/admin-cli.js"
   },
   "dependencies": {
     "jszip": "^3.10.2",
