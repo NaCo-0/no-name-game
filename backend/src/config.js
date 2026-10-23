@@ -9,7 +9,7 @@ export function loadConfig(env = process.env) {
   if (prod && !env.SESSION_SECRET) throw new Error('SESSION_SECRET is required in production');
   return {
     prod,
-    port: Number(env.PORT) || 5173,
+    port: Number(env.PORT) || 3000,
     projectRoot: path.resolve(env.PROJECT_ROOT || path.join(here, '..', '..')),
     dbFile: env.DB_FILE || path.resolve(here, '..', 'data', 'game.sqlite'),
     sessionSecret: env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),

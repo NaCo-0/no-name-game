@@ -202,9 +202,9 @@ export default defineConfig({
     // The game talks to the backend (backend/src, `npm run server`) through the same address,
     // so the browser sees ONE origin: no CORS, and the login token never goes to another site.
     proxy: {
-      '/api/game': { target: 'http://localhost:5173', changeOrigin: false },
-      '/api/auth': { target: 'http://localhost:5173', changeOrigin: false },
-      '/admin': { target: 'http://localhost:5173', changeOrigin: false },
+      '/api/game': { target: 'http://localhost:3000', changeOrigin: false },
+      '/api/auth': { target: 'http://localhost:3000', changeOrigin: false },
+      '/admin': { target: 'http://localhost:3000', changeOrigin: false },
     },
     watch: {
       // NOTE: do NOT ignore public/terrain, public/objects or public/data
@@ -216,9 +216,9 @@ export default defineConfig({
   },
   preview: {
     proxy: {
-      '/api/game': { target: 'http://localhost:5173' },
-      '/api/auth': { target: 'http://localhost:5173' },
-      '/admin': { target: 'http://localhost:5173' },
+      '/api/game': { target: 'http://localhost:3000' },
+      '/api/auth': { target: 'http://localhost:3000' },
+      '/admin': { target: 'http://localhost:3000' },
     },
   },
   build: {
