@@ -125,6 +125,9 @@
   }
   .world-btn:active { transform: scale(.92); }
   .world-btn .icon { width: 16px; height: 16px; }
+  @media (pointer: coarse) { .world-btn { width: 46px; height: 46px; } .world-btn .icon { width: 20px; height: 20px; } .world-controls { bottom: 24px; gap: 10px; } }
+  html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  .world-map-wrap, .phaser-host { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
   /* Floating Territory HUD */
   .territory-hud {
@@ -837,6 +840,8 @@ const MAP_BASE_URL = '/';                              // folder that contains m
 const CASTLE_ASSET_BASE = '/assets/objects/castles/';  // public/assets/objects/castles/
 const MIN_ZOOM = 0.08;
 const MAX_ZOOM = 1.4;
+// Phones have 2-3x pixel density: the canvas is drawn at (up to) 2x so the map is sharp, not blurry.
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
 // runtime/civilizations.js ids  ->  culture keys used in this file
 const CIV_TO_CULTURE = { persia: 'persian', mongol: 'mongol', arab: 'arabian', japan: 'japanese', rome: 'roman', viking: 'viking' };
@@ -864,7 +869,8 @@ class WorldScene extends Phaser.Scene {
   create() {
     const cam = this.cameras.main;
     cam.setBackgroundColor('#060a0f');
-    cam.setZoom(this.focus.zoom);
+    this.dpr = DPR;                      // layers divide the camera zoom by this to get the on-screen zoom
+    cam.setZoom(this.focus.zoom * DPR);
     cam.centerOn(this.focus.x, this.focus.y);
 
     this.overlay = this.add.graphics().setDepth(200000); // marches + target marker
@@ -948,14 +954,17 @@ class WorldScene extends Phaser.Scene {
   _bindInput() {
     const input = this.input;
 
+    // Mouse: drag with Phaser's pointer. Touch is handled below with DOM pointer events (pan + pinch),
+    // because that is reliable on phones; Phaser's touch pointer only does taps / castle clicks.
     input.on('pointerdown', (pointer) => {
+      if (pointer.wasTouch) return;
       this._drag = { px: pointer.x, py: pointer.y, gx: this.focus.x, gy: this.focus.y, zoom: this.cameras.main.zoom };
       this.goal.x = this.focus.x;
       this.goal.y = this.focus.y;
     });
 
     input.on('pointermove', (pointer) => {
-      if (!this._drag || !pointer.isDown) return;
+      if (pointer.wasTouch || !this._drag || !pointer.isDown) return;
       const d = this._drag;
       this.goal.x = d.gx - (pointer.x - d.px) / d.zoom;
       this.goal.y = d.gy - (pointer.y - d.py) / d.zoom;
@@ -963,14 +972,76 @@ class WorldScene extends Phaser.Scene {
 
     input.on('pointerup', (pointer, over) => {
       this._drag = null;
+      if (this._gesture) return;                       // end of a pan / pinch with fingers, not a tap
       if (over && over.length) return;                 // a castle was clicked, not the ground
-      if (pointer.getDistance() >= 6) return;          // it was a drag, not a tap
+      if (pointer.getDistance() >= (pointer.wasTouch ? 14 : 6)) return; // it was a drag, not a tap
       const wp = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       this.marker = { x: wp.x, y: wp.y };
-      this.bridge.onTerrainTap({ screenX: pointer.x, screenY: pointer.y, worldX: wp.x, worldY: wp.y });
+      this.bridge.onTerrainTap({ screenX: pointer.x / DPR, screenY: pointer.y / DPR, worldX: wp.x, worldY: wp.y });
     });
 
     input.on('wheel', (pointer, over, dx, dy) => this.zoomBy(dy < 0 ? 1.2 : 0.82));
+
+    this._bindTouch();
+  }
+
+  // One finger = pan, two fingers = pinch zoom (the point between the fingers stays under them).
+  _bindTouch() {
+    const el = this.game.canvas;
+    const pts = new Map(); // pointerId -> {x, y} in CSS pixels, relative to the canvas
+    let pan = null, pinch = null, clearTimer = null;
+    const at = (ev) => { const r = el.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
+    const centre = () => { const r = el.getBoundingClientRect(); return { x: r.width / 2, y: r.height / 2 }; };
+    const two = () => { const [a, b] = [...pts.values()]; return { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) }; };
+    const startPan = () => { const [p] = [...pts.values()]; pan = { x: p.x, y: p.y, fx: this.focus.x, fy: this.focus.y }; };
+    const set = (x, y) => { this.goal.x = this.focus.x = x; this.goal.y = this.focus.y = y; };
+
+    const down = (ev) => {
+      if (ev.pointerType !== 'touch') return;
+      clearTimeout(clearTimer);
+      pts.set(ev.pointerId, at(ev));
+      try { el.setPointerCapture(ev.pointerId); } catch { /* not needed */ }
+      if (pts.size === 1) startPan();
+      else if (pts.size === 2) {
+        this._gesture = true;
+        const t = two(), c = centre(), z = this.focus.zoom;
+        pinch = { d: t.d, z, wx: this.focus.x + (t.mx - c.x) / z, wy: this.focus.y + (t.my - c.y) / z };
+        pan = null;
+      }
+    };
+    const move = (ev) => {
+      if (ev.pointerType !== 'touch' || !pts.has(ev.pointerId)) return;
+      pts.set(ev.pointerId, at(ev));
+      if (pts.size === 1 && pan) {
+        const p = pts.get(ev.pointerId);
+        if (Math.hypot(p.x - pan.x, p.y - pan.y) > 8) this._gesture = true; // moved: not a tap
+        set(pan.fx - (p.x - pan.x) / this.focus.zoom, pan.fy - (p.y - pan.y) / this.focus.zoom);
+      } else if (pts.size === 2 && pinch) {
+        const t = two(), c = centre();
+        const z = Phaser.Math.Clamp(pinch.z * (t.d / pinch.d), MIN_ZOOM, MAX_ZOOM);
+        this.goal.zoom = this.focus.zoom = z;
+        set(pinch.wx - (t.mx - c.x) / z, pinch.wy - (t.my - c.y) / z);
+      }
+      ev.preventDefault();
+    };
+    const up = (ev) => {
+      if (ev.pointerType !== 'touch') return;
+      pts.delete(ev.pointerId);
+      if (pts.size === 1) { pinch = null; startPan(); }     // one finger left after a pinch: carry on panning from here
+      if (pts.size === 0) {
+        pan = null; pinch = null;
+        // Phaser handles its own pointerup a frame later: keep the flag until then
+        clearTimer = setTimeout(() => { this._gesture = false; }, 150);
+      }
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move, { passive: false });
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      clearTimeout(clearTimer);
+      for (const [n, f] of [['pointerdown', down], ['pointermove', move], ['pointerup', up], ['pointercancel', up]]) el.removeEventListener(n, f);
+    });
   }
 
   // ---- per frame ------------------------------------------------------------
@@ -983,7 +1054,7 @@ class WorldScene extends Phaser.Scene {
     this.focus.x += (this.goal.x - this.focus.x) * k;
     this.focus.y += (this.goal.y - this.focus.y) * k;
     this.focus.zoom += (this.goal.zoom - this.focus.zoom) * k;
-    cam.setZoom(this.focus.zoom);
+    cam.setZoom(this.focus.zoom * DPR);
     cam.centerOn(this.focus.x, this.focus.y);
 
     if (this.map) this.map.update();                   // streams terrain tiles in/out
@@ -1066,6 +1137,7 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onCampSelect, o
   const gameRef = useRef(null);
   const sceneRef = useRef(null);
   const sleptRef = useRef(false);
+  const fitRef = useRef(null);
   const marchesRef = useRef(marches);
   const activeRef = useRef(active);
   const cbRef = useRef({});
@@ -1111,7 +1183,7 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onCampSelect, o
         sound.playClick();
         if (castle.isPlayer) {
           const sc = sceneRef.current, cam = sc && sc.cameras.main;
-          const origin = cam ? { x: (castle.worldX - cam.worldView.x) * cam.zoom, y: (castle.worldY - cam.worldView.y) * cam.zoom } : undefined;
+          const origin = cam ? { x: (castle.worldX - cam.worldView.x) * cam.zoom / DPR, y: (castle.worldY - cam.worldView.y) * cam.zoom / DPR } : undefined;
           cbRef.current.onOpenCity(origin);
         }
         else cbRef.current.onCastleSelect(castle);
@@ -1123,15 +1195,23 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onCampSelect, o
       type: Phaser.AUTO,
       parent: hostRef.current,
       backgroundColor: '#060a0f',
-      scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
-      render: { antialias: true, antialiasGL: false, pixelArt: false }, // antialiasGL:false = no MSAA, lighter on the GPU
+      // NONE + zoom 1/DPR: the canvas has DPR x the pixels of its CSS box (sharp on phones); fit() keeps it the size of the host.
+      scale: { mode: Phaser.Scale.NONE, width: Math.round((hostRef.current.clientWidth || window.innerWidth) * DPR), height: Math.round((hostRef.current.clientHeight || window.innerHeight) * DPR), zoom: 1 / DPR },
+      render: { antialias: true, antialiasGL: false, pixelArt: false, powerPreference: 'high-performance' }, // antialiasGL:false = no MSAA, lighter on the GPU
       scene: [scene],
     });
     sceneRef.current = scene;
     gameRef.current = game;
 
     // The stage can change size without a window resize (HUD wraps, rotation...).
-    const ro = new ResizeObserver(() => game.scale.refresh());
+    const fit = () => {
+      const el = hostRef.current;
+      if (!el || !el.clientWidth || !el.clientHeight) return;
+      const W = Math.round(el.clientWidth * DPR), H = Math.round(el.clientHeight * DPR);
+      if (game.scale.width !== W || game.scale.height !== H) game.scale.resize(W, H);
+    };
+    fitRef.current = fit;
+    const ro = new ResizeObserver(fit);
     ro.observe(hostRef.current);
 
     return () => {
@@ -1153,7 +1233,7 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onCampSelect, o
     } else if (sleptRef.current) {
       sleptRef.current = false;
       game.loop.wake();
-      game.scale.refresh();
+      if (fitRef.current) fitRef.current();
     }
   }, [active]);
 

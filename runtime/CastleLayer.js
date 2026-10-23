@@ -200,7 +200,6 @@ export class CastleLayer {
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 4,
-      resolution: scene.dpr || 1, // sharp text on high-density screens
     });
     text.setOrigin(0.5, 1);
     const padX = 16;
@@ -241,7 +240,7 @@ export class CastleLayer {
 
   /** Keeps name plates readable when zoomed out (never smaller than on-screen size at zoom 1). */
   _onUpdate() {
-    const zoom = (this.scene.cameras.main.zoom || 1) / (this.scene.dpr || 1); // CSS-pixel zoom
+    const zoom = (this.scene.cameras.main.zoom || 1) / (this.scene.dpr || 1); // on-screen zoom (the camera zoom includes the pixel density)
     const s = Phaser.Math.Clamp(1 / zoom, 1, 2.4) * this.nameScale;
     for (const l of this._labels) l.setScale(s);
   }

@@ -166,7 +166,7 @@ export class CampLayer {
   }
 
   _onUpdate() {
-    const zoom = this.scene.cameras.main.zoom || 1;
+    const zoom = (this.scene.cameras.main.zoom || 1) / (this.scene.dpr || 1);
     const s = Phaser.Math.Clamp(1 / zoom, 1, 2.4);
     for (const e of this.camps.values()) e.label.setScale(s);
   }

@@ -28,6 +28,8 @@ import Phaser from 'phaser';
 export const SHADOW_DEPTH = 1;
 /** Below this zoom, shadows are skipped (invisible at that size anyway). */
 const SHADOW_MIN_ZOOM = 0.12;
+/** Terrain tiles kept (hidden) after they leave the screen. */
+const RETAIN_TILES = 10;
 
 export class BakedMap {
   /**
@@ -172,19 +174,35 @@ export class BakedMap {
     const r1 = Math.floor((view.bottom - t.origin.y) / size) + this.margin;
 
     const needed = new Set();
+    const frame = (this._frame = (this._frame || 0) + 1);
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
         const key = `${c},${r}`;
         if (!this.tileFiles.has(key)) continue;
         needed.add(key);
-        if (!this.terrain.has(key)) this._startTile(key, c, r);
+        const have = this.terrain.get(key);
+        if (!have) this._startTile(key, c, r);
+        else {
+          have.last = frame;
+          if (have.image && !have.image.visible) have.image.setVisible(true); // came back from the spare cache: no download
+        }
       }
     }
 
+    // Tiles that left the view are kept (hidden) for a while: dragging back is instant and uses no data.
+    // Only the most recently used RETAIN_TILES are kept, the rest are freed (GPU memory on phones).
+    const spare = [];
     for (const [key, entry] of this.terrain) {
       if (needed.has(key)) continue;
-      if (entry.state === 'ready') this._dropTile(key);
+      if (entry.state === 'ready') {
+        if (entry.image.visible) entry.image.setVisible(false);
+        spare.push([key, entry]);
+      }
       // 'loading' tiles are discarded when they finish (see _startTile)
+    }
+    if (spare.length > RETAIN_TILES) {
+      spare.sort((a, b) => (a[1].last || 0) - (b[1].last || 0));
+      for (const [key] of spare.slice(0, spare.length - RETAIN_TILES)) this._dropTile(key);
     }
   }
 
@@ -194,7 +212,7 @@ export class BakedMap {
    * frame. Here only the ones near the camera stay visible.
    */
   _cullObjects(view) {
-    const zoom = this.scene.cameras.main.zoom || 1;
+    const zoom = (this.scene.cameras.main.zoom || 1) / (this.scene.dpr || 1);
     const pad = 200 / zoom; // worldView is one frame old: small safety margin
     const x0 = view.x - pad;
     const x1 = view.right + pad;
@@ -226,7 +244,7 @@ export class BakedMap {
   _startTile(key, col, row) {
     const t = this.manifest.terrain;
     const texKey = `${this.prefix}t_${key}`;
-    const entry = { state: 'loading', texKey, image: null };
+    const entry = { state: 'loading', texKey, image: null, last: this._frame || 0 };
     this.terrain.set(key, entry);
 
     const done = () => {
