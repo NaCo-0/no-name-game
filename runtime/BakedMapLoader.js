@@ -132,9 +132,18 @@ export class BakedMap {
   async _createObjects() {
     const m = this.manifest;
     const p = this.prefix;
+    // cast shadows (a type has up to two: normal and mirrored)
+    const castImages = [];
+    for (const t of m.objectTypes) {
+      for (const v of ['plain', 'flip']) {
+        const c = t.castShadow && t.castShadow[v];
+        if (c) castImages.push({ key: `${p}cast_${t.id}_${v}`, url: c.image });
+      }
+    }
     await this._loadImages([
       { key: p + 'shadow', url: m.shadowTexture },
       ...m.objectTypes.map((t) => ({ key: `${p}obj_${t.id}`, url: t.image })),
+      ...castImages,
     ]);
 
     const types = new Map(m.objectTypes.map((t) => [t.id, t]));
@@ -151,7 +160,18 @@ export class BakedMap {
       this.objectSprites.push(sprite);
       this._cullList.push({ s: sprite, r: Math.max(sprite.displayWidth, sprite.displayHeight), shadow: false });
 
-      if (t.shadow) {
+      const cast = t.castShadow && t.castShadow[o.flipX ? 'flip' : 'plain'];
+      if (cast) {
+        // Silhouette shadow, same transform as the sprite (see EditorController._applyTypeToInstance)
+        const sh = this.scene.add.image(o.x, o.y, `${p}cast_${t.id}_${o.flipX ? 'flip' : 'plain'}`);
+        sh.setOrigin(cast.origin.x, cast.origin.y);
+        sh.setScale((t.displayHeight / t.naturalHeight) * k);
+        sh.setBlendMode(Phaser.BlendModes.MULTIPLY);
+        sh.setAlpha(t.castShadow.alpha);
+        sh.setDepth(SHADOW_DEPTH);
+        this.objectSprites.push(sh);
+        this._cullList.push({ s: sh, r: Math.max(sh.displayWidth, sh.displayHeight), shadow: true });
+      } else if (t.shadow) {
         const sh = this.scene.add.image(o.x, o.y - t.shadow.height * 0.15, p + 'shadow');
         sh.setBlendMode(Phaser.BlendModes.MULTIPLY);
         sh.setDisplaySize(t.shadow.width * k, t.shadow.height * k);

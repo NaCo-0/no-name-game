@@ -38,6 +38,7 @@ import { WorldConfig } from '../config/WorldConfig.js';
 import { IsoMath } from '../world/IsoMath.js';
 import { BiomeId } from '../world/BiomeRegistry.js';
 import { textureToDataURL, downloadBlob } from './ProjectIO.js';
+import { getCastShadow } from '../rendering/CastShadowGenerator.js';
 
 const INSTANCE_DEPTH_BASE = 1000; // keep in sync with EditorController
 const SHADOW_TEXTURE_KEY = 'contact_shadow';
@@ -187,10 +188,32 @@ export async function bakeExport(
   // ---- 1. object sprites -------------------------------------------------
   onProgress('Exporting object images…', 0);
   const objectTypes = [];
+  // Which object types are used flipped / not flipped (a cast shadow is a different image when mirrored).
+  const usedFlipped = new Set();
+  const usedPlain = new Set();
+  for (const i of editor.instances.values()) (i.flipX ? usedFlipped : usedPlain).add(i.typeId);
+
   for (const t of editor.objectTypes.values()) {
     const file = `objects/${t.id}.png`;
     const blob = await dataURLToBlob(textureToDataURL(scene, t.textureKey));
     await saveFile(file, blob);
+
+    // Cast shadow = the sprite's own silhouette projected on the ground (what the editor shows when
+    // "shadowCast" is on). It is baked here with the editor's CURRENT light, and the game just places it.
+    // Types with shadowCast off keep the round contact shadow (`shadow`).
+    let castShadow = null;
+    if (t.shadowEnabled && t.shadowCast) {
+      const make = async (flip, suffix) => {
+        const c = getCastShadow(scene, t.textureKey, t.anchorX, t.anchorY, flip, editor.light, t.shadowLift);
+        const f = `objects/${t.id}_cast${suffix}.png`;
+        await saveFile(f, await dataURLToBlob(textureToDataURL(scene, c.key)));
+        return { image: f, origin: { x: c.originX, y: c.originY } };
+      };
+      const plain = usedPlain.has(t.id) || !usedFlipped.has(t.id) ? await make(false, '') : null;
+      const flip = usedFlipped.has(t.id) ? await make(true, '_flip') : null;
+      castShadow = { alpha: t.shadowCastAlpha, plain, flip };
+    }
+
     objectTypes.push({
       id: t.id,
       name: t.name,
@@ -200,7 +223,8 @@ export async function bakeExport(
       displayHeight: t.displayHeight,
       anchor: { x: t.anchorX, y: t.anchorY },
       tint: t.tint,
-      shadow: t.shadowEnabled ? { width: t.shadowWidth, height: t.shadowHeight, alpha: t.shadowAlpha } : null,
+      shadow: t.shadowEnabled && !t.shadowCast ? { width: t.shadowWidth, height: t.shadowHeight, alpha: t.shadowAlpha } : null,
+      castShadow,
       blockRadius: t.blockRadius,
     });
   }
