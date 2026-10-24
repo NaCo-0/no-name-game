@@ -59,7 +59,13 @@ export class TerrainRenderTilePainter {
     // Fine surface grain: peak luminance shift, in 0-255 RGB units, added
     // on top of the ramp color. Kept tiny on purpose — RoK's grain is a
     // barely-there shimmer; anything above ~5 starts to look noisy.
-    this.grainAmplitude = 2.0;
+    this.grainAmplitude = 2.5;
+
+    // Painterly mottle (see SeededNoiseField.mottle): luminance swing in
+    // RGB units, plus a slight green push in the darker spots so shadows
+    // read as cool/leafy instead of just grey. 0 = off.
+    this.mottleAmplitude = 4.5;
+    this.mottleTint = 0.35;
 
     // ---- SOFT CEL-SHADE look -------------------------------------------
     // The biome `stops` define a smooth palette; the painter then
@@ -69,13 +75,13 @@ export class TerrainRenderTilePainter {
     //
     // bandCuts: noise values where one tone ends and the next begins
     // (4 tones: shade / base / light / dirt). Base gets the biggest share.
-    this.bandCuts = [0.17, 0.72, 0.91];
+    this.bandCuts = [0.2, 0.7, 0.9];
     // Half-width of the transition at each cut, in noise units. ~0.008
     // is roughly 2-4 screen px at the default zoom: crisp, not jagged.
-    this.edgeHalfWidth = 0.008;
+    this.edgeHalfWidth = 0.022;
     // How far each tone is pushed away from the biome's base tone.
     // 1 = exactly the palette; >1 = more distinct steps.
-    this.toneContrast = 1.05;
+    this.toneContrast = 0.55;
 
     // Per-biome precomputed ramps (built lazily, see _getRamp).
     this._rampCache = new Map();
@@ -214,6 +220,15 @@ export class TerrainRenderTilePainter {
     r += shimmer;
     g += shimmer;
     b += shimmer;
+
+    // Painterly mottle: darker spots get a touch more green/blue, lighter
+    // spots a touch more yellow, so the variation has colour, not only value.
+    if (this.mottleAmplitude) {
+      const m = this.noise.mottle(logicalPlane.x, logicalPlane.y) * this.mottleAmplitude;
+      r += m * (1 + this.mottleTint * 0.5);
+      g += m;
+      b += m * (1 - this.mottleTint);
+    }
 
     data[idx] = r < 0 ? 0 : r > 255 ? 255 : r;
     data[idx + 1] = g < 0 ? 0 : g > 255 ? 255 : g;

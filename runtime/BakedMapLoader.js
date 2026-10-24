@@ -30,6 +30,11 @@ export const SHADOW_DEPTH = 1;
 const SHADOW_MIN_ZOOM = 0.12;
 /** Terrain tiles kept (hidden) after they leave the screen. */
 const RETAIN_TILES = 10;
+/**
+ * Neighbouring terrain tiles overlap by this many world px on every side. Without it, at fractional
+ * zoom / high-DPI the GPU leaves a hairline gap between two tiles and the background shows through.
+ */
+const TILE_OVERLAP = 6;
 
 export class BakedMap {
   /**
@@ -254,11 +259,11 @@ export class BakedMap {
         return;
       }
       const img = this.scene.add.image(
-        t.origin.x + col * t.tileWorldSize,
-        t.origin.y + row * t.tileWorldSize,
+        t.origin.x + col * t.tileWorldSize - TILE_OVERLAP,
+        t.origin.y + row * t.tileWorldSize - TILE_OVERLAP,
         texKey
       );
-      img.setOrigin(0, 0).setDisplaySize(t.tileWorldSize, t.tileWorldSize).setDepth(0);
+      img.setOrigin(0, 0).setDisplaySize(t.tileWorldSize + 2 * TILE_OVERLAP, t.tileWorldSize + 2 * TILE_OVERLAP).setDepth(0);
       entry.image = img;
       entry.state = 'ready';
     };

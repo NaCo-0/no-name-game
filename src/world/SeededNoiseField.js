@@ -125,6 +125,15 @@ export class SeededNoiseField {
     // Fine surface grain (the subtle "grass texture" visible in RoK).
     this._grain = new ValueNoise2D(seed ^ 0x1b873593, 64);
 
+    // Medium-detail "mottle": gentle light/dark variation at about half a
+    // tile (big) and a few pixels (small). Gives the ground a painted,
+    // hand-brushed surface so the big color patches do not look like flat
+    // camouflage shapes. Two octaves, see mottle().
+    this._mottleA = new ValueNoise2D(seed ^ 0x3c6ef372, 64);
+    this._mottleB = new ValueNoise2D(seed ^ 0x5be0cd19, 64);
+    this.mottleScaleA = 64;  // logical-plane units (1 tile = 128)
+    this.mottleScaleB = 22;
+
     // World-pixels per noise-grid-cell. Larger = larger, calmer regions.
     // (Was 180 — patches were far too small/busy compared to RoK.)
     this.regionScale = 520;
@@ -173,6 +182,17 @@ export class SeededNoiseField {
   grain(worldX, worldY) {
     const gf = this.frequencies.grain;
     return this._grain.sample(worldX * gf, worldY * gf) * 2 - 1;
+  }
+
+  /**
+   * Painterly mottle in [-1, 1]: two octaves of smooth noise (about
+   * 1/2 tile and 1/6 tile wide). Added to the ground color by the painter
+   * at low amplitude; independent of the big region patches.
+   */
+  mottle(worldX, worldY) {
+    const a = this._mottleA.sample(worldX / this.mottleScaleA, worldY / this.mottleScaleA);
+    const b = this._mottleB.sample(worldX / this.mottleScaleB, worldY / this.mottleScaleB);
+    return (a * 0.62 + b * 0.38) * 2 - 1;
   }
 
   static to01(v) {
