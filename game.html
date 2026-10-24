@@ -841,7 +841,9 @@ const CASTLE_ASSET_BASE = '/assets/objects/castles/';  // public/assets/objects/
 const MIN_ZOOM = 0.08;
 const MAX_ZOOM = 1.4;
 // Phones have 2-3x pixel density: the canvas is drawn at (up to) 2x so the map is sharp, not blurry.
-const DPR = Math.min(window.devicePixelRatio || 1, 2);
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+// A slow phone lowers this by itself (see WorldScene._checkPerf) and remembers it for the next visit.
+try { const saved = parseFloat(localStorage.getItem('kingdoms.dpr')); if (saved >= 1 && saved < DPR) DPR = saved; } catch { /* storage blocked */ }
 
 // runtime/civilizations.js ids  ->  culture keys used in this file
 const CIV_TO_CULTURE = { persia: 'persian', mongol: 'mongol', arab: 'arabian', japan: 'japanese', rome: 'roman', viking: 'viking' };
@@ -1044,6 +1046,25 @@ class WorldScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Slow device? After a short warm-up, if the frame rate stays below ~40 fps for 3 checks in a row,
+   * draw the map at a lower pixel density (smaller canvas = much cheaper on the GPU). Steps 2 -> 1.5 -> 1.
+   * Remembered in localStorage so the next visit starts at the good setting.
+   */
+  _checkPerf(delta) {
+    this._perfAge = (this._perfAge || 0) + delta;
+    this._perfClock = (this._perfClock || 0) + delta;
+    if (this._perfAge < 8000 || this._perfClock < 1000) return; // let textures load first
+    this._perfClock = 0;
+    if (DPR <= 1) return;
+    if (this.game.loop.actualFps < 40) this._lowCount = (this._lowCount || 0) + 1; else this._lowCount = 0;
+    if (this._lowCount >= 3) {
+      this._lowCount = 0;
+      this._perfAge = 5000; // wait ~3 s before judging again
+      this.bridge.onLowFps();
+    }
+  }
+
   // ---- per frame ------------------------------------------------------------
 
   update(time, delta) {
@@ -1054,9 +1075,11 @@ class WorldScene extends Phaser.Scene {
     this.focus.x += (this.goal.x - this.focus.x) * k;
     this.focus.y += (this.goal.y - this.focus.y) * k;
     this.focus.zoom += (this.goal.zoom - this.focus.zoom) * k;
+    this.dpr = DPR;
     cam.setZoom(this.focus.zoom * DPR);
     cam.centerOn(this.focus.x, this.focus.y);
 
+    this._checkPerf(delta);
     if (this.map) this.map.update();                   // streams terrain tiles in/out
     this._drawOverlay();
     this._reportView(time);
@@ -1163,6 +1186,13 @@ function WorldMapView({ active, culture, onJoin, onCastleSelect, onCampSelect, o
     const bridge = {
       getMarches: () => marchesRef.current,
       getExpeditions: () => expRef.current,
+      onLowFps: () => {
+        if (DPR <= 1) return;
+        DPR = Math.max(1, DPR - 0.5);
+        try { localStorage.setItem('kingdoms.dpr', String(DPR)); } catch { /* storage blocked */ }
+        if (gameRef.current) gameRef.current.scale.setZoom(1 / DPR);
+        if (fitRef.current) fitRef.current();
+      },
       onCampSelect: (camp, extra) => { sound.playClick(); cbRef.current.onCampSelect(camp, extra); },
       getCivId: () => CULTURE_TO_CIV[lastCultureRef.current],
       onAuthLost: () => { if (cbRef.current.onAuthLost) cbRef.current.onAuthLost(); },

@@ -20,7 +20,7 @@ const VERSION = 1;
 // Per-type fields that are plain editable params (saved/restored as-is).
 const TYPE_PARAMS = [
   'displayHeight', 'anchorX', 'anchorY', 'tint',
-  'shadowEnabled', 'shadowWidth', 'shadowHeight', 'shadowAlpha', 'shadowCast', 'shadowCastAlpha', 'shadowLift', 'blockRadius',
+  'shadowEnabled', 'shadowWidth', 'shadowHeight', 'shadowAlpha', 'shadowCast', 'shadowCastAlpha', 'shadowLift', 'blockRadius', 'minZoom',
 ];
 
 /** Draws a Phaser texture's source image to a canvas and returns a PNG data URL. */

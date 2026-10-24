@@ -12,8 +12,9 @@
  *   layer.events.on('select', (camp) => ...);
  */
 import Phaser from 'phaser';
+import { iconTexture, iconBlend, applyIconBlend, ICON_PX } from './MapIcons.js';
 
-export const CAMP_DISPLAY_WIDTH = 210;
+export const CAMP_DISPLAY_WIDTH = 140;
 const DEPTH_BASE = 1000;
 const LABEL_DEPTH = 100000;
 export const CAMP_TYPES = ['nomad', 'outlaw', 'bandit', 'ronin', 'raider', 'barbarian'];
@@ -104,7 +105,16 @@ export class CampLayer {
     sprite.setAlpha(0);
     scene.tweens.add({ targets: sprite, alpha: 1, duration: 400 });
 
-    const entry = { data: c, sprite, shadow, label };
+    // Round icon for zoomed-out views (see MapIcons.js)
+    const icon = scene.add.image(world.x, world.y, iconTexture(scene, 'camp', 0xc4382e));
+    icon.setOrigin(0.5, 0.6).setDepth(LABEL_DEPTH - 2).setVisible(false);
+    icon.setInteractive({ useHandCursor: true });
+    icon.on('pointerup', (pointer) => {
+      if (pointer.getDistance() > 10) return;
+      this.events.emit('select', c);
+    });
+
+    const entry = { data: c, sprite, shadow, label, icon, world: { x: world.x, y: world.y }, topY: world.y - displayH * 0.9, labelWanted: this.namesVisible };
     this.camps.set(c.id, entry);
     return entry;
   }
@@ -116,6 +126,7 @@ export class CampLayer {
     if (this._ring && this._selectedId === id) this.setSelected(null);
     e.label.destroy();
     e.shadow?.destroy();
+    e.icon?.destroy();
     this.scene.tweens.add({ targets: e.sprite, alpha: 0, duration: 500, onComplete: () => e.sprite.destroy() });
   }
 
@@ -123,7 +134,7 @@ export class CampLayer {
 
   setNamesVisible(v) {
     this.namesVisible = !!v;
-    for (const e of this.camps.values()) e.label.setVisible(this.namesVisible);
+    for (const e of this.camps.values()) { e.labelWanted = this.namesVisible; if (!e._iconLabel) e.label.setVisible(this.namesVisible); }
   }
 
   setSelected(id) {
@@ -167,8 +178,13 @@ export class CampLayer {
 
   _onUpdate() {
     const zoom = (this.scene.cameras.main.zoom || 1) / (this.scene.dpr || 1);
+    const t = iconBlend(zoom);
     const s = Phaser.Math.Clamp(1 / zoom, 1, 2.4);
-    for (const e of this.camps.values()) e.label.setScale(s);
+    for (const e of this.camps.values()) {
+      if (t > 0 || e._iconLabel) applyIconBlend(e, t, zoom);
+      if (t === 0) e.label.setScale(s);
+    }
+    if (this._ring) this._ring.setScale(t > 0 ? Math.max(1, (ICON_PX * 1.5) / zoom / (CAMP_DISPLAY_WIDTH * 0.9)) : 1);
   }
 
   destroy() {
@@ -176,7 +192,7 @@ export class CampLayer {
     this._ringTween?.stop();
     this._ring?.destroy();
     this.events.removeAllListeners();
-    for (const e of this.camps.values()) { e.sprite.destroy(); e.shadow?.destroy(); e.label.destroy(); }
+    for (const e of this.camps.values()) { e.sprite.destroy(); e.icon?.destroy(); e.shadow?.destroy(); e.label.destroy(); }
     this.camps.clear();
   }
 }

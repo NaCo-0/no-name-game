@@ -45,6 +45,17 @@ const SHADOW_TEXTURE_KEY = 'contact_shadow';
 
 const yieldToUI = () => new Promise((r) => setTimeout(r, 0));
 
+/** Short content hash (FNV-1a, 32 bit, 8 hex chars). Works on plain http too (no crypto.subtle needed). */
+async function contentHash(data) {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data.arrayBuffer ? await data.arrayBuffer() : data.buffer ?? data);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
 function canvasToBlob(canvas, mime, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), mime, quality);
@@ -145,6 +156,7 @@ function collisionPreviewCanvas(grid, width, height) {
  * @param {object} [opts]
  * @param {number} [opts.scale=0.5] terrain output px per world px
  * @param {number} [opts.tilePx=1024] terrain tile size in output px
+ * @param {boolean} [opts.lods=true] also bake two coarser terrain levels (far/mid) for zooming out
  * @param {'webp'|'png'} [opts.format='webp']
  * @param {number} [opts.quality=0.92] webp quality
  * @param {(msg:string, fraction:number)=>void} [opts.onProgress]
@@ -153,7 +165,7 @@ function collisionPreviewCanvas(grid, width, height) {
  */
 export async function bakeExport(
   { scene, editor, painter, logicalGrid, territoryMap },
-  { scale = 0.5, tilePx = 1024, format = 'webp', quality = 0.92, onProgress = () => {}, isCancelled = () => false } = {}
+  { scale = 0.5, tilePx = 1024, format = 'webp', quality = 0.92, lods = true, onProgress = () => {}, isCancelled = () => false } = {}
 ) {
   const { gridWidth, gridHeight, tileWidth, tileHeight, seed } = WorldConfig;
   const isDirect = await checkDirectSaveSupported();
@@ -185,6 +197,15 @@ export async function bakeExport(
     else zip.file(relPath, data, zipOpts);
   };
 
+  // Files are named by CONTENT (name.<hash>.ext): a changed file always gets a new name, so the game can cache
+  // every baked file "forever" (immutable) and a new bake is picked up automatically. Only map.json (and the
+  // minimap) keep a fixed name; they are re-checked on every start.
+  const saveHashed = async (dir, base, extension, data, zipOpts) => {
+    const rel = `${dir}/${base}.${await contentHash(data)}.${extension}`;
+    await saveFile(rel, data, zipOpts);
+    return rel;
+  };
+
   // ---- 1. object sprites -------------------------------------------------
   onProgress('Exporting object images…', 0);
   const objectTypes = [];
@@ -194,9 +215,8 @@ export async function bakeExport(
   for (const i of editor.instances.values()) (i.flipX ? usedFlipped : usedPlain).add(i.typeId);
 
   for (const t of editor.objectTypes.values()) {
-    const file = `objects/${t.id}.png`;
     const blob = await dataURLToBlob(textureToDataURL(scene, t.textureKey));
-    await saveFile(file, blob);
+    const file = await saveHashed('objects', t.id, 'png', blob);
 
     // Cast shadow = the sprite's own silhouette projected on the ground (what the editor shows when
     // "shadowCast" is on). It is baked here with the editor's CURRENT light, and the game just places it.
@@ -205,8 +225,7 @@ export async function bakeExport(
     if (t.shadowEnabled && t.shadowCast) {
       const make = async (flip, suffix) => {
         const c = getCastShadow(scene, t.textureKey, t.anchorX, t.anchorY, flip, editor.light, t.shadowLift);
-        const f = `objects/${t.id}_cast${suffix}.png`;
-        await saveFile(f, await dataURLToBlob(textureToDataURL(scene, c.key)));
+        const f = await saveHashed('objects', `${t.id}_cast${suffix}`, 'png', await dataURLToBlob(textureToDataURL(scene, c.key)));
         return { image: f, origin: { x: c.originX, y: c.originY } };
       };
       const plain = usedPlain.has(t.id) || !usedFlipped.has(t.id) ? await make(false, '') : null;
@@ -223,12 +242,14 @@ export async function bakeExport(
       displayHeight: t.displayHeight,
       anchor: { x: t.anchorX, y: t.anchorY },
       tint: t.tint,
+      group: t.group || null, // e.g. 'trees': the game can scale / hide a whole group
+      minZoom: t.minZoom ?? (t.group === 'trees' ? 0.25 : 0), // hidden below this on-screen zoom
       shadow: t.shadowEnabled && !t.shadowCast ? { width: t.shadowWidth, height: t.shadowHeight, alpha: t.shadowAlpha } : null,
       castShadow,
       blockRadius: t.blockRadius,
     });
   }
-  await saveFile('objects/_shadow.png', await dataURLToBlob(textureToDataURL(scene, SHADOW_TEXTURE_KEY)));
+  const shadowFile = await saveHashed('objects', '_shadow', 'png', await dataURLToBlob(textureToDataURL(scene, SHADOW_TEXTURE_KEY)));
 
   const objects = [...editor.instances.values()]
     .map((i) => {
@@ -251,7 +272,7 @@ export async function bakeExport(
   onProgress('Building collision / biome data…', 0);
   await yieldToUI();
   const collision = buildCollision(editor, gridWidth, gridHeight);
-  await saveFile('data/collision.bin', collision, { compression: 'DEFLATE' });
+  const collisionFile = await saveHashed('data', 'collision', 'bin', collision, { compression: 'DEFLATE' });
   await saveFile(
     'data/collision_preview.png',
     await canvasToBlob(collisionPreviewCanvas(collision, gridWidth, gridHeight), 'image/png')
@@ -267,8 +288,8 @@ export async function bakeExport(
       territory[y * gridWidth + x] = sec === null ? 255 : sec;
     }
   }
-  await saveFile('data/biome.bin', biome, { compression: 'DEFLATE' });
-  await saveFile('data/territory.bin', territory, { compression: 'DEFLATE' });
+  const biomeFile = await saveHashed('data', 'biome', 'bin', biome, { compression: 'DEFLATE' });
+  const territoryFile = await saveHashed('data', 'territory', 'bin', territory, { compression: 'DEFLATE' });
 
   // ---- 3. minimap --------------------------------------------------------
   onProgress('Rendering minimap…', 0);
@@ -279,37 +300,58 @@ export async function bakeExport(
   const mini = painter.renderRegion(originX, originY, miniW, miniH, miniScale);
   if (mini) await saveFile('minimap.png', await canvasToBlob(mini, 'image/png'));
 
-  // ---- 4. terrain tiles --------------------------------------------------
-  const tiles = [];
-  const total = cols * rows;
-  let done = 0;
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      if (isCancelled()) throw new Error('Export cancelled');
-      done++;
-      onProgress(`Baking terrain ${done}/${total}…`, done / total);
-      await yieldToUI();
-
-      const canvas = painter.renderRegion(
-        originX + col * tileWorldSize,
-        originY + row * tileWorldSize,
-        tilePx,
-        tilePx,
-        scale
-      );
-      if (!canvas) continue;
-      const file = `terrain/t_${col}_${row}.${ext}`;
-      await saveFile(file, await canvasToBlob(canvas, mime, quality));
-      tiles.push({ col, row, file });
-      canvas.width = canvas.height = 0; // release memory early
-    }
+  // ---- 4. terrain tiles (detail level + two coarser levels for zooming out) ----
+  // A phone at the usual zoom shows a tile at ~1/6 of its pixels, so the game picks a coarser level
+  // (4x / 16x fewer pixels) by zoom. Levels are baked from the SAME noise, so they match exactly.
+  // The noise's finest layers are turned off where they would only alias at the lower resolution.
+  const noise = painter.noise;
+  const saved = { grain: painter.grainAmplitude, fine: noise.mottleFine };
+  const levelDefs = [{ id: 'detail', scale, dir: 'terrain', quality, grain: saved.grain, fine: 1, minZoom: 0.28 }];
+  if (lods) {
+    levelDefs.push({ id: 'mid', scale: scale / 2, dir: 'terrain/mid', quality: Math.min(quality, 0.88), grain: 0, fine: 1, minZoom: 0.14 });
+    levelDefs.push({ id: 'far', scale: scale / 4, dir: 'terrain/far', quality: Math.min(quality, 0.85), grain: 0, fine: 0, minZoom: 0 });
   }
+  const levels = [];
+  let done = 0;
+  let total = 0;
+  for (const d of levelDefs) total += Math.ceil(worldW / (tilePx / d.scale)) * Math.ceil(worldH / (tilePx / d.scale));
+  try {
+    for (const d of levelDefs) {
+      painter.grainAmplitude = d.grain;
+      noise.mottleFine = d.fine;
+      const tws = tilePx / d.scale;
+      const lc = Math.ceil(worldW / tws);
+      const lr = Math.ceil(worldH / tws);
+      const levelTiles = [];
+      for (let row = 0; row < lr; row++) {
+        for (let col = 0; col < lc; col++) {
+          if (isCancelled()) throw new Error('Export cancelled');
+          done++;
+          onProgress(`Baking terrain (${d.id}) ${done}/${total}…`, done / total);
+          await yieldToUI();
+
+          const canvas = painter.renderRegion(originX + col * tws, originY + row * tws, tilePx, tilePx, d.scale);
+          if (!canvas) continue;
+          const file = await saveHashed(d.dir, `t_${col}_${row}`, ext, await canvasToBlob(canvas, mime, d.quality));
+          levelTiles.push({ col, row, file });
+          canvas.width = canvas.height = 0; // release memory early
+        }
+      }
+      levels.push({ id: d.id, scale: d.scale, tilePx, tileWorldSize: tws, cols: lc, rows: lr, tiles: levelTiles, minZoom: d.minZoom });
+    }
+  } finally {
+    painter.grainAmplitude = saved.grain;
+    noise.mottleFine = saved.fine;
+  }
+  const detail = levels[0];
+  const tiles = detail.tiles;
+  const coarseLevels = levels.slice(1).reverse(); // coarsest first: far, mid
 
   // ---- 5. manifest (written LAST: its presence means "bake is complete") --
   const biomeLegend = Object.fromEntries(Object.entries(BiomeId).map(([name, id]) => [id, name.toLowerCase()]));
   const manifest = {
     format: 'iso-baked-map',
-    version: 1,
+    version: 2,
     seed,
     exportedAt: new Date().toISOString(),
     grid: { width: gridWidth, height: gridHeight },
@@ -328,16 +370,19 @@ export async function bakeExport(
       cols,
       rows,
       tiles,
+      minZoom: detail.minZoom, // use this level when the on-screen zoom is >= this
+      // coarser levels (far, mid) for lower zoom; same origin / world size as above. Absent = single level.
+      lods: coarseLevels.length ? coarseLevels : undefined,
       minimap: mini ? { file: 'minimap.png', worldWidth: worldW, worldHeight: worldH } : null,
     },
-    shadowTexture: 'objects/_shadow.png',
+    shadowTexture: shadowFile,
     objectTypes,
     objects, // sorted by depth ascending; draw in order (or setDepth(depth))
     data: {
-      collision: { file: 'data/collision.bin', encoding: 'uint8, index = y*width+x, 1 = blocked, 0 = walkable' },
-      biome: { file: 'data/biome.bin', encoding: 'uint8, index = y*width+x', legend: biomeLegend },
+      collision: { file: collisionFile, encoding: 'uint8, index = y*width+x, 1 = blocked, 0 = walkable' },
+      biome: { file: biomeFile, encoding: 'uint8, index = y*width+x', legend: biomeLegend },
       territory: {
-        file: 'data/territory.bin',
+        file: territoryFile,
         encoding: 'uint8, index = y*width+x, 255 = neutral center',
         names: WorldConfig.territories.sectionNames,
       },

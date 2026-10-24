@@ -176,6 +176,9 @@ export class EditorController {
       // Radius (in tiles) around an instance that is marked NOT walkable in
       // the baked collision map. 0 = purely decorative.
       blockRadius: 0,
+      // The game hides this object when zoomed out below this on-screen zoom (0 = always shown).
+      // Trees get 0.25, mountains stay 0.
+      minZoom: 0,
     };
   }
 

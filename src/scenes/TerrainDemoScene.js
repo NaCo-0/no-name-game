@@ -337,6 +337,7 @@ export class TerrainDemoScene extends Phaser.Scene {
       });
       const displayWidth = src.width * TREE_DISPLAY_SCALE;
       type.group = 'trees'; // the panel folds these into one collapsible list
+      type.minZoom = 0.25;  // the game hides trees when zoomed out further than this (performance + clarity)
       type.shadowCast = true; // trees cast a shadow from their own silhouette
       type.shadowLift = 0.02;
       type.shadowCastAlpha = 0.4;

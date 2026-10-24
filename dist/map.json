@@ -1,8 +1,8 @@
 {
  "format": "iso-baked-map",
- "version": 1,
+ "version": 2,
  "seed": 1337,
- "exportedAt": "2026-10-24T11:08:31.944Z",
+ "exportedAt": "2026-10-24T23:11:17.290Z",
  "grid": {
   "width": 600,
   "height": 600
@@ -34,2037 +34,2832 @@
    {
     "col": 16,
     "row": 0,
-    "file": "terrain/t_16_0.png"
+    "file": "terrain/t_16_0.150bf1a0.png"
    },
    {
     "col": 17,
     "row": 0,
-    "file": "terrain/t_17_0.png"
+    "file": "terrain/t_17_0.9b4cfd99.png"
    },
    {
     "col": 18,
     "row": 0,
-    "file": "terrain/t_18_0.png"
+    "file": "terrain/t_18_0.e0cb01aa.png"
    },
    {
     "col": 19,
     "row": 0,
-    "file": "terrain/t_19_0.png"
+    "file": "terrain/t_19_0.ce2e4e2f.png"
    },
    {
     "col": 20,
     "row": 0,
-    "file": "terrain/t_20_0.png"
+    "file": "terrain/t_20_0.89e0a1b6.png"
    },
    {
     "col": 14,
     "row": 1,
-    "file": "terrain/t_14_1.png"
+    "file": "terrain/t_14_1.1c9023f0.png"
    },
    {
     "col": 15,
     "row": 1,
-    "file": "terrain/t_15_1.png"
+    "file": "terrain/t_15_1.fb2e767f.png"
    },
    {
     "col": 16,
     "row": 1,
-    "file": "terrain/t_16_1.png"
+    "file": "terrain/t_16_1.5dcb6acb.png"
    },
    {
     "col": 17,
     "row": 1,
-    "file": "terrain/t_17_1.png"
+    "file": "terrain/t_17_1.e3325294.png"
    },
    {
     "col": 18,
     "row": 1,
-    "file": "terrain/t_18_1.png"
+    "file": "terrain/t_18_1.9e271c14.png"
    },
    {
     "col": 19,
     "row": 1,
-    "file": "terrain/t_19_1.png"
+    "file": "terrain/t_19_1.52e731d1.png"
    },
    {
     "col": 20,
     "row": 1,
-    "file": "terrain/t_20_1.png"
+    "file": "terrain/t_20_1.a1cae4da.png"
    },
    {
     "col": 21,
     "row": 1,
-    "file": "terrain/t_21_1.png"
+    "file": "terrain/t_21_1.ba24dae3.png"
    },
    {
     "col": 22,
     "row": 1,
-    "file": "terrain/t_22_1.png"
+    "file": "terrain/t_22_1.e3832727.png"
    },
    {
     "col": 12,
     "row": 2,
-    "file": "terrain/t_12_2.png"
+    "file": "terrain/t_12_2.abd5a1b1.png"
    },
    {
     "col": 13,
     "row": 2,
-    "file": "terrain/t_13_2.png"
+    "file": "terrain/t_13_2.280882d3.png"
    },
    {
     "col": 14,
     "row": 2,
-    "file": "terrain/t_14_2.png"
+    "file": "terrain/t_14_2.d366f60e.png"
    },
    {
     "col": 15,
     "row": 2,
-    "file": "terrain/t_15_2.png"
+    "file": "terrain/t_15_2.6edd2f43.png"
    },
    {
     "col": 16,
     "row": 2,
-    "file": "terrain/t_16_2.png"
+    "file": "terrain/t_16_2.f9533c1c.png"
    },
    {
     "col": 17,
     "row": 2,
-    "file": "terrain/t_17_2.png"
+    "file": "terrain/t_17_2.10a1943f.png"
    },
    {
     "col": 18,
     "row": 2,
-    "file": "terrain/t_18_2.png"
+    "file": "terrain/t_18_2.3822dc4e.png"
    },
    {
     "col": 19,
     "row": 2,
-    "file": "terrain/t_19_2.png"
+    "file": "terrain/t_19_2.1e9c45ec.png"
    },
    {
     "col": 20,
     "row": 2,
-    "file": "terrain/t_20_2.png"
+    "file": "terrain/t_20_2.b326663c.png"
    },
    {
     "col": 21,
     "row": 2,
-    "file": "terrain/t_21_2.png"
+    "file": "terrain/t_21_2.5aff3687.png"
    },
    {
     "col": 22,
     "row": 2,
-    "file": "terrain/t_22_2.png"
+    "file": "terrain/t_22_2.471cf1e9.png"
    },
    {
     "col": 23,
     "row": 2,
-    "file": "terrain/t_23_2.png"
+    "file": "terrain/t_23_2.4539343a.png"
    },
    {
     "col": 24,
     "row": 2,
-    "file": "terrain/t_24_2.png"
+    "file": "terrain/t_24_2.82ea8e3d.png"
    },
    {
     "col": 10,
     "row": 3,
-    "file": "terrain/t_10_3.png"
+    "file": "terrain/t_10_3.df26fb2a.png"
    },
    {
     "col": 11,
     "row": 3,
-    "file": "terrain/t_11_3.png"
+    "file": "terrain/t_11_3.36161b40.png"
    },
    {
     "col": 12,
     "row": 3,
-    "file": "terrain/t_12_3.png"
+    "file": "terrain/t_12_3.fbc4820a.png"
    },
    {
     "col": 13,
     "row": 3,
-    "file": "terrain/t_13_3.png"
+    "file": "terrain/t_13_3.c1e4e442.png"
    },
    {
     "col": 14,
     "row": 3,
-    "file": "terrain/t_14_3.png"
+    "file": "terrain/t_14_3.d279ae9c.png"
    },
    {
     "col": 15,
     "row": 3,
-    "file": "terrain/t_15_3.png"
+    "file": "terrain/t_15_3.d56bdde6.png"
    },
    {
     "col": 16,
     "row": 3,
-    "file": "terrain/t_16_3.png"
+    "file": "terrain/t_16_3.7f0d623f.png"
    },
    {
     "col": 17,
     "row": 3,
-    "file": "terrain/t_17_3.png"
+    "file": "terrain/t_17_3.74595428.png"
    },
    {
     "col": 18,
     "row": 3,
-    "file": "terrain/t_18_3.png"
+    "file": "terrain/t_18_3.eeea9bb1.png"
    },
    {
     "col": 19,
     "row": 3,
-    "file": "terrain/t_19_3.png"
+    "file": "terrain/t_19_3.addc3b46.png"
    },
    {
     "col": 20,
     "row": 3,
-    "file": "terrain/t_20_3.png"
+    "file": "terrain/t_20_3.245a96b6.png"
    },
    {
     "col": 21,
     "row": 3,
-    "file": "terrain/t_21_3.png"
+    "file": "terrain/t_21_3.5efc8989.png"
    },
    {
     "col": 22,
     "row": 3,
-    "file": "terrain/t_22_3.png"
+    "file": "terrain/t_22_3.b5ea0547.png"
    },
    {
     "col": 23,
     "row": 3,
-    "file": "terrain/t_23_3.png"
+    "file": "terrain/t_23_3.284dc687.png"
    },
    {
     "col": 24,
     "row": 3,
-    "file": "terrain/t_24_3.png"
+    "file": "terrain/t_24_3.9100cb02.png"
    },
    {
     "col": 25,
     "row": 3,
-    "file": "terrain/t_25_3.png"
+    "file": "terrain/t_25_3.2d88b6e3.png"
    },
    {
     "col": 26,
     "row": 3,
-    "file": "terrain/t_26_3.png"
+    "file": "terrain/t_26_3.65144e2d.png"
    },
    {
     "col": 8,
     "row": 4,
-    "file": "terrain/t_8_4.png"
+    "file": "terrain/t_8_4.ebd95f49.png"
    },
    {
     "col": 9,
     "row": 4,
-    "file": "terrain/t_9_4.png"
+    "file": "terrain/t_9_4.da7cfa38.png"
    },
    {
     "col": 10,
     "row": 4,
-    "file": "terrain/t_10_4.png"
+    "file": "terrain/t_10_4.1312695a.png"
    },
    {
     "col": 11,
     "row": 4,
-    "file": "terrain/t_11_4.png"
+    "file": "terrain/t_11_4.9e6a75b9.png"
    },
    {
     "col": 12,
     "row": 4,
-    "file": "terrain/t_12_4.png"
+    "file": "terrain/t_12_4.4b404f54.png"
    },
    {
     "col": 13,
     "row": 4,
-    "file": "terrain/t_13_4.png"
+    "file": "terrain/t_13_4.a7aff251.png"
    },
    {
     "col": 14,
     "row": 4,
-    "file": "terrain/t_14_4.png"
+    "file": "terrain/t_14_4.750c3d06.png"
    },
    {
     "col": 15,
     "row": 4,
-    "file": "terrain/t_15_4.png"
+    "file": "terrain/t_15_4.c7ffab2c.png"
    },
    {
     "col": 16,
     "row": 4,
-    "file": "terrain/t_16_4.png"
+    "file": "terrain/t_16_4.ecd82acb.png"
    },
    {
     "col": 17,
     "row": 4,
-    "file": "terrain/t_17_4.png"
+    "file": "terrain/t_17_4.a57743ef.png"
    },
    {
     "col": 18,
     "row": 4,
-    "file": "terrain/t_18_4.png"
+    "file": "terrain/t_18_4.8f9a6143.png"
    },
    {
     "col": 19,
     "row": 4,
-    "file": "terrain/t_19_4.png"
+    "file": "terrain/t_19_4.a84a6f53.png"
    },
    {
     "col": 20,
     "row": 4,
-    "file": "terrain/t_20_4.png"
+    "file": "terrain/t_20_4.2a2c5a85.png"
    },
    {
     "col": 21,
     "row": 4,
-    "file": "terrain/t_21_4.png"
+    "file": "terrain/t_21_4.d115b89e.png"
    },
    {
     "col": 22,
     "row": 4,
-    "file": "terrain/t_22_4.png"
+    "file": "terrain/t_22_4.08956178.png"
    },
    {
     "col": 23,
     "row": 4,
-    "file": "terrain/t_23_4.png"
+    "file": "terrain/t_23_4.c4dcb576.png"
    },
    {
     "col": 24,
     "row": 4,
-    "file": "terrain/t_24_4.png"
+    "file": "terrain/t_24_4.aa37f8f1.png"
    },
    {
     "col": 25,
     "row": 4,
-    "file": "terrain/t_25_4.png"
+    "file": "terrain/t_25_4.8c294d3d.png"
    },
    {
     "col": 26,
     "row": 4,
-    "file": "terrain/t_26_4.png"
+    "file": "terrain/t_26_4.6bcb44f8.png"
    },
    {
     "col": 27,
     "row": 4,
-    "file": "terrain/t_27_4.png"
+    "file": "terrain/t_27_4.142606e5.png"
    },
    {
     "col": 28,
     "row": 4,
-    "file": "terrain/t_28_4.png"
+    "file": "terrain/t_28_4.87cd92ab.png"
    },
    {
     "col": 6,
     "row": 5,
-    "file": "terrain/t_6_5.png"
+    "file": "terrain/t_6_5.67e89cfe.png"
    },
    {
     "col": 7,
     "row": 5,
-    "file": "terrain/t_7_5.png"
+    "file": "terrain/t_7_5.46668e0e.png"
    },
    {
     "col": 8,
     "row": 5,
-    "file": "terrain/t_8_5.png"
+    "file": "terrain/t_8_5.73ca5889.png"
    },
    {
     "col": 9,
     "row": 5,
-    "file": "terrain/t_9_5.png"
+    "file": "terrain/t_9_5.c4c047c5.png"
    },
    {
     "col": 10,
     "row": 5,
-    "file": "terrain/t_10_5.png"
+    "file": "terrain/t_10_5.59a30849.png"
    },
    {
     "col": 11,
     "row": 5,
-    "file": "terrain/t_11_5.png"
+    "file": "terrain/t_11_5.4a750e95.png"
    },
    {
     "col": 12,
     "row": 5,
-    "file": "terrain/t_12_5.png"
+    "file": "terrain/t_12_5.bd41c7c7.png"
    },
    {
     "col": 13,
     "row": 5,
-    "file": "terrain/t_13_5.png"
+    "file": "terrain/t_13_5.746e3c88.png"
    },
    {
     "col": 14,
     "row": 5,
-    "file": "terrain/t_14_5.png"
+    "file": "terrain/t_14_5.68e680e9.png"
    },
    {
     "col": 15,
     "row": 5,
-    "file": "terrain/t_15_5.png"
+    "file": "terrain/t_15_5.81351acb.png"
    },
    {
     "col": 16,
     "row": 5,
-    "file": "terrain/t_16_5.png"
+    "file": "terrain/t_16_5.baed0bc4.png"
    },
    {
     "col": 17,
     "row": 5,
-    "file": "terrain/t_17_5.png"
+    "file": "terrain/t_17_5.d6f7b612.png"
    },
    {
     "col": 18,
     "row": 5,
-    "file": "terrain/t_18_5.png"
+    "file": "terrain/t_18_5.a0e01cef.png"
    },
    {
     "col": 19,
     "row": 5,
-    "file": "terrain/t_19_5.png"
+    "file": "terrain/t_19_5.97ab1671.png"
    },
    {
     "col": 20,
     "row": 5,
-    "file": "terrain/t_20_5.png"
+    "file": "terrain/t_20_5.87907f29.png"
    },
    {
     "col": 21,
     "row": 5,
-    "file": "terrain/t_21_5.png"
+    "file": "terrain/t_21_5.36f823bb.png"
    },
    {
     "col": 22,
     "row": 5,
-    "file": "terrain/t_22_5.png"
+    "file": "terrain/t_22_5.c7638f95.png"
    },
    {
     "col": 23,
     "row": 5,
-    "file": "terrain/t_23_5.png"
+    "file": "terrain/t_23_5.ab8f6073.png"
    },
    {
     "col": 24,
     "row": 5,
-    "file": "terrain/t_24_5.png"
+    "file": "terrain/t_24_5.77778dc5.png"
    },
    {
     "col": 25,
     "row": 5,
-    "file": "terrain/t_25_5.png"
+    "file": "terrain/t_25_5.8a102467.png"
    },
    {
     "col": 26,
     "row": 5,
-    "file": "terrain/t_26_5.png"
+    "file": "terrain/t_26_5.73dfc6a8.png"
    },
    {
     "col": 27,
     "row": 5,
-    "file": "terrain/t_27_5.png"
+    "file": "terrain/t_27_5.491395a4.png"
    },
    {
     "col": 28,
     "row": 5,
-    "file": "terrain/t_28_5.png"
+    "file": "terrain/t_28_5.b866a0ee.png"
    },
    {
     "col": 29,
     "row": 5,
-    "file": "terrain/t_29_5.png"
+    "file": "terrain/t_29_5.2f5998b1.png"
    },
    {
     "col": 30,
     "row": 5,
-    "file": "terrain/t_30_5.png"
+    "file": "terrain/t_30_5.928e1bf1.png"
    },
    {
     "col": 4,
     "row": 6,
-    "file": "terrain/t_4_6.png"
+    "file": "terrain/t_4_6.65ec31c7.png"
    },
    {
     "col": 5,
     "row": 6,
-    "file": "terrain/t_5_6.png"
+    "file": "terrain/t_5_6.b85f570c.png"
    },
    {
     "col": 6,
     "row": 6,
-    "file": "terrain/t_6_6.png"
+    "file": "terrain/t_6_6.77ec8735.png"
    },
    {
     "col": 7,
     "row": 6,
-    "file": "terrain/t_7_6.png"
+    "file": "terrain/t_7_6.f53d0294.png"
    },
    {
     "col": 8,
     "row": 6,
-    "file": "terrain/t_8_6.png"
+    "file": "terrain/t_8_6.affe5bdc.png"
    },
    {
     "col": 9,
     "row": 6,
-    "file": "terrain/t_9_6.png"
+    "file": "terrain/t_9_6.36fa0e77.png"
    },
    {
     "col": 10,
     "row": 6,
-    "file": "terrain/t_10_6.png"
+    "file": "terrain/t_10_6.20d807e5.png"
    },
    {
     "col": 11,
     "row": 6,
-    "file": "terrain/t_11_6.png"
+    "file": "terrain/t_11_6.c6d32359.png"
    },
    {
     "col": 12,
     "row": 6,
-    "file": "terrain/t_12_6.png"
+    "file": "terrain/t_12_6.c449ee59.png"
    },
    {
     "col": 13,
     "row": 6,
-    "file": "terrain/t_13_6.png"
+    "file": "terrain/t_13_6.6cbad61b.png"
    },
    {
     "col": 14,
     "row": 6,
-    "file": "terrain/t_14_6.png"
+    "file": "terrain/t_14_6.6fef70eb.png"
    },
    {
     "col": 15,
     "row": 6,
-    "file": "terrain/t_15_6.png"
+    "file": "terrain/t_15_6.45155b4e.png"
    },
    {
     "col": 16,
     "row": 6,
-    "file": "terrain/t_16_6.png"
+    "file": "terrain/t_16_6.3fe00dbd.png"
    },
    {
     "col": 17,
     "row": 6,
-    "file": "terrain/t_17_6.png"
+    "file": "terrain/t_17_6.e5ad7b9d.png"
    },
    {
     "col": 18,
     "row": 6,
-    "file": "terrain/t_18_6.png"
+    "file": "terrain/t_18_6.9ff6bcad.png"
    },
    {
     "col": 19,
     "row": 6,
-    "file": "terrain/t_19_6.png"
+    "file": "terrain/t_19_6.1f015799.png"
    },
    {
     "col": 20,
     "row": 6,
-    "file": "terrain/t_20_6.png"
+    "file": "terrain/t_20_6.17c3a7b0.png"
    },
    {
     "col": 21,
     "row": 6,
-    "file": "terrain/t_21_6.png"
+    "file": "terrain/t_21_6.239fa7ac.png"
    },
    {
     "col": 22,
     "row": 6,
-    "file": "terrain/t_22_6.png"
+    "file": "terrain/t_22_6.40ef7915.png"
    },
    {
     "col": 23,
     "row": 6,
-    "file": "terrain/t_23_6.png"
+    "file": "terrain/t_23_6.8787df71.png"
    },
    {
     "col": 24,
     "row": 6,
-    "file": "terrain/t_24_6.png"
+    "file": "terrain/t_24_6.7bce52fe.png"
    },
    {
     "col": 25,
     "row": 6,
-    "file": "terrain/t_25_6.png"
+    "file": "terrain/t_25_6.8bd1e50c.png"
    },
    {
     "col": 26,
     "row": 6,
-    "file": "terrain/t_26_6.png"
+    "file": "terrain/t_26_6.ae08f98d.png"
    },
    {
     "col": 27,
     "row": 6,
-    "file": "terrain/t_27_6.png"
+    "file": "terrain/t_27_6.5eca4b14.png"
    },
    {
     "col": 28,
     "row": 6,
-    "file": "terrain/t_28_6.png"
+    "file": "terrain/t_28_6.001085a2.png"
    },
    {
     "col": 29,
     "row": 6,
-    "file": "terrain/t_29_6.png"
+    "file": "terrain/t_29_6.a5b298f2.png"
    },
    {
     "col": 30,
     "row": 6,
-    "file": "terrain/t_30_6.png"
+    "file": "terrain/t_30_6.f36a54a9.png"
    },
    {
     "col": 31,
     "row": 6,
-    "file": "terrain/t_31_6.png"
+    "file": "terrain/t_31_6.0a5cb882.png"
    },
    {
     "col": 32,
     "row": 6,
-    "file": "terrain/t_32_6.png"
+    "file": "terrain/t_32_6.728cb99d.png"
    },
    {
     "col": 2,
     "row": 7,
-    "file": "terrain/t_2_7.png"
+    "file": "terrain/t_2_7.3a83b93f.png"
    },
    {
     "col": 3,
     "row": 7,
-    "file": "terrain/t_3_7.png"
+    "file": "terrain/t_3_7.497f439b.png"
    },
    {
     "col": 4,
     "row": 7,
-    "file": "terrain/t_4_7.png"
+    "file": "terrain/t_4_7.03b4cf6f.png"
    },
    {
     "col": 5,
     "row": 7,
-    "file": "terrain/t_5_7.png"
+    "file": "terrain/t_5_7.7480ad24.png"
    },
    {
     "col": 6,
     "row": 7,
-    "file": "terrain/t_6_7.png"
+    "file": "terrain/t_6_7.76643602.png"
    },
    {
     "col": 7,
     "row": 7,
-    "file": "terrain/t_7_7.png"
+    "file": "terrain/t_7_7.a87dc13d.png"
    },
    {
     "col": 8,
     "row": 7,
-    "file": "terrain/t_8_7.png"
+    "file": "terrain/t_8_7.661d5096.png"
    },
    {
     "col": 9,
     "row": 7,
-    "file": "terrain/t_9_7.png"
+    "file": "terrain/t_9_7.64352552.png"
    },
    {
     "col": 10,
     "row": 7,
-    "file": "terrain/t_10_7.png"
+    "file": "terrain/t_10_7.08c3c172.png"
    },
    {
     "col": 11,
     "row": 7,
-    "file": "terrain/t_11_7.png"
+    "file": "terrain/t_11_7.179f691d.png"
    },
    {
     "col": 12,
     "row": 7,
-    "file": "terrain/t_12_7.png"
+    "file": "terrain/t_12_7.94acfdb7.png"
    },
    {
     "col": 13,
     "row": 7,
-    "file": "terrain/t_13_7.png"
+    "file": "terrain/t_13_7.d83362a1.png"
    },
    {
     "col": 14,
     "row": 7,
-    "file": "terrain/t_14_7.png"
+    "file": "terrain/t_14_7.392e8cbb.png"
    },
    {
     "col": 15,
     "row": 7,
-    "file": "terrain/t_15_7.png"
+    "file": "terrain/t_15_7.c5406180.png"
    },
    {
     "col": 16,
     "row": 7,
-    "file": "terrain/t_16_7.png"
+    "file": "terrain/t_16_7.a61c8cc4.png"
    },
    {
     "col": 17,
     "row": 7,
-    "file": "terrain/t_17_7.png"
+    "file": "terrain/t_17_7.5fb621a2.png"
    },
    {
     "col": 18,
     "row": 7,
-    "file": "terrain/t_18_7.png"
+    "file": "terrain/t_18_7.0f6cc6e3.png"
    },
    {
     "col": 19,
     "row": 7,
-    "file": "terrain/t_19_7.png"
+    "file": "terrain/t_19_7.3170da7e.png"
    },
    {
     "col": 20,
     "row": 7,
-    "file": "terrain/t_20_7.png"
+    "file": "terrain/t_20_7.e47a2fb7.png"
    },
    {
     "col": 21,
     "row": 7,
-    "file": "terrain/t_21_7.png"
+    "file": "terrain/t_21_7.0cbe85eb.png"
    },
    {
     "col": 22,
     "row": 7,
-    "file": "terrain/t_22_7.png"
+    "file": "terrain/t_22_7.13b5c5fc.png"
    },
    {
     "col": 23,
     "row": 7,
-    "file": "terrain/t_23_7.png"
+    "file": "terrain/t_23_7.754c1780.png"
    },
    {
     "col": 24,
     "row": 7,
-    "file": "terrain/t_24_7.png"
+    "file": "terrain/t_24_7.bf5a563f.png"
    },
    {
     "col": 25,
     "row": 7,
-    "file": "terrain/t_25_7.png"
+    "file": "terrain/t_25_7.b8191c2e.png"
    },
    {
     "col": 26,
     "row": 7,
-    "file": "terrain/t_26_7.png"
+    "file": "terrain/t_26_7.a0da4537.png"
    },
    {
     "col": 27,
     "row": 7,
-    "file": "terrain/t_27_7.png"
+    "file": "terrain/t_27_7.785cdb7e.png"
    },
    {
     "col": 28,
     "row": 7,
-    "file": "terrain/t_28_7.png"
+    "file": "terrain/t_28_7.de08d5b1.png"
    },
    {
     "col": 29,
     "row": 7,
-    "file": "terrain/t_29_7.png"
+    "file": "terrain/t_29_7.eb6856cc.png"
    },
    {
     "col": 30,
     "row": 7,
-    "file": "terrain/t_30_7.png"
+    "file": "terrain/t_30_7.5b12181f.png"
    },
    {
     "col": 31,
     "row": 7,
-    "file": "terrain/t_31_7.png"
+    "file": "terrain/t_31_7.260eff5a.png"
    },
    {
     "col": 32,
     "row": 7,
-    "file": "terrain/t_32_7.png"
+    "file": "terrain/t_32_7.28e54d52.png"
    },
    {
     "col": 33,
     "row": 7,
-    "file": "terrain/t_33_7.png"
+    "file": "terrain/t_33_7.8852f0b1.png"
    },
    {
     "col": 34,
     "row": 7,
-    "file": "terrain/t_34_7.png"
+    "file": "terrain/t_34_7.8ff9de3f.png"
    },
    {
     "col": 0,
     "row": 8,
-    "file": "terrain/t_0_8.png"
+    "file": "terrain/t_0_8.49315ed7.png"
    },
    {
     "col": 1,
     "row": 8,
-    "file": "terrain/t_1_8.png"
+    "file": "terrain/t_1_8.2b1c0d60.png"
    },
    {
     "col": 2,
     "row": 8,
-    "file": "terrain/t_2_8.png"
+    "file": "terrain/t_2_8.43bbdd58.png"
    },
    {
     "col": 3,
     "row": 8,
-    "file": "terrain/t_3_8.png"
+    "file": "terrain/t_3_8.b8ee68c8.png"
    },
    {
     "col": 4,
     "row": 8,
-    "file": "terrain/t_4_8.png"
+    "file": "terrain/t_4_8.96d1f5b6.png"
    },
    {
     "col": 5,
     "row": 8,
-    "file": "terrain/t_5_8.png"
+    "file": "terrain/t_5_8.335c2888.png"
    },
    {
     "col": 6,
     "row": 8,
-    "file": "terrain/t_6_8.png"
+    "file": "terrain/t_6_8.0d4bc9b9.png"
    },
    {
     "col": 7,
     "row": 8,
-    "file": "terrain/t_7_8.png"
+    "file": "terrain/t_7_8.be6b0b0c.png"
    },
    {
     "col": 8,
     "row": 8,
-    "file": "terrain/t_8_8.png"
+    "file": "terrain/t_8_8.8826c4a2.png"
    },
    {
     "col": 9,
     "row": 8,
-    "file": "terrain/t_9_8.png"
+    "file": "terrain/t_9_8.cfa0c7e3.png"
    },
    {
     "col": 10,
     "row": 8,
-    "file": "terrain/t_10_8.png"
+    "file": "terrain/t_10_8.a785ed91.png"
    },
    {
     "col": 11,
     "row": 8,
-    "file": "terrain/t_11_8.png"
+    "file": "terrain/t_11_8.d940e114.png"
    },
    {
     "col": 12,
     "row": 8,
-    "file": "terrain/t_12_8.png"
+    "file": "terrain/t_12_8.a3639096.png"
    },
    {
     "col": 13,
     "row": 8,
-    "file": "terrain/t_13_8.png"
+    "file": "terrain/t_13_8.ab2d5f01.png"
    },
    {
     "col": 14,
     "row": 8,
-    "file": "terrain/t_14_8.png"
+    "file": "terrain/t_14_8.04b79ef6.png"
    },
    {
     "col": 15,
     "row": 8,
-    "file": "terrain/t_15_8.png"
+    "file": "terrain/t_15_8.4dc027d7.png"
    },
    {
     "col": 16,
     "row": 8,
-    "file": "terrain/t_16_8.png"
+    "file": "terrain/t_16_8.1467076a.png"
    },
    {
     "col": 17,
     "row": 8,
-    "file": "terrain/t_17_8.png"
+    "file": "terrain/t_17_8.3feea8c0.png"
    },
    {
     "col": 18,
     "row": 8,
-    "file": "terrain/t_18_8.png"
+    "file": "terrain/t_18_8.e4cdb5bc.png"
    },
    {
     "col": 19,
     "row": 8,
-    "file": "terrain/t_19_8.png"
+    "file": "terrain/t_19_8.1b6c7f47.png"
    },
    {
     "col": 20,
     "row": 8,
-    "file": "terrain/t_20_8.png"
+    "file": "terrain/t_20_8.af02d87e.png"
    },
    {
     "col": 21,
     "row": 8,
-    "file": "terrain/t_21_8.png"
+    "file": "terrain/t_21_8.59b3b3da.png"
    },
    {
     "col": 22,
     "row": 8,
-    "file": "terrain/t_22_8.png"
+    "file": "terrain/t_22_8.c797a509.png"
    },
    {
     "col": 23,
     "row": 8,
-    "file": "terrain/t_23_8.png"
+    "file": "terrain/t_23_8.8d30ebb9.png"
    },
    {
     "col": 24,
     "row": 8,
-    "file": "terrain/t_24_8.png"
+    "file": "terrain/t_24_8.0f5cf0ac.png"
    },
    {
     "col": 25,
     "row": 8,
-    "file": "terrain/t_25_8.png"
+    "file": "terrain/t_25_8.153f96c7.png"
    },
    {
     "col": 26,
     "row": 8,
-    "file": "terrain/t_26_8.png"
+    "file": "terrain/t_26_8.0ea2da7e.png"
    },
    {
     "col": 27,
     "row": 8,
-    "file": "terrain/t_27_8.png"
+    "file": "terrain/t_27_8.82cdbcae.png"
    },
    {
     "col": 28,
     "row": 8,
-    "file": "terrain/t_28_8.png"
+    "file": "terrain/t_28_8.d76dfc0e.png"
    },
    {
     "col": 29,
     "row": 8,
-    "file": "terrain/t_29_8.png"
+    "file": "terrain/t_29_8.bc10d37f.png"
    },
    {
     "col": 30,
     "row": 8,
-    "file": "terrain/t_30_8.png"
+    "file": "terrain/t_30_8.d331ac64.png"
    },
    {
     "col": 31,
     "row": 8,
-    "file": "terrain/t_31_8.png"
+    "file": "terrain/t_31_8.bdf08bff.png"
    },
    {
     "col": 32,
     "row": 8,
-    "file": "terrain/t_32_8.png"
+    "file": "terrain/t_32_8.8e17b4aa.png"
    },
    {
     "col": 33,
     "row": 8,
-    "file": "terrain/t_33_8.png"
+    "file": "terrain/t_33_8.f4159ef1.png"
    },
    {
     "col": 34,
     "row": 8,
-    "file": "terrain/t_34_8.png"
+    "file": "terrain/t_34_8.b1a50ced.png"
    },
    {
     "col": 35,
     "row": 8,
-    "file": "terrain/t_35_8.png"
+    "file": "terrain/t_35_8.ce923223.png"
    },
    {
     "col": 36,
     "row": 8,
-    "file": "terrain/t_36_8.png"
+    "file": "terrain/t_36_8.e04cfc7b.png"
    },
    {
     "col": 0,
     "row": 9,
-    "file": "terrain/t_0_9.png"
+    "file": "terrain/t_0_9.924d4212.png"
    },
    {
     "col": 1,
     "row": 9,
-    "file": "terrain/t_1_9.png"
+    "file": "terrain/t_1_9.5b8773e4.png"
    },
    {
     "col": 2,
     "row": 9,
-    "file": "terrain/t_2_9.png"
+    "file": "terrain/t_2_9.e80237ad.png"
    },
    {
     "col": 3,
     "row": 9,
-    "file": "terrain/t_3_9.png"
+    "file": "terrain/t_3_9.669d721f.png"
    },
    {
     "col": 4,
     "row": 9,
-    "file": "terrain/t_4_9.png"
+    "file": "terrain/t_4_9.a4761701.png"
    },
    {
     "col": 5,
     "row": 9,
-    "file": "terrain/t_5_9.png"
+    "file": "terrain/t_5_9.eb0fc1f9.png"
    },
    {
     "col": 6,
     "row": 9,
-    "file": "terrain/t_6_9.png"
+    "file": "terrain/t_6_9.62961655.png"
    },
    {
     "col": 7,
     "row": 9,
-    "file": "terrain/t_7_9.png"
+    "file": "terrain/t_7_9.768d6954.png"
    },
    {
     "col": 8,
     "row": 9,
-    "file": "terrain/t_8_9.png"
+    "file": "terrain/t_8_9.881cccdb.png"
    },
    {
     "col": 9,
     "row": 9,
-    "file": "terrain/t_9_9.png"
+    "file": "terrain/t_9_9.9477c1c9.png"
    },
    {
     "col": 10,
     "row": 9,
-    "file": "terrain/t_10_9.png"
+    "file": "terrain/t_10_9.cb681660.png"
    },
    {
     "col": 11,
     "row": 9,
-    "file": "terrain/t_11_9.png"
+    "file": "terrain/t_11_9.a335a724.png"
    },
    {
     "col": 12,
     "row": 9,
-    "file": "terrain/t_12_9.png"
+    "file": "terrain/t_12_9.c954e0d9.png"
    },
    {
     "col": 13,
     "row": 9,
-    "file": "terrain/t_13_9.png"
+    "file": "terrain/t_13_9.a8bad9df.png"
    },
    {
     "col": 14,
     "row": 9,
-    "file": "terrain/t_14_9.png"
+    "file": "terrain/t_14_9.8dfc0ad3.png"
    },
    {
     "col": 15,
     "row": 9,
-    "file": "terrain/t_15_9.png"
+    "file": "terrain/t_15_9.20922afd.png"
    },
    {
     "col": 16,
     "row": 9,
-    "file": "terrain/t_16_9.png"
+    "file": "terrain/t_16_9.10c1b6a0.png"
    },
    {
     "col": 17,
     "row": 9,
-    "file": "terrain/t_17_9.png"
+    "file": "terrain/t_17_9.89643bc9.png"
    },
    {
     "col": 18,
     "row": 9,
-    "file": "terrain/t_18_9.png"
+    "file": "terrain/t_18_9.54a3eb81.png"
    },
    {
     "col": 19,
     "row": 9,
-    "file": "terrain/t_19_9.png"
+    "file": "terrain/t_19_9.a95c69b2.png"
    },
    {
     "col": 20,
     "row": 9,
-    "file": "terrain/t_20_9.png"
+    "file": "terrain/t_20_9.94a9b987.png"
    },
    {
     "col": 21,
     "row": 9,
-    "file": "terrain/t_21_9.png"
+    "file": "terrain/t_21_9.69fe3c21.png"
    },
    {
     "col": 22,
     "row": 9,
-    "file": "terrain/t_22_9.png"
+    "file": "terrain/t_22_9.d160626d.png"
    },
    {
     "col": 23,
     "row": 9,
-    "file": "terrain/t_23_9.png"
+    "file": "terrain/t_23_9.e4f53a5f.png"
    },
    {
     "col": 24,
     "row": 9,
-    "file": "terrain/t_24_9.png"
+    "file": "terrain/t_24_9.e264fd91.png"
    },
    {
     "col": 25,
     "row": 9,
-    "file": "terrain/t_25_9.png"
+    "file": "terrain/t_25_9.faa1c3ae.png"
    },
    {
     "col": 26,
     "row": 9,
-    "file": "terrain/t_26_9.png"
+    "file": "terrain/t_26_9.1536160e.png"
    },
    {
     "col": 27,
     "row": 9,
-    "file": "terrain/t_27_9.png"
+    "file": "terrain/t_27_9.bc7dc9d9.png"
    },
    {
     "col": 28,
     "row": 9,
-    "file": "terrain/t_28_9.png"
+    "file": "terrain/t_28_9.7e43dbd8.png"
    },
    {
     "col": 29,
     "row": 9,
-    "file": "terrain/t_29_9.png"
+    "file": "terrain/t_29_9.e342375c.png"
    },
    {
     "col": 30,
     "row": 9,
-    "file": "terrain/t_30_9.png"
+    "file": "terrain/t_30_9.00af5a97.png"
    },
    {
     "col": 31,
     "row": 9,
-    "file": "terrain/t_31_9.png"
+    "file": "terrain/t_31_9.5f578faa.png"
    },
    {
     "col": 32,
     "row": 9,
-    "file": "terrain/t_32_9.png"
+    "file": "terrain/t_32_9.2b22a729.png"
    },
    {
     "col": 33,
     "row": 9,
-    "file": "terrain/t_33_9.png"
+    "file": "terrain/t_33_9.9f69c8e6.png"
    },
    {
     "col": 34,
     "row": 9,
-    "file": "terrain/t_34_9.png"
+    "file": "terrain/t_34_9.844d66fc.png"
    },
    {
     "col": 35,
     "row": 9,
-    "file": "terrain/t_35_9.png"
+    "file": "terrain/t_35_9.b6c13d50.png"
    },
    {
     "col": 36,
     "row": 9,
-    "file": "terrain/t_36_9.png"
+    "file": "terrain/t_36_9.724015cc.png"
    },
    {
     "col": 37,
     "row": 9,
-    "file": "terrain/t_37_9.png"
+    "file": "terrain/t_37_9.74772051.png"
    },
    {
     "col": 1,
     "row": 10,
-    "file": "terrain/t_1_10.png"
+    "file": "terrain/t_1_10.dac10144.png"
    },
    {
     "col": 2,
     "row": 10,
-    "file": "terrain/t_2_10.png"
+    "file": "terrain/t_2_10.1bacbfec.png"
    },
    {
     "col": 3,
     "row": 10,
-    "file": "terrain/t_3_10.png"
+    "file": "terrain/t_3_10.736d64e6.png"
    },
    {
     "col": 4,
     "row": 10,
-    "file": "terrain/t_4_10.png"
+    "file": "terrain/t_4_10.6a292177.png"
    },
    {
     "col": 5,
     "row": 10,
-    "file": "terrain/t_5_10.png"
+    "file": "terrain/t_5_10.1a59d001.png"
    },
    {
     "col": 6,
     "row": 10,
-    "file": "terrain/t_6_10.png"
+    "file": "terrain/t_6_10.4752243e.png"
    },
    {
     "col": 7,
     "row": 10,
-    "file": "terrain/t_7_10.png"
+    "file": "terrain/t_7_10.9bd7f0ac.png"
    },
    {
     "col": 8,
     "row": 10,
-    "file": "terrain/t_8_10.png"
+    "file": "terrain/t_8_10.81da5c08.png"
    },
    {
     "col": 9,
     "row": 10,
-    "file": "terrain/t_9_10.png"
+    "file": "terrain/t_9_10.bc0d15bf.png"
    },
    {
     "col": 10,
     "row": 10,
-    "file": "terrain/t_10_10.png"
+    "file": "terrain/t_10_10.4e37e350.png"
    },
    {
     "col": 11,
     "row": 10,
-    "file": "terrain/t_11_10.png"
+    "file": "terrain/t_11_10.d9b340eb.png"
    },
    {
     "col": 12,
     "row": 10,
-    "file": "terrain/t_12_10.png"
+    "file": "terrain/t_12_10.648b87b1.png"
    },
    {
     "col": 13,
     "row": 10,
-    "file": "terrain/t_13_10.png"
+    "file": "terrain/t_13_10.d17bda9c.png"
    },
    {
     "col": 14,
     "row": 10,
-    "file": "terrain/t_14_10.png"
+    "file": "terrain/t_14_10.5ed6d257.png"
    },
    {
     "col": 15,
     "row": 10,
-    "file": "terrain/t_15_10.png"
+    "file": "terrain/t_15_10.fe411aaa.png"
    },
    {
     "col": 16,
     "row": 10,
-    "file": "terrain/t_16_10.png"
+    "file": "terrain/t_16_10.be962c65.png"
    },
    {
     "col": 17,
     "row": 10,
-    "file": "terrain/t_17_10.png"
+    "file": "terrain/t_17_10.324f170f.png"
    },
    {
     "col": 18,
     "row": 10,
-    "file": "terrain/t_18_10.png"
+    "file": "terrain/t_18_10.fee84943.png"
    },
    {
     "col": 19,
     "row": 10,
-    "file": "terrain/t_19_10.png"
+    "file": "terrain/t_19_10.54fe65db.png"
    },
    {
     "col": 20,
     "row": 10,
-    "file": "terrain/t_20_10.png"
+    "file": "terrain/t_20_10.2fadc71e.png"
    },
    {
     "col": 21,
     "row": 10,
-    "file": "terrain/t_21_10.png"
+    "file": "terrain/t_21_10.cd703c26.png"
    },
    {
     "col": 22,
     "row": 10,
-    "file": "terrain/t_22_10.png"
+    "file": "terrain/t_22_10.79a67143.png"
    },
    {
     "col": 23,
     "row": 10,
-    "file": "terrain/t_23_10.png"
+    "file": "terrain/t_23_10.b8113969.png"
    },
    {
     "col": 24,
     "row": 10,
-    "file": "terrain/t_24_10.png"
+    "file": "terrain/t_24_10.22ff4153.png"
    },
    {
     "col": 25,
     "row": 10,
-    "file": "terrain/t_25_10.png"
+    "file": "terrain/t_25_10.0921df41.png"
    },
    {
     "col": 26,
     "row": 10,
-    "file": "terrain/t_26_10.png"
+    "file": "terrain/t_26_10.86a0686d.png"
    },
    {
     "col": 27,
     "row": 10,
-    "file": "terrain/t_27_10.png"
+    "file": "terrain/t_27_10.6c1ea9ef.png"
    },
    {
     "col": 28,
     "row": 10,
-    "file": "terrain/t_28_10.png"
+    "file": "terrain/t_28_10.0e46e5a7.png"
    },
    {
     "col": 29,
     "row": 10,
-    "file": "terrain/t_29_10.png"
+    "file": "terrain/t_29_10.50dce3bc.png"
    },
    {
     "col": 30,
     "row": 10,
-    "file": "terrain/t_30_10.png"
+    "file": "terrain/t_30_10.010a7119.png"
    },
    {
     "col": 31,
     "row": 10,
-    "file": "terrain/t_31_10.png"
+    "file": "terrain/t_31_10.a6068a32.png"
    },
    {
     "col": 32,
     "row": 10,
-    "file": "terrain/t_32_10.png"
+    "file": "terrain/t_32_10.4d162224.png"
    },
    {
     "col": 33,
     "row": 10,
-    "file": "terrain/t_33_10.png"
+    "file": "terrain/t_33_10.d383de8b.png"
    },
    {
     "col": 34,
     "row": 10,
-    "file": "terrain/t_34_10.png"
+    "file": "terrain/t_34_10.9b5dbd1e.png"
    },
    {
     "col": 35,
     "row": 10,
-    "file": "terrain/t_35_10.png"
+    "file": "terrain/t_35_10.5853ab3e.png"
    },
    {
     "col": 36,
     "row": 10,
-    "file": "terrain/t_36_10.png"
+    "file": "terrain/t_36_10.cecbb44d.png"
    },
    {
     "col": 3,
     "row": 11,
-    "file": "terrain/t_3_11.png"
+    "file": "terrain/t_3_11.1b27b90e.png"
    },
    {
     "col": 4,
     "row": 11,
-    "file": "terrain/t_4_11.png"
+    "file": "terrain/t_4_11.5791dd7f.png"
    },
    {
     "col": 5,
     "row": 11,
-    "file": "terrain/t_5_11.png"
+    "file": "terrain/t_5_11.ed523484.png"
    },
    {
     "col": 6,
     "row": 11,
-    "file": "terrain/t_6_11.png"
+    "file": "terrain/t_6_11.09444587.png"
    },
    {
     "col": 7,
     "row": 11,
-    "file": "terrain/t_7_11.png"
+    "file": "terrain/t_7_11.1c6400ca.png"
    },
    {
     "col": 8,
     "row": 11,
-    "file": "terrain/t_8_11.png"
+    "file": "terrain/t_8_11.205479df.png"
    },
    {
     "col": 9,
     "row": 11,
-    "file": "terrain/t_9_11.png"
+    "file": "terrain/t_9_11.76cf4449.png"
    },
    {
     "col": 10,
     "row": 11,
-    "file": "terrain/t_10_11.png"
+    "file": "terrain/t_10_11.97f7f760.png"
    },
    {
     "col": 11,
     "row": 11,
-    "file": "terrain/t_11_11.png"
+    "file": "terrain/t_11_11.e0475361.png"
    },
    {
     "col": 12,
     "row": 11,
-    "file": "terrain/t_12_11.png"
+    "file": "terrain/t_12_11.b8f92baf.png"
    },
    {
     "col": 13,
     "row": 11,
-    "file": "terrain/t_13_11.png"
+    "file": "terrain/t_13_11.fd5dc839.png"
    },
    {
     "col": 14,
     "row": 11,
-    "file": "terrain/t_14_11.png"
+    "file": "terrain/t_14_11.6be7c211.png"
    },
    {
     "col": 15,
     "row": 11,
-    "file": "terrain/t_15_11.png"
+    "file": "terrain/t_15_11.13a2d2a0.png"
    },
    {
     "col": 16,
     "row": 11,
-    "file": "terrain/t_16_11.png"
+    "file": "terrain/t_16_11.7cfc0817.png"
    },
    {
     "col": 17,
     "row": 11,
-    "file": "terrain/t_17_11.png"
+    "file": "terrain/t_17_11.4b0d2957.png"
    },
    {
     "col": 18,
     "row": 11,
-    "file": "terrain/t_18_11.png"
+    "file": "terrain/t_18_11.7658c6c0.png"
    },
    {
     "col": 19,
     "row": 11,
-    "file": "terrain/t_19_11.png"
+    "file": "terrain/t_19_11.7c80318a.png"
    },
    {
     "col": 20,
     "row": 11,
-    "file": "terrain/t_20_11.png"
+    "file": "terrain/t_20_11.0f4f6d3c.png"
    },
    {
     "col": 21,
     "row": 11,
-    "file": "terrain/t_21_11.png"
+    "file": "terrain/t_21_11.7b43ca4e.png"
    },
    {
     "col": 22,
     "row": 11,
-    "file": "terrain/t_22_11.png"
+    "file": "terrain/t_22_11.29a5f305.png"
    },
    {
     "col": 23,
     "row": 11,
-    "file": "terrain/t_23_11.png"
+    "file": "terrain/t_23_11.75abcd33.png"
    },
    {
     "col": 24,
     "row": 11,
-    "file": "terrain/t_24_11.png"
+    "file": "terrain/t_24_11.ecc99f5a.png"
    },
    {
     "col": 25,
     "row": 11,
-    "file": "terrain/t_25_11.png"
+    "file": "terrain/t_25_11.8f601e0f.png"
    },
    {
     "col": 26,
     "row": 11,
-    "file": "terrain/t_26_11.png"
+    "file": "terrain/t_26_11.a5aa10d1.png"
    },
    {
     "col": 27,
     "row": 11,
-    "file": "terrain/t_27_11.png"
+    "file": "terrain/t_27_11.bc1b0792.png"
    },
    {
     "col": 28,
     "row": 11,
-    "file": "terrain/t_28_11.png"
+    "file": "terrain/t_28_11.9870caa8.png"
    },
    {
     "col": 29,
     "row": 11,
-    "file": "terrain/t_29_11.png"
+    "file": "terrain/t_29_11.9e3fa329.png"
    },
    {
     "col": 30,
     "row": 11,
-    "file": "terrain/t_30_11.png"
+    "file": "terrain/t_30_11.7a24cbe9.png"
    },
    {
     "col": 31,
     "row": 11,
-    "file": "terrain/t_31_11.png"
+    "file": "terrain/t_31_11.6fa2fdd5.png"
    },
    {
     "col": 32,
     "row": 11,
-    "file": "terrain/t_32_11.png"
+    "file": "terrain/t_32_11.849f676c.png"
    },
    {
     "col": 33,
     "row": 11,
-    "file": "terrain/t_33_11.png"
+    "file": "terrain/t_33_11.b4f4034d.png"
    },
    {
     "col": 34,
     "row": 11,
-    "file": "terrain/t_34_11.png"
+    "file": "terrain/t_34_11.f20000e4.png"
    },
    {
     "col": 5,
     "row": 12,
-    "file": "terrain/t_5_12.png"
+    "file": "terrain/t_5_12.4a8730e3.png"
    },
    {
     "col": 6,
     "row": 12,
-    "file": "terrain/t_6_12.png"
+    "file": "terrain/t_6_12.9e6eedb5.png"
    },
    {
     "col": 7,
     "row": 12,
-    "file": "terrain/t_7_12.png"
+    "file": "terrain/t_7_12.76d3999b.png"
    },
    {
     "col": 8,
     "row": 12,
-    "file": "terrain/t_8_12.png"
+    "file": "terrain/t_8_12.9f49150c.png"
    },
    {
     "col": 9,
     "row": 12,
-    "file": "terrain/t_9_12.png"
+    "file": "terrain/t_9_12.9c922318.png"
    },
    {
     "col": 10,
     "row": 12,
-    "file": "terrain/t_10_12.png"
+    "file": "terrain/t_10_12.fadaeadd.png"
    },
    {
     "col": 11,
     "row": 12,
-    "file": "terrain/t_11_12.png"
+    "file": "terrain/t_11_12.cec90af8.png"
    },
    {
     "col": 12,
     "row": 12,
-    "file": "terrain/t_12_12.png"
+    "file": "terrain/t_12_12.8516cb59.png"
    },
    {
     "col": 13,
     "row": 12,
-    "file": "terrain/t_13_12.png"
+    "file": "terrain/t_13_12.79672138.png"
    },
    {
     "col": 14,
     "row": 12,
-    "file": "terrain/t_14_12.png"
+    "file": "terrain/t_14_12.b39f1647.png"
    },
    {
     "col": 15,
     "row": 12,
-    "file": "terrain/t_15_12.png"
+    "file": "terrain/t_15_12.da3dd308.png"
    },
    {
     "col": 16,
     "row": 12,
-    "file": "terrain/t_16_12.png"
+    "file": "terrain/t_16_12.496967f8.png"
    },
    {
     "col": 17,
     "row": 12,
-    "file": "terrain/t_17_12.png"
+    "file": "terrain/t_17_12.3548b1cc.png"
    },
    {
     "col": 18,
     "row": 12,
-    "file": "terrain/t_18_12.png"
+    "file": "terrain/t_18_12.545d1549.png"
    },
    {
     "col": 19,
     "row": 12,
-    "file": "terrain/t_19_12.png"
+    "file": "terrain/t_19_12.27143598.png"
    },
    {
     "col": 20,
     "row": 12,
-    "file": "terrain/t_20_12.png"
+    "file": "terrain/t_20_12.3cc67ee6.png"
    },
    {
     "col": 21,
     "row": 12,
-    "file": "terrain/t_21_12.png"
+    "file": "terrain/t_21_12.d40f3f00.png"
    },
    {
     "col": 22,
     "row": 12,
-    "file": "terrain/t_22_12.png"
+    "file": "terrain/t_22_12.fdfeb5c7.png"
    },
    {
     "col": 23,
     "row": 12,
-    "file": "terrain/t_23_12.png"
+    "file": "terrain/t_23_12.9b46c2e9.png"
    },
    {
     "col": 24,
     "row": 12,
-    "file": "terrain/t_24_12.png"
+    "file": "terrain/t_24_12.6a20391e.png"
    },
    {
     "col": 25,
     "row": 12,
-    "file": "terrain/t_25_12.png"
+    "file": "terrain/t_25_12.c2859e21.png"
    },
    {
     "col": 26,
     "row": 12,
-    "file": "terrain/t_26_12.png"
+    "file": "terrain/t_26_12.3b00f1ce.png"
    },
    {
     "col": 27,
     "row": 12,
-    "file": "terrain/t_27_12.png"
+    "file": "terrain/t_27_12.ef030cb3.png"
    },
    {
     "col": 28,
     "row": 12,
-    "file": "terrain/t_28_12.png"
+    "file": "terrain/t_28_12.0e7de206.png"
    },
    {
     "col": 29,
     "row": 12,
-    "file": "terrain/t_29_12.png"
+    "file": "terrain/t_29_12.9944c235.png"
    },
    {
     "col": 30,
     "row": 12,
-    "file": "terrain/t_30_12.png"
+    "file": "terrain/t_30_12.e36bf388.png"
    },
    {
     "col": 31,
     "row": 12,
-    "file": "terrain/t_31_12.png"
+    "file": "terrain/t_31_12.6ef01140.png"
    },
    {
     "col": 32,
     "row": 12,
-    "file": "terrain/t_32_12.png"
+    "file": "terrain/t_32_12.c2f7df64.png"
    },
    {
     "col": 7,
     "row": 13,
-    "file": "terrain/t_7_13.png"
+    "file": "terrain/t_7_13.88236d41.png"
    },
    {
     "col": 8,
     "row": 13,
-    "file": "terrain/t_8_13.png"
+    "file": "terrain/t_8_13.b0a3edae.png"
    },
    {
     "col": 9,
     "row": 13,
-    "file": "terrain/t_9_13.png"
+    "file": "terrain/t_9_13.eb23b064.png"
    },
    {
     "col": 10,
     "row": 13,
-    "file": "terrain/t_10_13.png"
+    "file": "terrain/t_10_13.abef8e7c.png"
    },
    {
     "col": 11,
     "row": 13,
-    "file": "terrain/t_11_13.png"
+    "file": "terrain/t_11_13.e0076ddd.png"
    },
    {
     "col": 12,
     "row": 13,
-    "file": "terrain/t_12_13.png"
+    "file": "terrain/t_12_13.876fdd9b.png"
    },
    {
     "col": 13,
     "row": 13,
-    "file": "terrain/t_13_13.png"
+    "file": "terrain/t_13_13.ba6bbb1d.png"
    },
    {
     "col": 14,
     "row": 13,
-    "file": "terrain/t_14_13.png"
+    "file": "terrain/t_14_13.d55b5f31.png"
    },
    {
     "col": 15,
     "row": 13,
-    "file": "terrain/t_15_13.png"
+    "file": "terrain/t_15_13.7a6e10f6.png"
    },
    {
     "col": 16,
     "row": 13,
-    "file": "terrain/t_16_13.png"
+    "file": "terrain/t_16_13.dabad505.png"
    },
    {
     "col": 17,
     "row": 13,
-    "file": "terrain/t_17_13.png"
+    "file": "terrain/t_17_13.83c43dbc.png"
    },
    {
     "col": 18,
     "row": 13,
-    "file": "terrain/t_18_13.png"
+    "file": "terrain/t_18_13.99618410.png"
    },
    {
     "col": 19,
     "row": 13,
-    "file": "terrain/t_19_13.png"
+    "file": "terrain/t_19_13.880287eb.png"
    },
    {
     "col": 20,
     "row": 13,
-    "file": "terrain/t_20_13.png"
+    "file": "terrain/t_20_13.72bbb1fd.png"
    },
    {
     "col": 21,
     "row": 13,
-    "file": "terrain/t_21_13.png"
+    "file": "terrain/t_21_13.1a447daa.png"
    },
    {
     "col": 22,
     "row": 13,
-    "file": "terrain/t_22_13.png"
+    "file": "terrain/t_22_13.4408b835.png"
    },
    {
     "col": 23,
     "row": 13,
-    "file": "terrain/t_23_13.png"
+    "file": "terrain/t_23_13.2cc22c11.png"
    },
    {
     "col": 24,
     "row": 13,
-    "file": "terrain/t_24_13.png"
+    "file": "terrain/t_24_13.8d7342f7.png"
    },
    {
     "col": 25,
     "row": 13,
-    "file": "terrain/t_25_13.png"
+    "file": "terrain/t_25_13.02c148a5.png"
    },
    {
     "col": 26,
     "row": 13,
-    "file": "terrain/t_26_13.png"
+    "file": "terrain/t_26_13.a32fcaa7.png"
    },
    {
     "col": 27,
     "row": 13,
-    "file": "terrain/t_27_13.png"
+    "file": "terrain/t_27_13.8e83cac8.png"
    },
    {
     "col": 28,
     "row": 13,
-    "file": "terrain/t_28_13.png"
+    "file": "terrain/t_28_13.c76e2b26.png"
    },
    {
     "col": 29,
     "row": 13,
-    "file": "terrain/t_29_13.png"
+    "file": "terrain/t_29_13.2a64f1c2.png"
    },
    {
     "col": 30,
     "row": 13,
-    "file": "terrain/t_30_13.png"
+    "file": "terrain/t_30_13.fe18a238.png"
    },
    {
     "col": 9,
     "row": 14,
-    "file": "terrain/t_9_14.png"
+    "file": "terrain/t_9_14.4158ad5d.png"
    },
    {
     "col": 10,
     "row": 14,
-    "file": "terrain/t_10_14.png"
+    "file": "terrain/t_10_14.ccf2f267.png"
    },
    {
     "col": 11,
     "row": 14,
-    "file": "terrain/t_11_14.png"
+    "file": "terrain/t_11_14.b333b862.png"
    },
    {
     "col": 12,
     "row": 14,
-    "file": "terrain/t_12_14.png"
+    "file": "terrain/t_12_14.79adceb8.png"
    },
    {
     "col": 13,
     "row": 14,
-    "file": "terrain/t_13_14.png"
+    "file": "terrain/t_13_14.34c12111.png"
    },
    {
     "col": 14,
     "row": 14,
-    "file": "terrain/t_14_14.png"
+    "file": "terrain/t_14_14.d53fabd8.png"
    },
    {
     "col": 15,
     "row": 14,
-    "file": "terrain/t_15_14.png"
+    "file": "terrain/t_15_14.980cf0aa.png"
    },
    {
     "col": 16,
     "row": 14,
-    "file": "terrain/t_16_14.png"
+    "file": "terrain/t_16_14.32a1696f.png"
    },
    {
     "col": 17,
     "row": 14,
-    "file": "terrain/t_17_14.png"
+    "file": "terrain/t_17_14.ba4092f0.png"
    },
    {
     "col": 18,
     "row": 14,
-    "file": "terrain/t_18_14.png"
+    "file": "terrain/t_18_14.ba19811d.png"
    },
    {
     "col": 19,
     "row": 14,
-    "file": "terrain/t_19_14.png"
+    "file": "terrain/t_19_14.8ca81d8d.png"
    },
    {
     "col": 20,
     "row": 14,
-    "file": "terrain/t_20_14.png"
+    "file": "terrain/t_20_14.4b854656.png"
    },
    {
     "col": 21,
     "row": 14,
-    "file": "terrain/t_21_14.png"
+    "file": "terrain/t_21_14.3476181a.png"
    },
    {
     "col": 22,
     "row": 14,
-    "file": "terrain/t_22_14.png"
+    "file": "terrain/t_22_14.d2a06489.png"
    },
    {
     "col": 23,
     "row": 14,
-    "file": "terrain/t_23_14.png"
+    "file": "terrain/t_23_14.cbdaad9d.png"
    },
    {
     "col": 24,
     "row": 14,
-    "file": "terrain/t_24_14.png"
+    "file": "terrain/t_24_14.ad6b02e3.png"
    },
    {
     "col": 25,
     "row": 14,
-    "file": "terrain/t_25_14.png"
+    "file": "terrain/t_25_14.b7531a1c.png"
    },
    {
     "col": 26,
     "row": 14,
-    "file": "terrain/t_26_14.png"
+    "file": "terrain/t_26_14.c43757f8.png"
    },
    {
     "col": 27,
     "row": 14,
-    "file": "terrain/t_27_14.png"
+    "file": "terrain/t_27_14.2d2bd6fd.png"
    },
    {
     "col": 28,
     "row": 14,
-    "file": "terrain/t_28_14.png"
+    "file": "terrain/t_28_14.72905a2f.png"
    },
    {
     "col": 11,
     "row": 15,
-    "file": "terrain/t_11_15.png"
+    "file": "terrain/t_11_15.5d91a051.png"
    },
    {
     "col": 12,
     "row": 15,
-    "file": "terrain/t_12_15.png"
+    "file": "terrain/t_12_15.2d8e1afa.png"
    },
    {
     "col": 13,
     "row": 15,
-    "file": "terrain/t_13_15.png"
+    "file": "terrain/t_13_15.27956a41.png"
    },
    {
     "col": 14,
     "row": 15,
-    "file": "terrain/t_14_15.png"
+    "file": "terrain/t_14_15.03b1b786.png"
    },
    {
     "col": 15,
     "row": 15,
-    "file": "terrain/t_15_15.png"
+    "file": "terrain/t_15_15.67ffb2c3.png"
    },
    {
     "col": 16,
     "row": 15,
-    "file": "terrain/t_16_15.png"
+    "file": "terrain/t_16_15.6b5bede6.png"
    },
    {
     "col": 17,
     "row": 15,
-    "file": "terrain/t_17_15.png"
+    "file": "terrain/t_17_15.0a06a6b5.png"
    },
    {
     "col": 18,
     "row": 15,
-    "file": "terrain/t_18_15.png"
+    "file": "terrain/t_18_15.b77d83a2.png"
    },
    {
     "col": 19,
     "row": 15,
-    "file": "terrain/t_19_15.png"
+    "file": "terrain/t_19_15.a22ffd09.png"
    },
    {
     "col": 20,
     "row": 15,
-    "file": "terrain/t_20_15.png"
+    "file": "terrain/t_20_15.893af8b8.png"
    },
    {
     "col": 21,
     "row": 15,
-    "file": "terrain/t_21_15.png"
+    "file": "terrain/t_21_15.b1462f55.png"
    },
    {
     "col": 22,
     "row": 15,
-    "file": "terrain/t_22_15.png"
+    "file": "terrain/t_22_15.d7af6150.png"
    },
    {
     "col": 23,
     "row": 15,
-    "file": "terrain/t_23_15.png"
+    "file": "terrain/t_23_15.ddabcb1d.png"
    },
    {
     "col": 24,
     "row": 15,
-    "file": "terrain/t_24_15.png"
+    "file": "terrain/t_24_15.d805127a.png"
    },
    {
     "col": 25,
     "row": 15,
-    "file": "terrain/t_25_15.png"
+    "file": "terrain/t_25_15.53c1f05a.png"
    },
    {
     "col": 26,
     "row": 15,
-    "file": "terrain/t_26_15.png"
+    "file": "terrain/t_26_15.b1045579.png"
    },
    {
     "col": 13,
     "row": 16,
-    "file": "terrain/t_13_16.png"
+    "file": "terrain/t_13_16.7cd25626.png"
    },
    {
     "col": 14,
     "row": 16,
-    "file": "terrain/t_14_16.png"
+    "file": "terrain/t_14_16.29785e93.png"
    },
    {
     "col": 15,
     "row": 16,
-    "file": "terrain/t_15_16.png"
+    "file": "terrain/t_15_16.becf21b1.png"
    },
    {
     "col": 16,
     "row": 16,
-    "file": "terrain/t_16_16.png"
+    "file": "terrain/t_16_16.3d90eb0a.png"
    },
    {
     "col": 17,
     "row": 16,
-    "file": "terrain/t_17_16.png"
+    "file": "terrain/t_17_16.0ff294d5.png"
    },
    {
     "col": 18,
     "row": 16,
-    "file": "terrain/t_18_16.png"
+    "file": "terrain/t_18_16.57506095.png"
    },
    {
     "col": 19,
     "row": 16,
-    "file": "terrain/t_19_16.png"
+    "file": "terrain/t_19_16.108f0e76.png"
    },
    {
     "col": 20,
     "row": 16,
-    "file": "terrain/t_20_16.png"
+    "file": "terrain/t_20_16.5ee15099.png"
    },
    {
     "col": 21,
     "row": 16,
-    "file": "terrain/t_21_16.png"
+    "file": "terrain/t_21_16.adffb032.png"
    },
    {
     "col": 22,
     "row": 16,
-    "file": "terrain/t_22_16.png"
+    "file": "terrain/t_22_16.8c9f86ef.png"
    },
    {
     "col": 23,
     "row": 16,
-    "file": "terrain/t_23_16.png"
+    "file": "terrain/t_23_16.cc16edb5.png"
    },
    {
     "col": 24,
     "row": 16,
-    "file": "terrain/t_24_16.png"
+    "file": "terrain/t_24_16.7ff14f69.png"
    },
    {
     "col": 15,
     "row": 17,
-    "file": "terrain/t_15_17.png"
+    "file": "terrain/t_15_17.4d2baba5.png"
    },
    {
     "col": 16,
     "row": 17,
-    "file": "terrain/t_16_17.png"
+    "file": "terrain/t_16_17.0d56314f.png"
    },
    {
     "col": 17,
     "row": 17,
-    "file": "terrain/t_17_17.png"
+    "file": "terrain/t_17_17.7e8cbac5.png"
    },
    {
     "col": 18,
     "row": 17,
-    "file": "terrain/t_18_17.png"
+    "file": "terrain/t_18_17.58f0887a.png"
    },
    {
     "col": 19,
     "row": 17,
-    "file": "terrain/t_19_17.png"
+    "file": "terrain/t_19_17.1ded587c.png"
    },
    {
     "col": 20,
     "row": 17,
-    "file": "terrain/t_20_17.png"
+    "file": "terrain/t_20_17.32f5facb.png"
    },
    {
     "col": 21,
     "row": 17,
-    "file": "terrain/t_21_17.png"
+    "file": "terrain/t_21_17.c432d160.png"
    },
    {
     "col": 22,
     "row": 17,
-    "file": "terrain/t_22_17.png"
+    "file": "terrain/t_22_17.12def585.png"
    },
    {
     "col": 17,
     "row": 18,
-    "file": "terrain/t_17_18.png"
+    "file": "terrain/t_17_18.05bab52f.png"
    },
    {
     "col": 18,
     "row": 18,
-    "file": "terrain/t_18_18.png"
+    "file": "terrain/t_18_18.185a9176.png"
    },
    {
     "col": 19,
     "row": 18,
-    "file": "terrain/t_19_18.png"
+    "file": "terrain/t_19_18.11345956.png"
    },
    {
     "col": 20,
     "row": 18,
-    "file": "terrain/t_20_18.png"
+    "file": "terrain/t_20_18.a64cec09.png"
+   }
+  ],
+  "minZoom": 0.28,
+  "lods": [
+   {
+    "id": "far",
+    "scale": 0.125,
+    "tilePx": 1024,
+    "tileWorldSize": 8192,
+    "cols": 10,
+    "rows": 5,
+    "tiles": [
+     {
+      "col": 2,
+      "row": 0,
+      "file": "terrain/far/t_2_0.5437c1e6.png"
+     },
+     {
+      "col": 3,
+      "row": 0,
+      "file": "terrain/far/t_3_0.fe7393c5.png"
+     },
+     {
+      "col": 4,
+      "row": 0,
+      "file": "terrain/far/t_4_0.7d9e0c51.png"
+     },
+     {
+      "col": 5,
+      "row": 0,
+      "file": "terrain/far/t_5_0.6f1e2ace.png"
+     },
+     {
+      "col": 6,
+      "row": 0,
+      "file": "terrain/far/t_6_0.6eee387e.png"
+     },
+     {
+      "col": 0,
+      "row": 1,
+      "file": "terrain/far/t_0_1.1eebb94a.png"
+     },
+     {
+      "col": 1,
+      "row": 1,
+      "file": "terrain/far/t_1_1.2043bdf0.png"
+     },
+     {
+      "col": 2,
+      "row": 1,
+      "file": "terrain/far/t_2_1.49fb2e0a.png"
+     },
+     {
+      "col": 3,
+      "row": 1,
+      "file": "terrain/far/t_3_1.24617912.png"
+     },
+     {
+      "col": 4,
+      "row": 1,
+      "file": "terrain/far/t_4_1.7a6b10c5.png"
+     },
+     {
+      "col": 5,
+      "row": 1,
+      "file": "terrain/far/t_5_1.8018ec30.png"
+     },
+     {
+      "col": 6,
+      "row": 1,
+      "file": "terrain/far/t_6_1.cc519497.png"
+     },
+     {
+      "col": 7,
+      "row": 1,
+      "file": "terrain/far/t_7_1.521d42f8.png"
+     },
+     {
+      "col": 8,
+      "row": 1,
+      "file": "terrain/far/t_8_1.86b84247.png"
+     },
+     {
+      "col": 0,
+      "row": 2,
+      "file": "terrain/far/t_0_2.ec286a88.png"
+     },
+     {
+      "col": 1,
+      "row": 2,
+      "file": "terrain/far/t_1_2.e784deae.png"
+     },
+     {
+      "col": 2,
+      "row": 2,
+      "file": "terrain/far/t_2_2.6437abd4.png"
+     },
+     {
+      "col": 3,
+      "row": 2,
+      "file": "terrain/far/t_3_2.44889f0e.png"
+     },
+     {
+      "col": 4,
+      "row": 2,
+      "file": "terrain/far/t_4_2.6dc6bb04.png"
+     },
+     {
+      "col": 5,
+      "row": 2,
+      "file": "terrain/far/t_5_2.9fb91ed8.png"
+     },
+     {
+      "col": 6,
+      "row": 2,
+      "file": "terrain/far/t_6_2.04e94e77.png"
+     },
+     {
+      "col": 7,
+      "row": 2,
+      "file": "terrain/far/t_7_2.4f977155.png"
+     },
+     {
+      "col": 8,
+      "row": 2,
+      "file": "terrain/far/t_8_2.5d18ed45.png"
+     },
+     {
+      "col": 9,
+      "row": 2,
+      "file": "terrain/far/t_9_2.00737312.png"
+     },
+     {
+      "col": 1,
+      "row": 3,
+      "file": "terrain/far/t_1_3.fdb8ee9a.png"
+     },
+     {
+      "col": 2,
+      "row": 3,
+      "file": "terrain/far/t_2_3.5f93503b.png"
+     },
+     {
+      "col": 3,
+      "row": 3,
+      "file": "terrain/far/t_3_3.60f47e7c.png"
+     },
+     {
+      "col": 4,
+      "row": 3,
+      "file": "terrain/far/t_4_3.36f8cbee.png"
+     },
+     {
+      "col": 5,
+      "row": 3,
+      "file": "terrain/far/t_5_3.e0656ee7.png"
+     },
+     {
+      "col": 6,
+      "row": 3,
+      "file": "terrain/far/t_6_3.7f3ab4a9.png"
+     },
+     {
+      "col": 7,
+      "row": 3,
+      "file": "terrain/far/t_7_3.67c83ea5.png"
+     },
+     {
+      "col": 8,
+      "row": 3,
+      "file": "terrain/far/t_8_3.8f86baaf.png"
+     },
+     {
+      "col": 3,
+      "row": 4,
+      "file": "terrain/far/t_3_4.dc8d0973.png"
+     },
+     {
+      "col": 4,
+      "row": 4,
+      "file": "terrain/far/t_4_4.87f1f410.png"
+     },
+     {
+      "col": 5,
+      "row": 4,
+      "file": "terrain/far/t_5_4.cbf8ecff.png"
+     },
+     {
+      "col": 6,
+      "row": 4,
+      "file": "terrain/far/t_6_4.d59ad6b9.png"
+     }
+    ],
+    "minZoom": 0
+   },
+   {
+    "id": "mid",
+    "scale": 0.25,
+    "tilePx": 1024,
+    "tileWorldSize": 4096,
+    "cols": 19,
+    "rows": 10,
+    "tiles": [
+     {
+      "col": 7,
+      "row": 0,
+      "file": "terrain/mid/t_7_0.6be6da37.png"
+     },
+     {
+      "col": 8,
+      "row": 0,
+      "file": "terrain/mid/t_8_0.003e7dc3.png"
+     },
+     {
+      "col": 9,
+      "row": 0,
+      "file": "terrain/mid/t_9_0.6963be80.png"
+     },
+     {
+      "col": 10,
+      "row": 0,
+      "file": "terrain/mid/t_10_0.3c67d1b4.png"
+     },
+     {
+      "col": 11,
+      "row": 0,
+      "file": "terrain/mid/t_11_0.3846e346.png"
+     },
+     {
+      "col": 5,
+      "row": 1,
+      "file": "terrain/mid/t_5_1.bbf2352c.png"
+     },
+     {
+      "col": 6,
+      "row": 1,
+      "file": "terrain/mid/t_6_1.31276a39.png"
+     },
+     {
+      "col": 7,
+      "row": 1,
+      "file": "terrain/mid/t_7_1.af034c0a.png"
+     },
+     {
+      "col": 8,
+      "row": 1,
+      "file": "terrain/mid/t_8_1.7fe4de91.png"
+     },
+     {
+      "col": 9,
+      "row": 1,
+      "file": "terrain/mid/t_9_1.15e58f4c.png"
+     },
+     {
+      "col": 10,
+      "row": 1,
+      "file": "terrain/mid/t_10_1.6d26cdf8.png"
+     },
+     {
+      "col": 11,
+      "row": 1,
+      "file": "terrain/mid/t_11_1.75d360c1.png"
+     },
+     {
+      "col": 12,
+      "row": 1,
+      "file": "terrain/mid/t_12_1.c3247d2f.png"
+     },
+     {
+      "col": 13,
+      "row": 1,
+      "file": "terrain/mid/t_13_1.271113be.png"
+     },
+     {
+      "col": 3,
+      "row": 2,
+      "file": "terrain/mid/t_3_2.1bca59c8.png"
+     },
+     {
+      "col": 4,
+      "row": 2,
+      "file": "terrain/mid/t_4_2.88ab5b97.png"
+     },
+     {
+      "col": 5,
+      "row": 2,
+      "file": "terrain/mid/t_5_2.d39276ad.png"
+     },
+     {
+      "col": 6,
+      "row": 2,
+      "file": "terrain/mid/t_6_2.353ca576.png"
+     },
+     {
+      "col": 7,
+      "row": 2,
+      "file": "terrain/mid/t_7_2.a515db63.png"
+     },
+     {
+      "col": 8,
+      "row": 2,
+      "file": "terrain/mid/t_8_2.82efe0cd.png"
+     },
+     {
+      "col": 9,
+      "row": 2,
+      "file": "terrain/mid/t_9_2.e6157207.png"
+     },
+     {
+      "col": 10,
+      "row": 2,
+      "file": "terrain/mid/t_10_2.89396f59.png"
+     },
+     {
+      "col": 11,
+      "row": 2,
+      "file": "terrain/mid/t_11_2.24c14eff.png"
+     },
+     {
+      "col": 12,
+      "row": 2,
+      "file": "terrain/mid/t_12_2.e1ad412e.png"
+     },
+     {
+      "col": 13,
+      "row": 2,
+      "file": "terrain/mid/t_13_2.0ed4078f.png"
+     },
+     {
+      "col": 14,
+      "row": 2,
+      "file": "terrain/mid/t_14_2.36e7c134.png"
+     },
+     {
+      "col": 15,
+      "row": 2,
+      "file": "terrain/mid/t_15_2.9837a6f1.png"
+     },
+     {
+      "col": 1,
+      "row": 3,
+      "file": "terrain/mid/t_1_3.b7515501.png"
+     },
+     {
+      "col": 2,
+      "row": 3,
+      "file": "terrain/mid/t_2_3.64f41251.png"
+     },
+     {
+      "col": 3,
+      "row": 3,
+      "file": "terrain/mid/t_3_3.851b01cc.png"
+     },
+     {
+      "col": 4,
+      "row": 3,
+      "file": "terrain/mid/t_4_3.63bd2178.png"
+     },
+     {
+      "col": 5,
+      "row": 3,
+      "file": "terrain/mid/t_5_3.68ea29f5.png"
+     },
+     {
+      "col": 6,
+      "row": 3,
+      "file": "terrain/mid/t_6_3.3d0d5dc2.png"
+     },
+     {
+      "col": 7,
+      "row": 3,
+      "file": "terrain/mid/t_7_3.aade6a80.png"
+     },
+     {
+      "col": 8,
+      "row": 3,
+      "file": "terrain/mid/t_8_3.de18e304.png"
+     },
+     {
+      "col": 9,
+      "row": 3,
+      "file": "terrain/mid/t_9_3.8756e601.png"
+     },
+     {
+      "col": 10,
+      "row": 3,
+      "file": "terrain/mid/t_10_3.f4a031c0.png"
+     },
+     {
+      "col": 11,
+      "row": 3,
+      "file": "terrain/mid/t_11_3.94f9e0a5.png"
+     },
+     {
+      "col": 12,
+      "row": 3,
+      "file": "terrain/mid/t_12_3.850f1de7.png"
+     },
+     {
+      "col": 13,
+      "row": 3,
+      "file": "terrain/mid/t_13_3.e7de9f76.png"
+     },
+     {
+      "col": 14,
+      "row": 3,
+      "file": "terrain/mid/t_14_3.ec1ff0ac.png"
+     },
+     {
+      "col": 15,
+      "row": 3,
+      "file": "terrain/mid/t_15_3.4145bffe.png"
+     },
+     {
+      "col": 16,
+      "row": 3,
+      "file": "terrain/mid/t_16_3.0d29f086.png"
+     },
+     {
+      "col": 17,
+      "row": 3,
+      "file": "terrain/mid/t_17_3.31a0c112.png"
+     },
+     {
+      "col": 0,
+      "row": 4,
+      "file": "terrain/mid/t_0_4.d8d1e4d5.png"
+     },
+     {
+      "col": 1,
+      "row": 4,
+      "file": "terrain/mid/t_1_4.9f58f20b.png"
+     },
+     {
+      "col": 2,
+      "row": 4,
+      "file": "terrain/mid/t_2_4.62984da6.png"
+     },
+     {
+      "col": 3,
+      "row": 4,
+      "file": "terrain/mid/t_3_4.43f162bb.png"
+     },
+     {
+      "col": 4,
+      "row": 4,
+      "file": "terrain/mid/t_4_4.ab83f179.png"
+     },
+     {
+      "col": 5,
+      "row": 4,
+      "file": "terrain/mid/t_5_4.11ee9980.png"
+     },
+     {
+      "col": 6,
+      "row": 4,
+      "file": "terrain/mid/t_6_4.d8a053a0.png"
+     },
+     {
+      "col": 7,
+      "row": 4,
+      "file": "terrain/mid/t_7_4.3ebfc9a0.png"
+     },
+     {
+      "col": 8,
+      "row": 4,
+      "file": "terrain/mid/t_8_4.7496e247.png"
+     },
+     {
+      "col": 9,
+      "row": 4,
+      "file": "terrain/mid/t_9_4.7af50801.png"
+     },
+     {
+      "col": 10,
+      "row": 4,
+      "file": "terrain/mid/t_10_4.eb519f59.png"
+     },
+     {
+      "col": 11,
+      "row": 4,
+      "file": "terrain/mid/t_11_4.71ef123c.png"
+     },
+     {
+      "col": 12,
+      "row": 4,
+      "file": "terrain/mid/t_12_4.8350c671.png"
+     },
+     {
+      "col": 13,
+      "row": 4,
+      "file": "terrain/mid/t_13_4.94d0e2b6.png"
+     },
+     {
+      "col": 14,
+      "row": 4,
+      "file": "terrain/mid/t_14_4.85a6a368.png"
+     },
+     {
+      "col": 15,
+      "row": 4,
+      "file": "terrain/mid/t_15_4.5857bc76.png"
+     },
+     {
+      "col": 16,
+      "row": 4,
+      "file": "terrain/mid/t_16_4.a99d2462.png"
+     },
+     {
+      "col": 17,
+      "row": 4,
+      "file": "terrain/mid/t_17_4.2a8577e9.png"
+     },
+     {
+      "col": 18,
+      "row": 4,
+      "file": "terrain/mid/t_18_4.208478a2.png"
+     },
+     {
+      "col": 0,
+      "row": 5,
+      "file": "terrain/mid/t_0_5.e12ed2a8.png"
+     },
+     {
+      "col": 1,
+      "row": 5,
+      "file": "terrain/mid/t_1_5.54c8cf59.png"
+     },
+     {
+      "col": 2,
+      "row": 5,
+      "file": "terrain/mid/t_2_5.11df7dfb.png"
+     },
+     {
+      "col": 3,
+      "row": 5,
+      "file": "terrain/mid/t_3_5.da036eaf.png"
+     },
+     {
+      "col": 4,
+      "row": 5,
+      "file": "terrain/mid/t_4_5.7f9c00da.png"
+     },
+     {
+      "col": 5,
+      "row": 5,
+      "file": "terrain/mid/t_5_5.c22504db.png"
+     },
+     {
+      "col": 6,
+      "row": 5,
+      "file": "terrain/mid/t_6_5.be54c0a2.png"
+     },
+     {
+      "col": 7,
+      "row": 5,
+      "file": "terrain/mid/t_7_5.ea891260.png"
+     },
+     {
+      "col": 8,
+      "row": 5,
+      "file": "terrain/mid/t_8_5.23da0bd2.png"
+     },
+     {
+      "col": 9,
+      "row": 5,
+      "file": "terrain/mid/t_9_5.ad994719.png"
+     },
+     {
+      "col": 10,
+      "row": 5,
+      "file": "terrain/mid/t_10_5.bb3a96f8.png"
+     },
+     {
+      "col": 11,
+      "row": 5,
+      "file": "terrain/mid/t_11_5.1bb80e9a.png"
+     },
+     {
+      "col": 12,
+      "row": 5,
+      "file": "terrain/mid/t_12_5.27bf89c0.png"
+     },
+     {
+      "col": 13,
+      "row": 5,
+      "file": "terrain/mid/t_13_5.99b5892a.png"
+     },
+     {
+      "col": 14,
+      "row": 5,
+      "file": "terrain/mid/t_14_5.1b0878dd.png"
+     },
+     {
+      "col": 15,
+      "row": 5,
+      "file": "terrain/mid/t_15_5.ff881e19.png"
+     },
+     {
+      "col": 16,
+      "row": 5,
+      "file": "terrain/mid/t_16_5.88a88d48.png"
+     },
+     {
+      "col": 17,
+      "row": 5,
+      "file": "terrain/mid/t_17_5.12767cea.png"
+     },
+     {
+      "col": 18,
+      "row": 5,
+      "file": "terrain/mid/t_18_5.c7352adb.png"
+     },
+     {
+      "col": 2,
+      "row": 6,
+      "file": "terrain/mid/t_2_6.82c7eada.png"
+     },
+     {
+      "col": 3,
+      "row": 6,
+      "file": "terrain/mid/t_3_6.42118384.png"
+     },
+     {
+      "col": 4,
+      "row": 6,
+      "file": "terrain/mid/t_4_6.1f9c6484.png"
+     },
+     {
+      "col": 5,
+      "row": 6,
+      "file": "terrain/mid/t_5_6.74c651a8.png"
+     },
+     {
+      "col": 6,
+      "row": 6,
+      "file": "terrain/mid/t_6_6.1458c9bc.png"
+     },
+     {
+      "col": 7,
+      "row": 6,
+      "file": "terrain/mid/t_7_6.a39292f8.png"
+     },
+     {
+      "col": 8,
+      "row": 6,
+      "file": "terrain/mid/t_8_6.5f03b544.png"
+     },
+     {
+      "col": 9,
+      "row": 6,
+      "file": "terrain/mid/t_9_6.1d778226.png"
+     },
+     {
+      "col": 10,
+      "row": 6,
+      "file": "terrain/mid/t_10_6.8bc3e0f5.png"
+     },
+     {
+      "col": 11,
+      "row": 6,
+      "file": "terrain/mid/t_11_6.69d041e2.png"
+     },
+     {
+      "col": 12,
+      "row": 6,
+      "file": "terrain/mid/t_12_6.74362912.png"
+     },
+     {
+      "col": 13,
+      "row": 6,
+      "file": "terrain/mid/t_13_6.fbcfc5b3.png"
+     },
+     {
+      "col": 14,
+      "row": 6,
+      "file": "terrain/mid/t_14_6.dd1484b6.png"
+     },
+     {
+      "col": 15,
+      "row": 6,
+      "file": "terrain/mid/t_15_6.fc770f7c.png"
+     },
+     {
+      "col": 16,
+      "row": 6,
+      "file": "terrain/mid/t_16_6.e74bc5fc.png"
+     },
+     {
+      "col": 4,
+      "row": 7,
+      "file": "terrain/mid/t_4_7.611b32f3.png"
+     },
+     {
+      "col": 5,
+      "row": 7,
+      "file": "terrain/mid/t_5_7.11676424.png"
+     },
+     {
+      "col": 6,
+      "row": 7,
+      "file": "terrain/mid/t_6_7.001f0726.png"
+     },
+     {
+      "col": 7,
+      "row": 7,
+      "file": "terrain/mid/t_7_7.08b2636e.png"
+     },
+     {
+      "col": 8,
+      "row": 7,
+      "file": "terrain/mid/t_8_7.989b09d0.png"
+     },
+     {
+      "col": 9,
+      "row": 7,
+      "file": "terrain/mid/t_9_7.c136f850.png"
+     },
+     {
+      "col": 10,
+      "row": 7,
+      "file": "terrain/mid/t_10_7.c1068bb8.png"
+     },
+     {
+      "col": 11,
+      "row": 7,
+      "file": "terrain/mid/t_11_7.f4e19e1b.png"
+     },
+     {
+      "col": 12,
+      "row": 7,
+      "file": "terrain/mid/t_12_7.1fe50048.png"
+     },
+     {
+      "col": 13,
+      "row": 7,
+      "file": "terrain/mid/t_13_7.87a96bec.png"
+     },
+     {
+      "col": 14,
+      "row": 7,
+      "file": "terrain/mid/t_14_7.2eb26dc6.png"
+     },
+     {
+      "col": 6,
+      "row": 8,
+      "file": "terrain/mid/t_6_8.e319d9e2.png"
+     },
+     {
+      "col": 7,
+      "row": 8,
+      "file": "terrain/mid/t_7_8.0e153351.png"
+     },
+     {
+      "col": 8,
+      "row": 8,
+      "file": "terrain/mid/t_8_8.f8fa2611.png"
+     },
+     {
+      "col": 9,
+      "row": 8,
+      "file": "terrain/mid/t_9_8.f148acfa.png"
+     },
+     {
+      "col": 10,
+      "row": 8,
+      "file": "terrain/mid/t_10_8.5e175503.png"
+     },
+     {
+      "col": 11,
+      "row": 8,
+      "file": "terrain/mid/t_11_8.ba00fb65.png"
+     },
+     {
+      "col": 12,
+      "row": 8,
+      "file": "terrain/mid/t_12_8.5a5419ee.png"
+     },
+     {
+      "col": 8,
+      "row": 9,
+      "file": "terrain/mid/t_8_9.a8e7cbcb.png"
+     },
+     {
+      "col": 9,
+      "row": 9,
+      "file": "terrain/mid/t_9_9.c3f91228.png"
+     },
+     {
+      "col": 10,
+      "row": 9,
+      "file": "terrain/mid/t_10_9.5cbafb07.png"
+     }
+    ],
+    "minZoom": 0.14
    }
   ],
   "minimap": {
@@ -2073,12 +2868,12 @@
    "worldHeight": 38400
   }
  },
- "shadowTexture": "objects/_shadow.png",
+ "shadowTexture": "objects/_shadow.b34e9c02.png",
  "objectTypes": [
   {
    "id": "type_1",
    "name": "Mountain A (single peak)",
-   "image": "objects/type_1.png",
+   "image": "objects/type_1.b5022c4f.png",
    "naturalWidth": 900,
    "naturalHeight": 653,
    "displayHeight": 600,
@@ -2087,13 +2882,16 @@
     "y": 1
    },
    "tint": 16777215,
+   "group": null,
+   "minZoom": 0,
    "shadow": null,
+   "castShadow": null,
    "blockRadius": 0.8
   },
   {
    "id": "type_2",
    "name": "Mountain B (single peak)",
-   "image": "objects/type_2.png",
+   "image": "objects/type_2.75210693.png",
    "naturalWidth": 900,
    "naturalHeight": 666,
    "displayHeight": 600,
@@ -2102,13 +2900,16 @@
     "y": 1
    },
    "tint": 16777215,
+   "group": null,
+   "minZoom": 0,
    "shadow": null,
+   "castShadow": null,
    "blockRadius": 0.8
   },
   {
    "id": "type_3",
    "name": "Persia · Cypress",
-   "image": "objects/type_3.png",
+   "image": "objects/type_3.c886e22f.png",
    "naturalWidth": 74,
    "naturalHeight": 276,
    "displayHeight": 132,
@@ -2117,17 +2918,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 24,
-    "height": 10,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_3_cast.e1c98207.png",
+     "origin": {
+      "x": 0.8251267605633803,
+      "y": 0.9574159292035397
+     }
+    },
+    "flip": {
+     "image": "objects/type_3_cast_flip.1f1519cd.png",
+     "origin": {
+      "x": 0.8251267605633803,
+      "y": 0.9574159292035397
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_4",
    "name": "Persia · Cypress grove",
-   "image": "objects/type_4.png",
+   "image": "objects/type_4.74d56d11.png",
    "naturalWidth": 156,
    "naturalHeight": 300,
    "displayHeight": 144,
@@ -2136,17 +2952,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 41,
-    "height": 16,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_4_cast.4a8bffb9.png",
+     "origin": {
+      "x": 0.7638743455497381,
+      "y": 0.9661157024793386
+     }
+    },
+    "flip": {
+     "image": "objects/type_4_cast_flip.65a33836.png",
+     "origin": {
+      "x": 0.7638743455497381,
+      "y": 0.9661157024793386
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_5",
    "name": "Persia · Pomegranate",
-   "image": "objects/type_5.png",
+   "image": "objects/type_5.00bd0e8d.png",
    "naturalWidth": 190,
    "naturalHeight": 226,
    "displayHeight": 108,
@@ -2155,17 +2986,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 50,
-    "height": 19,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_5_cast.2f8088a6.png",
+     "origin": {
+      "x": 0.7069479452054793,
+      "y": 0.9378958333333335
+     }
+    },
+    "flip": {
+     "image": "objects/type_5_cast_flip.dd9df2b2.png",
+     "origin": {
+      "x": 0.7069479452054793,
+      "y": 0.9378958333333335
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_6",
    "name": "Persia · Pomegranate grove",
-   "image": "objects/type_6.png",
+   "image": "objects/type_6.cce07718.png",
    "naturalWidth": 286,
    "naturalHeight": 252,
    "displayHeight": 121,
@@ -2174,17 +3020,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 76,
-    "height": 29,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_6_cast.31fe8214.png",
+     "origin": {
+      "x": 0.6761419624217118,
+      "y": 0.9473904761904762
+     }
+    },
+    "flip": {
+     "image": "objects/type_6_cast_flip.d3b14126.png",
+     "origin": {
+      "x": 0.6761419624217118,
+      "y": 0.9473904761904762
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_7",
    "name": "Persia · Date palm",
-   "image": "objects/type_7.png",
+   "image": "objects/type_7.05097377.png",
    "naturalWidth": 182,
    "naturalHeight": 257,
    "displayHeight": 123,
@@ -2193,17 +3054,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 48,
-    "height": 18,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_7_cast.4da2d048.png",
+     "origin": {
+      "x": 0.7283121693121694,
+      "y": 0.9555754716981132
+     }
+    },
+    "flip": {
+     "image": "objects/type_7_cast_flip.11e5079e.png",
+     "origin": {
+      "x": 0.7283121693121694,
+      "y": 0.9555754716981132
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_8",
    "name": "Persia · Date palm grove",
-   "image": "objects/type_8.png",
+   "image": "objects/type_8.f444beff.png",
    "naturalWidth": 226,
    "naturalHeight": 270,
    "displayHeight": 130,
@@ -2212,17 +3088,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 60,
-    "height": 23,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_8_cast.58ae7304.png",
+     "origin": {
+      "x": 0.7104872389791184,
+      "y": 0.955045045045045
+     }
+    },
+    "flip": {
+     "image": "objects/type_8_cast_flip.e9807f11.png",
+     "origin": {
+      "x": 0.7104872389791184,
+      "y": 0.955045045045045
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_9",
    "name": "Persia · Weeping willow",
-   "image": "objects/type_9.png",
+   "image": "objects/type_9.68f8ecb5.png",
    "naturalWidth": 194,
    "naturalHeight": 233,
    "displayHeight": 112,
@@ -2231,17 +3122,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 51,
-    "height": 19,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_9_cast.508dcbec.png",
+     "origin": {
+      "x": 0.7081229946524064,
+      "y": 0.9446836734693879
+     }
+    },
+    "flip": {
+     "image": "objects/type_9_cast_flip.18f198d2.png",
+     "origin": {
+      "x": 0.7081229946524064,
+      "y": 0.9446836734693879
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_10",
    "name": "Persia · Weeping willow grove",
-   "image": "objects/type_10.png",
+   "image": "objects/type_10.a3564f9b.png",
    "naturalWidth": 271,
    "naturalHeight": 236,
    "displayHeight": 113,
@@ -2250,17 +3156,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 72,
-    "height": 27,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_10_cast.d42acee3.png",
+     "origin": {
+      "x": 0.6741633554083885,
+      "y": 0.9461414141414142
+     }
+    },
+    "flip": {
+     "image": "objects/type_10_cast_flip.e7d15e4a.png",
+     "origin": {
+      "x": 0.6741633554083885,
+      "y": 0.9461414141414142
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_11",
    "name": "Persia · Shrub 9",
-   "image": "objects/type_11.png",
+   "image": "objects/type_11.3476df92.png",
    "naturalWidth": 206,
    "naturalHeight": 170,
    "displayHeight": 82,
@@ -2269,17 +3190,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 84,
-    "height": 32,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_11_cast.6aa81944.png",
+     "origin": {
+      "x": 0.6675073313782991,
+      "y": 0.9172368421052632
+     }
+    },
+    "flip": {
+     "image": "objects/type_11_cast_flip.6c54daab.png",
+     "origin": {
+      "x": 0.6675073313782991,
+      "y": 0.9172368421052632
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_12",
    "name": "Persia · Shrub 10",
-   "image": "objects/type_12.png",
+   "image": "objects/type_12.4310991f.png",
    "naturalWidth": 150,
    "naturalHeight": 134,
    "displayHeight": 64,
@@ -2288,17 +3224,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 61,
-    "height": 23,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_12_cast.df00935b.png",
+     "origin": {
+      "x": 0.6727846153846153,
+      "y": 0.899079365079365
+     }
+    },
+    "flip": {
+     "image": "objects/type_12_cast_flip.585b0350.png",
+     "origin": {
+      "x": 0.6727846153846153,
+      "y": 0.899079365079365
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_13",
    "name": "Mongol · Spruce",
-   "image": "objects/type_13.png",
+   "image": "objects/type_13.a4ff4f61.png",
    "naturalWidth": 102,
    "naturalHeight": 283,
    "displayHeight": 136,
@@ -2307,17 +3258,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 27,
-    "height": 10,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_13_cast.102aafeb.png",
+     "origin": {
+      "x": 0.7985425867507886,
+      "y": 0.9545603448275863
+     }
+    },
+    "flip": {
+     "image": "objects/type_13_cast_flip.a91d91db.png",
+     "origin": {
+      "x": 0.7985425867507886,
+      "y": 0.9545603448275863
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_14",
    "name": "Mongol · Spruce grove",
-   "image": "objects/type_14.png",
+   "image": "objects/type_14.cc4419b5.png",
    "naturalWidth": 178,
    "naturalHeight": 314,
    "displayHeight": 151,
@@ -2326,17 +3292,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 47,
-    "height": 18,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_14_cast.665ca37c.png",
+     "origin": {
+      "x": 0.7545990338164251,
+      "y": 0.9681111111111109
+     }
+    },
+    "flip": {
+     "image": "objects/type_14_cast_flip.8c2508b7.png",
+     "origin": {
+      "x": 0.7545990338164251,
+      "y": 0.9681111111111109
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_15",
    "name": "Mongol · Birch",
-   "image": "objects/type_15.png",
+   "image": "objects/type_15.bde6ae79.png",
    "naturalWidth": 156,
    "naturalHeight": 266,
    "displayHeight": 128,
@@ -2345,17 +3326,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 41,
-    "height": 16,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_15_cast.d1e5b654.png",
+     "origin": {
+      "x": 0.7478440111420612,
+      "y": 0.9505272727272727
+     }
+    },
+    "flip": {
+     "image": "objects/type_15_cast_flip.628e941b.png",
+     "origin": {
+      "x": 0.7478440111420612,
+      "y": 0.9505272727272727
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_16",
    "name": "Mongol · Birch grove",
-   "image": "objects/type_16.png",
+   "image": "objects/type_16.587b453f.png",
    "naturalWidth": 240,
    "naturalHeight": 282,
    "displayHeight": 135,
@@ -2364,17 +3360,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 63,
-    "height": 24,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_16_cast.e1d98853.png",
+     "origin": {
+      "x": 0.7080440528634361,
+      "y": 0.9597043478260868
+     }
+    },
+    "flip": {
+     "image": "objects/type_16_cast_flip.3d5424cc.png",
+     "origin": {
+      "x": 0.7080440528634361,
+      "y": 0.9597043478260868
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_17",
    "name": "Mongol · Poplar",
-   "image": "objects/type_17.png",
+   "image": "objects/type_17.b9ea5e11.png",
    "naturalWidth": 80,
    "naturalHeight": 296,
    "displayHeight": 142,
@@ -2383,17 +3394,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 24,
-    "height": 10,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_17_cast.32279f23.png",
+     "origin": {
+      "x": 0.8258421052631578,
+      "y": 0.9620666666666667
+     }
+    },
+    "flip": {
+     "image": "objects/type_17_cast_flip.a198319c.png",
+     "origin": {
+      "x": 0.8258421052631578,
+      "y": 0.9620666666666667
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_18",
    "name": "Mongol · Poplar grove",
-   "image": "objects/type_18.png",
+   "image": "objects/type_18.e00c87e2.png",
    "naturalWidth": 170,
    "naturalHeight": 264,
    "displayHeight": 127,
@@ -2402,17 +3428,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 45,
-    "height": 17,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_18_cast.56cc726d.png",
+     "origin": {
+      "x": 0.7388247978436658,
+      "y": 0.9525871559633027
+     }
+    },
+    "flip": {
+     "image": "objects/type_18_cast_flip.b191069f.png",
+     "origin": {
+      "x": 0.7388247978436658,
+      "y": 0.9525871559633027
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_19",
    "name": "Mongol · Shrub 7",
-   "image": "objects/type_19.png",
+   "image": "objects/type_19.872b36e7.png",
    "naturalWidth": 202,
    "naturalHeight": 162,
    "displayHeight": 78,
@@ -2421,17 +3462,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 82,
-    "height": 31,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_19_cast.e1d90e5d.png",
+     "origin": {
+      "x": 0.6630481927710844,
+      "y": 0.915150684931507
+     }
+    },
+    "flip": {
+     "image": "objects/type_19_cast_flip.abac94a4.png",
+     "origin": {
+      "x": 0.6630481927710844,
+      "y": 0.915150684931507
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_20",
    "name": "Mongol · Shrub 8",
-   "image": "objects/type_20.png",
+   "image": "objects/type_20.08449a99.png",
    "naturalWidth": 237,
    "naturalHeight": 182,
    "displayHeight": 87,
@@ -2440,17 +3496,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 97,
-    "height": 37,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_20_cast.0a867d43.png",
+     "origin": {
+      "x": 0.6597165354330708,
+      "y": 0.9258249999999999
+     }
+    },
+    "flip": {
+     "image": "objects/type_20_cast_flip.dc8095d8.png",
+     "origin": {
+      "x": 0.6597165354330708,
+      "y": 0.9258249999999999
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_21",
    "name": "Mongol · Shrub 9",
-   "image": "objects/type_21.png",
+   "image": "objects/type_21.2cd9bd00.png",
    "naturalWidth": 236,
    "naturalHeight": 186,
    "displayHeight": 89,
@@ -2459,17 +3530,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 96,
-    "height": 36,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_21_cast.66ebf812.png",
+     "origin": {
+      "x": 0.6621305483028721,
+      "y": 0.9209512195121952
+     }
+    },
+    "flip": {
+     "image": "objects/type_21_cast_flip.e8811124.png",
+     "origin": {
+      "x": 0.6621305483028721,
+      "y": 0.9209512195121952
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_22",
    "name": "Mongol · Shrub 10",
-   "image": "objects/type_22.png",
+   "image": "objects/type_22.149fbf6a.png",
    "naturalWidth": 172,
    "naturalHeight": 126,
    "displayHeight": 60,
@@ -2478,17 +3564,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 70,
-    "height": 27,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_22_cast.5822bc88.png",
+     "origin": {
+      "x": 0.6513935018050541,
+      "y": 0.8809508196721312
+     }
+    },
+    "flip": {
+     "image": "objects/type_22_cast_flip.106a8f9c.png",
+     "origin": {
+      "x": 0.6513935018050541,
+      "y": 0.8809508196721312
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_23",
    "name": "Arabia · Date palm",
-   "image": "objects/type_23.png",
+   "image": "objects/type_23.7bcf4668.png",
    "naturalWidth": 176,
    "naturalHeight": 276,
    "displayHeight": 132,
@@ -2497,17 +3598,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 46,
-    "height": 17,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_23_cast.ec306373.png",
+     "origin": {
+      "x": 0.7392124352331606,
+      "y": 0.9574159292035397
+     }
+    },
+    "flip": {
+     "image": "objects/type_23_cast_flip.28699bc4.png",
+     "origin": {
+      "x": 0.7392124352331606,
+      "y": 0.9574159292035397
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_24",
    "name": "Arabia · Date palm grove",
-   "image": "objects/type_24.png",
+   "image": "objects/type_24.714b1ad8.png",
    "naturalWidth": 220,
    "naturalHeight": 292,
    "displayHeight": 140,
@@ -2516,17 +3632,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 58,
-    "height": 22,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_24_cast.d7c42457.png",
+     "origin": {
+      "x": 0.7217959183673469,
+      "y": 0.9579495798319326
+     }
+    },
+    "flip": {
+     "image": "objects/type_24_cast_flip.c8f6ee9e.png",
+     "origin": {
+      "x": 0.7217959183673469,
+      "y": 0.9579495798319326
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_25",
    "name": "Arabia · Acacia",
-   "image": "objects/type_25.png",
+   "image": "objects/type_25.1e32f715.png",
    "naturalWidth": 262,
    "naturalHeight": 227,
    "displayHeight": 109,
@@ -2535,17 +3666,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 69,
-    "height": 26,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_25_cast.a2d513c9.png",
+     "origin": {
+      "x": 0.6744210526315789,
+      "y": 0.9416770833333334
+     }
+    },
+    "flip": {
+     "image": "objects/type_25_cast_flip.ec30d77d.png",
+     "origin": {
+      "x": 0.6744210526315789,
+      "y": 0.9416770833333334
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_26",
    "name": "Arabia · Acacia grove",
-   "image": "objects/type_26.png",
+   "image": "objects/type_26.b044df56.png",
    "naturalWidth": 284,
    "naturalHeight": 254,
    "displayHeight": 122,
@@ -2554,17 +3700,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 75,
-    "height": 29,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_26_cast.2ca3e6e5.png",
+     "origin": {
+      "x": 0.6783347280334727,
+      "y": 0.9543047619047619
+     }
+    },
+    "flip": {
+     "image": "objects/type_26_cast_flip.7b58d7a9.png",
+     "origin": {
+      "x": 0.6783347280334727,
+      "y": 0.9543047619047619
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_27",
    "name": "Arabia · Dragon palm",
-   "image": "objects/type_27.png",
+   "image": "objects/type_27.8eadb606.png",
    "naturalWidth": 193,
    "naturalHeight": 260,
    "displayHeight": 125,
@@ -2573,17 +3734,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 51,
-    "height": 19,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_27_cast.afc33842.png",
+     "origin": {
+      "x": 0.7234271099744246,
+      "y": 0.956822429906542
+     }
+    },
+    "flip": {
+     "image": "objects/type_27_cast_flip.44379fcf.png",
+     "origin": {
+      "x": 0.7234271099744246,
+      "y": 0.956822429906542
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_28",
    "name": "Arabia · Dragon palm grove",
-   "image": "objects/type_28.png",
+   "image": "objects/type_28.54e8e074.png",
    "naturalWidth": 234,
    "naturalHeight": 242,
    "displayHeight": 116,
@@ -2592,17 +3768,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 62,
-    "height": 24,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_28_cast.80d8e003.png",
+     "origin": {
+      "x": 0.6928857142857143,
+      "y": 0.948970297029703
+     }
+    },
+    "flip": {
+     "image": "objects/type_28_cast_flip.ad7c8c8b.png",
+     "origin": {
+      "x": 0.6928857142857143,
+      "y": 0.948970297029703
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_29",
    "name": "Arabia · Shrub 7",
-   "image": "objects/type_29.png",
+   "image": "objects/type_29.fd83cd14.png",
    "naturalWidth": 202,
    "naturalHeight": 164,
    "displayHeight": 79,
@@ -2611,17 +3802,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 82,
-    "height": 31,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_29_cast.3ca52187.png",
+     "origin": {
+      "x": 0.6651771771771772,
+      "y": 0.9125945945945946
+     }
+    },
+    "flip": {
+     "image": "objects/type_29_cast_flip.2f5dfbc3.png",
+     "origin": {
+      "x": 0.6651771771771772,
+      "y": 0.9125945945945946
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_30",
    "name": "Arabia · Shrub 8",
-   "image": "objects/type_30.png",
+   "image": "objects/type_30.066f4083.png",
    "naturalWidth": 260,
    "naturalHeight": 179,
    "displayHeight": 86,
@@ -2630,17 +3836,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 106,
-    "height": 40,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_30_cast.3614207a.png",
+     "origin": {
+      "x": 0.6487412935323382,
+      "y": 0.9237594936708862
+     }
+    },
+    "flip": {
+     "image": "objects/type_30_cast_flip.7b70d03f.png",
+     "origin": {
+      "x": 0.6487412935323382,
+      "y": 0.9237594936708862
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_31",
    "name": "Arabia · Shrub 9",
-   "image": "objects/type_31.png",
+   "image": "objects/type_31.5273fcea.png",
    "naturalWidth": 224,
    "naturalHeight": 166,
    "displayHeight": 80,
@@ -2649,17 +3870,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 91,
-    "height": 35,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_31_cast.29526b96.png",
+     "origin": {
+      "x": 0.6551148459383753,
+      "y": 0.9101066666666664
+     }
+    },
+    "flip": {
+     "image": "objects/type_31_cast_flip.cc16bd69.png",
+     "origin": {
+      "x": 0.6551148459383753,
+      "y": 0.9101066666666664
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_32",
    "name": "Arabia · Shrub 10",
-   "image": "objects/type_32.png",
+   "image": "objects/type_32.90b63feb.png",
    "naturalWidth": 166,
    "naturalHeight": 124,
    "displayHeight": 60,
@@ -2668,17 +3904,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 68,
-    "height": 26,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_32_cast.8f2afc4f.png",
+     "origin": {
+      "x": 0.6545130111524163,
+      "y": 0.8835333333333334
+     }
+    },
+    "flip": {
+     "image": "objects/type_32_cast_flip.e5d3ff0a.png",
+     "origin": {
+      "x": 0.6545130111524163,
+      "y": 0.8835333333333334
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_33",
    "name": "Japan · Sakura",
-   "image": "objects/type_33.png",
+   "image": "objects/type_33.062e4e46.png",
    "naturalWidth": 200,
    "naturalHeight": 218,
    "displayHeight": 105,
@@ -2687,17 +3938,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 53,
-    "height": 20,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_33_cast.441d5d74.png",
+     "origin": {
+      "x": 0.6979620596205962,
+      "y": 0.9369247311827958
+     }
+    },
+    "flip": {
+     "image": "objects/type_33_cast_flip.c261126b.png",
+     "origin": {
+      "x": 0.6979620596205962,
+      "y": 0.9369247311827958
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_34",
    "name": "Japan · Sakura grove",
-   "image": "objects/type_34.png",
+   "image": "objects/type_34.198808db.png",
    "naturalWidth": 300,
    "naturalHeight": 241,
    "displayHeight": 116,
@@ -2706,17 +3972,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 79,
-    "height": 30,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_34_cast.15524466.png",
+     "origin": {
+      "x": 0.6666515463917526,
+      "y": 0.9453762376237624
+     }
+    },
+    "flip": {
+     "image": "objects/type_34_cast_flip.5cc876c6.png",
+     "origin": {
+      "x": 0.6666515463917526,
+      "y": 0.9453762376237624
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_35",
    "name": "Japan · Maple",
-   "image": "objects/type_35.png",
+   "image": "objects/type_35.f7ea2230.png",
    "naturalWidth": 171,
    "naturalHeight": 210,
    "displayHeight": 101,
@@ -2725,17 +4006,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 45,
-    "height": 17,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_35_cast.f1a38e39.png",
+     "origin": {
+      "x": 0.7112574850299401,
+      "y": 0.9358888888888888
+     }
+    },
+    "flip": {
+     "image": "objects/type_35_cast_flip.0e0c3e9f.png",
+     "origin": {
+      "x": 0.7112574850299401,
+      "y": 0.9358888888888888
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_36",
    "name": "Japan · Maple grove",
-   "image": "objects/type_36.png",
+   "image": "objects/type_36.4626266e.png",
    "naturalWidth": 274,
    "naturalHeight": 256,
    "displayHeight": 123,
@@ -2744,17 +4040,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 72,
-    "height": 27,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_36_cast.9df51781.png",
+     "origin": {
+      "x": 0.6821617021276596,
+      "y": 0.9521509433962264
+     }
+    },
+    "flip": {
+     "image": "objects/type_36_cast_flip.8ad6049c.png",
+     "origin": {
+      "x": 0.6821617021276596,
+      "y": 0.9521509433962264
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_37",
    "name": "Japan · Pine",
-   "image": "objects/type_37.png",
+   "image": "objects/type_37.5834c7e2.png",
    "naturalWidth": 142,
    "naturalHeight": 239,
    "displayHeight": 115,
@@ -2763,17 +4074,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 37,
-    "height": 14,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_37_cast.e71100bf.png",
+     "origin": {
+      "x": 0.7452576687116563,
+      "y": 0.94757
+     }
+    },
+    "flip": {
+     "image": "objects/type_37_cast_flip.ef5aa57c.png",
+     "origin": {
+      "x": 0.7452576687116563,
+      "y": 0.94757
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_38",
    "name": "Japan · Pine",
-   "image": "objects/type_38.png",
+   "image": "objects/type_38.d99abf57.png",
    "naturalWidth": 140,
    "naturalHeight": 264,
    "displayHeight": 127,
@@ -2782,17 +4108,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 37,
-    "height": 14,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_38_cast.05976816.png",
+     "origin": {
+      "x": 0.7598357771260998,
+      "y": 0.9525871559633027
+     }
+    },
+    "flip": {
+     "image": "objects/type_38_cast_flip.3dd00e88.png",
+     "origin": {
+      "x": 0.7598357771260998,
+      "y": 0.9525871559633027
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_39",
    "name": "Japan · Fir grove",
-   "image": "objects/type_39.png",
+   "image": "objects/type_39.4fcef921.png",
    "naturalWidth": 228,
    "naturalHeight": 280,
    "displayHeight": 134,
@@ -2801,17 +4142,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 60,
-    "height": 23,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_39_cast.02249390.png",
+     "origin": {
+      "x": 0.7138181818181818,
+      "y": 0.9533913043478263
+     }
+    },
+    "flip": {
+     "image": "objects/type_39_cast_flip.35bf4703.png",
+     "origin": {
+      "x": 0.7138181818181818,
+      "y": 0.9533913043478263
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_40",
    "name": "Japan · Bamboo",
-   "image": "objects/type_40.png",
+   "image": "objects/type_40.46341457.png",
    "naturalWidth": 170,
    "naturalHeight": 232,
    "displayHeight": 111,
@@ -2820,17 +4176,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 45,
-    "height": 17,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_40_cast.64aefd29.png",
+     "origin": {
+      "x": 0.7224985673352435,
+      "y": 0.9409795918367345
+     }
+    },
+    "flip": {
+     "image": "objects/type_40_cast_flip.26ac7fb0.png",
+     "origin": {
+      "x": 0.7224985673352435,
+      "y": 0.9409795918367345
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_41",
    "name": "Japan · Bamboo grove",
-   "image": "objects/type_41.png",
+   "image": "objects/type_41.a9a4a879.png",
    "naturalWidth": 288,
    "naturalHeight": 275,
    "displayHeight": 132,
@@ -2839,17 +4210,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 76,
-    "height": 29,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_41_cast.729215c5.png",
+     "origin": {
+      "x": 0.6854124748490945,
+      "y": 0.9542035398230088
+     }
+    },
+    "flip": {
+     "image": "objects/type_41_cast_flip.e0094b51.png",
+     "origin": {
+      "x": 0.6854124748490945,
+      "y": 0.9542035398230088
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_42",
    "name": "Rome · Cypress",
-   "image": "objects/type_42.png",
+   "image": "objects/type_42.055eb589.png",
    "naturalWidth": 62,
    "naturalHeight": 276,
    "displayHeight": 132,
@@ -2858,17 +4244,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 24,
-    "height": 10,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_42_cast.156a068e.png",
+     "origin": {
+      "x": 0.8394705882352942,
+      "y": 0.9574159292035397
+     }
+    },
+    "flip": {
+     "image": "objects/type_42_cast_flip.81ad6cbc.png",
+     "origin": {
+      "x": 0.8394705882352942,
+      "y": 0.9574159292035397
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_43",
    "name": "Rome · Cypress grove",
-   "image": "objects/type_43.png",
+   "image": "objects/type_43.2b4f6a0f.png",
    "naturalWidth": 130,
    "naturalHeight": 306,
    "displayHeight": 147,
@@ -2877,17 +4278,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 34,
-    "height": 13,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_43_cast.677d8522.png",
+     "origin": {
+      "x": 0.7837008310249307,
+      "y": 0.9603064516129033
+     }
+    },
+    "flip": {
+     "image": "objects/type_43_cast_flip.5c47977a.png",
+     "origin": {
+      "x": 0.7837008310249307,
+      "y": 0.9603064516129033
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_44",
    "name": "Rome · Olive",
-   "image": "objects/type_44.png",
+   "image": "objects/type_44.1af793b2.png",
    "naturalWidth": 213,
    "naturalHeight": 225,
    "displayHeight": 108,
@@ -2896,17 +4312,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 56,
-    "height": 21,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_44_cast.3f0b47f5.png",
+     "origin": {
+      "x": 0.694702842377261,
+      "y": 0.9439473684210528
+     }
+    },
+    "flip": {
+     "image": "objects/type_44_cast_flip.71a3f99c.png",
+     "origin": {
+      "x": 0.694702842377261,
+      "y": 0.9439473684210528
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_45",
    "name": "Rome · Olive grove",
-   "image": "objects/type_45.png",
+   "image": "objects/type_45.8c288b1c.png",
    "naturalWidth": 258,
    "naturalHeight": 242,
    "displayHeight": 116,
@@ -2915,17 +4346,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 68,
-    "height": 26,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_45_cast.3497b942.png",
+     "origin": {
+      "x": 0.6824594594594594,
+      "y": 0.948970297029703
+     }
+    },
+    "flip": {
+     "image": "objects/type_45_cast_flip.d97e4c20.png",
+     "origin": {
+      "x": 0.6824594594594594,
+      "y": 0.948970297029703
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_46",
    "name": "Rome · Stone pine",
-   "image": "objects/type_46.png",
+   "image": "objects/type_46.128c9323.png",
    "naturalWidth": 221,
    "naturalHeight": 265,
    "displayHeight": 127,
@@ -2934,17 +4380,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 58,
-    "height": 22,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_46_cast.4c398c2a.png",
+     "origin": {
+      "x": 0.7099054373522458,
+      "y": 0.9559174311926605
+     }
+    },
+    "flip": {
+     "image": "objects/type_46_cast_flip.037e555a.png",
+     "origin": {
+      "x": 0.7099054373522458,
+      "y": 0.9559174311926605
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_47",
    "name": "Rome · Stone pine grove",
-   "image": "objects/type_47.png",
+   "image": "objects/type_47.0ef7b708.png",
    "naturalWidth": 256,
    "naturalHeight": 238,
    "displayHeight": 114,
@@ -2953,17 +4414,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 68,
-    "height": 26,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_47_cast.a1ccd698.png",
+     "origin": {
+      "x": 0.6817038724373577,
+      "y": 0.94394
+     }
+    },
+    "flip": {
+     "image": "objects/type_47_cast_flip.c5acfd52.png",
+     "origin": {
+      "x": 0.6817038724373577,
+      "y": 0.94394
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_48",
    "name": "Rome · Oak",
-   "image": "objects/type_48.png",
+   "image": "objects/type_48.1d07990a.png",
    "naturalWidth": 180,
    "naturalHeight": 211,
    "displayHeight": 101,
@@ -2972,17 +4448,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 48,
-    "height": 18,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_48_cast.572bebbb.png",
+     "origin": {
+      "x": 0.705656976744186,
+      "y": 0.9399222222222221
+     }
+    },
+    "flip": {
+     "image": "objects/type_48_cast_flip.16ce22f5.png",
+     "origin": {
+      "x": 0.705656976744186,
+      "y": 0.9399222222222221
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_49",
    "name": "Rome · Oak grove",
-   "image": "objects/type_49.png",
+   "image": "objects/type_49.a26caa86.png",
    "naturalWidth": 278,
    "naturalHeight": 234,
    "displayHeight": 112,
@@ -2991,17 +4482,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 73,
-    "height": 28,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_49_cast.ddc3ba31.png",
+     "origin": {
+      "x": 0.6714497816593886,
+      "y": 0.9483877551020409
+     }
+    },
+    "flip": {
+     "image": "objects/type_49_cast_flip.c89dad4b.png",
+     "origin": {
+      "x": 0.6714497816593886,
+      "y": 0.9483877551020409
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_50",
    "name": "Rome · Shrub 9",
-   "image": "objects/type_50.png",
+   "image": "objects/type_50.2e8204ee.png",
    "naturalWidth": 211,
    "naturalHeight": 176,
    "displayHeight": 84,
@@ -3010,17 +4516,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 86,
-    "height": 33,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_50_cast.38a0a70a.png",
+     "origin": {
+      "x": 0.6673390313390313,
+      "y": 0.9216410256410257
+     }
+    },
+    "flip": {
+     "image": "objects/type_50_cast_flip.5534e866.png",
+     "origin": {
+      "x": 0.6673390313390313,
+      "y": 0.9216410256410257
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_51",
    "name": "Rome · Shrub 10",
-   "image": "objects/type_51.png",
+   "image": "objects/type_51.0d8d4b71.png",
    "naturalWidth": 152,
    "naturalHeight": 116,
    "displayHeight": 56,
@@ -3029,17 +4550,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 62,
-    "height": 24,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_51_cast.7997431d.png",
+     "origin": {
+      "x": 0.654304,
+      "y": 0.8790877192982455
+     }
+    },
+    "flip": {
+     "image": "objects/type_51_cast_flip.ecd2a850.png",
+     "origin": {
+      "x": 0.654304,
+      "y": 0.8790877192982455
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_52",
    "name": "Viking · Snowy spruce",
-   "image": "objects/type_52.png",
+   "image": "objects/type_52.c2d8789f.png",
    "naturalWidth": 126,
    "naturalHeight": 242,
    "displayHeight": 116,
@@ -3048,17 +4584,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 33,
-    "height": 13,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_52_cast.b916aba1.png",
+     "origin": {
+      "x": 0.7596538461538461,
+      "y": 0.948970297029703
+     }
+    },
+    "flip": {
+     "image": "objects/type_52_cast_flip.c3e6ea11.png",
+     "origin": {
+      "x": 0.7596538461538461,
+      "y": 0.948970297029703
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_53",
    "name": "Viking · Snowy spruce grove",
-   "image": "objects/type_53.png",
+   "image": "objects/type_53.bf7d5efb.png",
    "naturalWidth": 199,
    "naturalHeight": 270,
    "displayHeight": 130,
@@ -3067,17 +4618,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 53,
-    "height": 20,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_53_cast.d58862a4.png",
+     "origin": {
+      "x": 0.7245544554455446,
+      "y": 0.955045045045045
+     }
+    },
+    "flip": {
+     "image": "objects/type_53_cast_flip.8ff20867.png",
+     "origin": {
+      "x": 0.7245544554455446,
+      "y": 0.955045045045045
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_54",
    "name": "Viking · Snowy spruce grove",
-   "image": "objects/type_54.png",
+   "image": "objects/type_54.cd72f5e0.png",
    "naturalWidth": 268,
    "naturalHeight": 286,
    "displayHeight": 137,
@@ -3086,17 +4652,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 71,
-    "height": 27,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_54_cast.6ad0593a.png",
+     "origin": {
+      "x": 0.6973113402061855,
+      "y": 0.9557094017094018
+     }
+    },
+    "flip": {
+     "image": "objects/type_54_cast_flip.4eaec01f.png",
+     "origin": {
+      "x": 0.6973113402061855,
+      "y": 0.9557094017094018
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_55",
    "name": "Viking · Spruce",
-   "image": "objects/type_55.png",
+   "image": "objects/type_55.113d3662.png",
    "naturalWidth": 119,
    "naturalHeight": 249,
    "displayHeight": 120,
@@ -3105,17 +4686,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 31,
-    "height": 12,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_55_cast.3abe5d2e.png",
+     "origin": {
+      "x": 0.7687548387096774,
+      "y": 0.9460288461538462
+     }
+    },
+    "flip": {
+     "image": "objects/type_55_cast_flip.24a9d013.png",
+     "origin": {
+      "x": 0.7687548387096774,
+      "y": 0.9460288461538462
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_56",
    "name": "Viking · Spruce grove",
-   "image": "objects/type_56.png",
+   "image": "objects/type_56.88b51141.png",
    "naturalWidth": 210,
    "naturalHeight": 270,
    "displayHeight": 130,
@@ -3124,17 +4720,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 55,
-    "height": 21,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_56_cast.1d1addf8.png",
+     "origin": {
+      "x": 0.7186024096385543,
+      "y": 0.955045045045045
+     }
+    },
+    "flip": {
+     "image": "objects/type_56_cast_flip.32a2c647.png",
+     "origin": {
+      "x": 0.7186024096385543,
+      "y": 0.955045045045045
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_57",
    "name": "Viking · Birch",
-   "image": "objects/type_57.png",
+   "image": "objects/type_57.99d1c468.png",
    "naturalWidth": 112,
    "naturalHeight": 244,
    "displayHeight": 117,
@@ -3143,17 +4754,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 30,
-    "height": 11,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_57_cast.022516a3.png",
+     "origin": {
+      "x": 0.7738595317725752,
+      "y": 0.9467843137254902
+     }
+    },
+    "flip": {
+     "image": "objects/type_57_cast_flip.1539c872.png",
+     "origin": {
+      "x": 0.7738595317725752,
+      "y": 0.9467843137254902
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_58",
    "name": "Viking · Birch grove",
-   "image": "objects/type_58.png",
+   "image": "objects/type_58.5a7f7257.png",
    "naturalWidth": 208,
    "naturalHeight": 246,
    "displayHeight": 118,
@@ -3162,17 +4788,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 55,
-    "height": 21,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_58_cast.54211d25.png",
+     "origin": {
+      "x": 0.7071939546599495,
+      "y": 0.9446407766990291
+     }
+    },
+    "flip": {
+     "image": "objects/type_58_cast_flip.25d2cdaa.png",
+     "origin": {
+      "x": 0.7071939546599495,
+      "y": 0.9446407766990291
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_59",
    "name": "Viking · Autumn oak",
-   "image": "objects/type_59.png",
+   "image": "objects/type_59.8d689ba8.png",
    "naturalWidth": 220,
    "naturalHeight": 250,
    "displayHeight": 120,
@@ -3181,17 +4822,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 58,
-    "height": 22,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_59_cast.fc08eba3.png",
+     "origin": {
+      "x": 0.7043795620437956,
+      "y": 0.9495192307692307
+     }
+    },
+    "flip": {
+     "image": "objects/type_59_cast_flip.05032eca.png",
+     "origin": {
+      "x": 0.7043795620437956,
+      "y": 0.9495192307692307
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_60",
    "name": "Viking · Autumn oak grove",
-   "image": "objects/type_60.png",
+   "image": "objects/type_60.b3cc7c0c.png",
    "naturalWidth": 259,
    "naturalHeight": 246,
    "displayHeight": 118,
@@ -3200,17 +4856,32 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 68,
-    "height": 26,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_60_cast.c6df2e23.png",
+     "origin": {
+      "x": 0.6836071428571427,
+      "y": 0.9446407766990291
+     }
+    },
+    "flip": {
+     "image": "objects/type_60_cast_flip.f037e9f8.png",
+     "origin": {
+      "x": 0.6836071428571427,
+      "y": 0.9446407766990291
+     }
+    }
    },
    "blockRadius": 0
   },
   {
    "id": "type_61",
    "name": "Viking · Shrub 10",
-   "image": "objects/type_61.png",
+   "image": "objects/type_61.cf5d5100.png",
    "naturalWidth": 186,
    "naturalHeight": 117,
    "displayHeight": 56,
@@ -3219,10 +4890,25 @@
     "y": 1
    },
    "tint": 16777215,
-   "shadow": {
-    "width": 76,
-    "height": 29,
-    "alpha": 0.85
+   "group": "trees",
+   "minZoom": 0.25,
+   "shadow": null,
+   "castShadow": {
+    "alpha": 0.4,
+    "plain": {
+     "image": "objects/type_61_cast.386ec391.png",
+     "origin": {
+      "x": 0.6382464788732395,
+      "y": 0.8854561403508773
+     }
+    },
+    "flip": {
+     "image": "objects/type_61_cast_flip.def5f6d6.png",
+     "origin": {
+      "x": 0.6382464788732395,
+      "y": 0.8854561403508773
+     }
+    }
    },
    "blockRadius": 0
   }
@@ -93926,11 +95612,11 @@
  ],
  "data": {
   "collision": {
-   "file": "data/collision.bin",
+   "file": "data/collision.87acbeff.bin",
    "encoding": "uint8, index = y*width+x, 1 = blocked, 0 = walkable"
   },
   "biome": {
-   "file": "data/biome.bin",
+   "file": "data/biome.e66d506b.bin",
    "encoding": "uint8, index = y*width+x",
    "legend": {
     "0": "grass",
@@ -93947,7 +95633,7 @@
    }
   },
   "territory": {
-   "file": "data/territory.bin",
+   "file": "data/territory.5eb5f4a7.bin",
    "encoding": "uint8, index = y*width+x, 255 = neutral center",
    "names": [
     "Persia",

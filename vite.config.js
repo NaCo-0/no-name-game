@@ -88,8 +88,12 @@ function readBody(req) {
 function findMissingFiles(manifest) {
   const wanted = [];
   for (const t of (manifest.terrain && manifest.terrain.tiles) || []) wanted.push(t.file);
+  // coarser terrain levels (zoomed-out views)
+  for (const lv of (manifest.terrain && manifest.terrain.lods) || []) for (const t of lv.tiles || []) wanted.push(t.file);
   for (const o of manifest.objectTypes || []) {
     wanted.push(o.image);
+    // silhouette (cast) shadows, normal and mirrored
+    for (const v of ['plain', 'flip']) if (o.castShadow && o.castShadow[v]) wanted.push(o.castShadow[v].image);
   }
   if (manifest.shadowTexture) wanted.push(manifest.shadowTexture);
   if (manifest.terrain && manifest.terrain.minimap) wanted.push(manifest.terrain.minimap.file);
@@ -181,14 +185,38 @@ async function bakeMiddleware(req, res, next) {
   }
 }
 
+/**
+ * Browser caching for the baked map. Baked files are named by content (t_3_5.a1b2c3d4.webp), so a file
+ * never changes under its name: the browser may keep it "forever" and never ask again (the biggest
+ * saving on a phone). map.json / minimap.png keep a fixed name, so they are re-checked on every start
+ * (a 304 answer costs a few bytes). Works in `npm run game` and `npm run preview`; for a real host see
+ * the nginx example in the README (same two rules).
+ */
+const HASHED_FILE = /^\/(terrain|objects|data)\/.+\.[0-9a-f]{8}\.(webp|png|bin)$/;
+function cacheHeadersMiddleware(req, res, next) {
+  const url = String(req.url || '').split('?')[0];
+  const value = HASHED_FILE.test(url) ? 'public, max-age=31536000, immutable' : url === '/map.json' || url === '/minimap.png' ? 'no-cache' : null;
+  if (value) {
+    const writeHead = res.writeHead;
+    // set the header right before the answer goes out, so it wins over the static file server's own value
+    res.writeHead = function (...args) {
+      if (res.statusCode === 200 || res.statusCode === 304) res.setHeader('Cache-Control', value);
+      return writeHead.apply(this, args);
+    };
+  }
+  next();
+}
+
 function bakeServerPlugin() {
   return {
     name: 'bake-server-plugin',
     configureServer(server) {
+      server.middlewares.use(cacheHeadersMiddleware);
       server.middlewares.use(bakeMiddleware);
     },
     // Same endpoints under `npm run preview`, so baking works there too.
     configurePreviewServer(server) {
+      server.middlewares.use(cacheHeadersMiddleware);
       server.middlewares.use(bakeMiddleware);
     },
   };

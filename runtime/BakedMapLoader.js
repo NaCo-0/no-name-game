@@ -31,10 +31,19 @@ const SHADOW_MIN_ZOOM = 0.12;
 /** Terrain tiles kept (hidden) after they leave the screen. */
 const RETAIN_TILES = 10;
 /**
- * Neighbouring terrain tiles overlap by this many world px on every side. Without it, at fractional
- * zoom / high-DPI the GPU leaves a hairline gap between two tiles and the background shows through.
+ * Neighbouring terrain tiles overlap on every side (world px = at least this, and 3 texels of the level).
+ * Without it, at fractional zoom / high-DPI the GPU leaves a hairline gap between two tiles.
  */
 const TILE_OVERLAP = 6;
+/** Zoom must pass a level's boundary by this much before the game switches (stops flicker at the boundary). */
+const LOD_HYSTERESIS = 0.08;
+/**
+ * Size of whole object groups on the map (a group is set in the editor, e.g. 'trees'). The baked
+ * sprites AND their shadows are scaled, so no re-bake is needed to change it.
+ */
+export const OBJECT_GROUP_SCALE = { trees: 0.65 };
+/** Drawn objects smaller than this on screen are skipped: phones need more skipping than desktops. */
+const MIN_OBJECT_PX = (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 6 : 3;
 
 export class BakedMap {
   /**
@@ -68,10 +77,27 @@ export class BakedMap {
     this.grids = grids;
     this.prefix = opts.prefix ?? 'baked_';
     this.margin = opts.margin ?? 1;
+    this.groupScale = { ...OBJECT_GROUP_SCALE, ...(opts.groupScale || {}) };
 
+    // Terrain levels of detail, COARSEST FIRST. Old bakes have just one (the detail level).
+    // Finer levels are drawn above coarser ones, and the coarsest is always kept under the view,
+    // so there is never a hole while a finer tile is still downloading.
     const t = manifest.terrain;
-    this.tileFiles = new Map(t.tiles.map((x) => [`${x.col},${x.row}`, x.file]));
-    this.terrain = new Map(); // key -> { state:'loading'|'ready', image? }
+    const mk = (lv, index) => ({
+      index,
+      id: lv.id || 'detail',
+      tileWorldSize: lv.tileWorldSize,
+      minZoom: lv.minZoom ?? 0,
+      overlap: Math.max(TILE_OVERLAP, 3 / (lv.scale || 0.5)),
+      files: new Map(lv.tiles.map((x) => [`${x.col},${x.row}`, x.file])),
+      depth: index * 0.01, // terrain stays below shadows (1) and objects (>=1000)
+    });
+    const ordered = [...(t.lods || []).slice().sort((a, b) => a.minZoom - b.minZoom), { ...t, id: 'detail' }];
+    this.levels = ordered.map(mk);
+    this._level = this.levels.length - 1; // start at the finest; the first update() picks the right one
+    this._frame = 0;
+    this.tileFiles = this.levels[this.levels.length - 1].files; // (kept for old callers)
+    this.terrain = new Map(); // `${levelIndex}:${col},${row}` -> { state:'loading'|'ready', image?, level }
     this.objectSprites = [];
     this._cullList = []; // { s: sprite, r: radius, shadow: bool } - see _cullObjects()
   }
@@ -152,13 +178,14 @@ export class BakedMap {
       if (!t) continue;
       const sprite = this.scene.add.image(o.x, o.y, `${p}obj_${t.id}`);
       sprite.setOrigin(t.anchor.x, t.anchor.y);
-      const k = o.scale ?? 1; // per-instance size variation (trees)
+      const k = (o.scale ?? 1) * (t.group ? this.groupScale[t.group] ?? 1 : 1); // instance size variation x group size
+      const minZoom = t.minZoom ?? 0; // hidden when zoomed out below this
       sprite.setScale((t.displayHeight / t.naturalHeight) * k);
       sprite.setFlipX(!!o.flipX);
       sprite.setTint(t.tint);
       sprite.setDepth(o.depth);
       this.objectSprites.push(sprite);
-      this._cullList.push({ s: sprite, r: Math.max(sprite.displayWidth, sprite.displayHeight), shadow: false });
+      this._cullList.push({ s: sprite, r: Math.max(sprite.displayWidth, sprite.displayHeight), shadow: false, z: minZoom });
 
       const cast = t.castShadow && t.castShadow[o.flipX ? 'flip' : 'plain'];
       if (cast) {
@@ -170,7 +197,7 @@ export class BakedMap {
         sh.setAlpha(t.castShadow.alpha);
         sh.setDepth(SHADOW_DEPTH);
         this.objectSprites.push(sh);
-        this._cullList.push({ s: sh, r: Math.max(sh.displayWidth, sh.displayHeight), shadow: true });
+        this._cullList.push({ s: sh, r: Math.max(sh.displayWidth, sh.displayHeight), shadow: true, z: minZoom });
       } else if (t.shadow) {
         const sh = this.scene.add.image(o.x, o.y - t.shadow.height * 0.15, p + 'shadow');
         sh.setBlendMode(Phaser.BlendModes.MULTIPLY);
@@ -178,44 +205,70 @@ export class BakedMap {
         sh.setAlpha(t.shadow.alpha);
         sh.setDepth(SHADOW_DEPTH);
         this.objectSprites.push(sh);
-        this._cullList.push({ s: sh, r: Math.max(sh.displayWidth, sh.displayHeight), shadow: true });
+        this._cullList.push({ s: sh, r: Math.max(sh.displayWidth, sh.displayHeight), shadow: true, z: minZoom });
       }
     }
   }
 
   // ---- terrain streaming ------------------------------------------------------
 
+  /** Level of detail to use at this on-screen zoom (with hysteresis around the boundaries). */
+  _pickLevel(zoom) {
+    let i = this._level;
+    const L = this.levels;
+    while (i < L.length - 1 && zoom >= L[i + 1].minZoom * (1 + LOD_HYSTERESIS)) i++;
+    while (i > 0 && zoom < L[i].minZoom * (1 - LOD_HYSTERESIS)) i--;
+    return i;
+  }
+
+  _tileRange(level, view, margin) {
+    const t = this.manifest.terrain;
+    const size = level.tileWorldSize;
+    return {
+      c0: Math.floor((view.x - t.origin.x) / size) - margin,
+      c1: Math.floor((view.right - t.origin.x) / size) + margin,
+      r0: Math.floor((view.y - t.origin.y) / size) - margin,
+      r1: Math.floor((view.bottom - t.origin.y) / size) + margin,
+    };
+  }
+
   /** Call every frame (or every few frames) from scene.update(). */
   update() {
-    const t = this.manifest.terrain;
-    const view = this.scene.cameras.main.worldView;
-    const size = t.tileWorldSize;
-
+    const cam = this.scene.cameras.main;
+    const view = cam.worldView;
     this._cullObjects(view);
 
-    const c0 = Math.floor((view.x - t.origin.x) / size) - this.margin;
-    const c1 = Math.floor((view.right - t.origin.x) / size) + this.margin;
-    const r0 = Math.floor((view.y - t.origin.y) / size) - this.margin;
-    const r1 = Math.floor((view.bottom - t.origin.y) / size) + this.margin;
+    const zoom = (cam.zoom || 1) / (this.scene.dpr || 1);
+    this._level = this._pickLevel(zoom);
+    const frame = ++this._frame;
+
+    // What must be on screen: the coarsest level under the whole view (cheap, always there),
+    // and the chosen level around the camera.
+    const want = [{ level: this.levels[0], margin: 0 }];
+    if (this._level > 0) want.push({ level: this.levels[this._level], margin: this.margin });
+    else want[0].margin = this.margin;
 
     const needed = new Set();
-    const frame = (this._frame = (this._frame || 0) + 1);
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) {
-        const key = `${c},${r}`;
-        if (!this.tileFiles.has(key)) continue;
-        needed.add(key);
-        const have = this.terrain.get(key);
-        if (!have) this._startTile(key, c, r);
-        else {
-          have.last = frame;
-          if (have.image && !have.image.visible) have.image.setVisible(true); // came back from the spare cache: no download
+    for (const { level, margin } of want) {
+      const { c0, c1, r0, r1 } = this._tileRange(level, view, margin);
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const tile = `${c},${r}`;
+          if (!level.files.has(tile)) continue;
+          const key = `${level.index}:${tile}`;
+          needed.add(key);
+          const have = this.terrain.get(key);
+          if (!have) this._startTile(level, key, c, r);
+          else {
+            have.last = frame;
+            if (have.image && !have.image.visible) have.image.setVisible(true); // back from the spare cache: no download
+          }
         }
       }
     }
 
-    // Tiles that left the view are kept (hidden) for a while: dragging back is instant and uses no data.
-    // Only the most recently used RETAIN_TILES are kept, the rest are freed (GPU memory on phones).
+    // Everything else is hidden. A finer tile that is no longer needed stays hidden in a small cache,
+    // so zooming back / dragging back is instant and uses no data; only the most recent are kept.
     const spare = [];
     for (const [key, entry] of this.terrain) {
       if (needed.has(key)) continue;
@@ -250,7 +303,8 @@ export class BakedMap {
       const s = c.s;
       const vis =
         (shadows || !c.shadow) &&
-        c.r * zoom >= 3 && // smaller than 3 screen pixels: not worth drawing
+        zoom >= c.z && // this type is hidden when zoomed out (trees)
+        c.r * zoom >= MIN_OBJECT_PX && // smaller than this on screen: not worth drawing
         s.x + c.r >= x0 &&
         s.x - c.r <= x1 &&
         s.y + c.r >= y0 &&
@@ -266,10 +320,10 @@ export class BakedMap {
     return n;
   }
 
-  _startTile(key, col, row) {
+  _startTile(level, key, col, row) {
     const t = this.manifest.terrain;
-    const texKey = `${this.prefix}t_${key}`;
-    const entry = { state: 'loading', texKey, image: null, last: this._frame || 0 };
+    const texKey = `${this.prefix}t_${level.id}_${key.split(':')[1]}`;
+    const entry = { state: 'loading', texKey, image: null, last: this._frame, level: level.index };
     this.terrain.set(key, entry);
 
     const done = () => {
@@ -278,17 +332,15 @@ export class BakedMap {
         if (this.scene.textures.exists(texKey)) this.scene.textures.remove(texKey);
         return;
       }
-      const img = this.scene.add.image(
-        t.origin.x + col * t.tileWorldSize - TILE_OVERLAP,
-        t.origin.y + row * t.tileWorldSize - TILE_OVERLAP,
-        texKey
-      );
-      img.setOrigin(0, 0).setDisplaySize(t.tileWorldSize + 2 * TILE_OVERLAP, t.tileWorldSize + 2 * TILE_OVERLAP).setDepth(0);
+      const o = level.overlap;
+      const size = level.tileWorldSize;
+      const img = this.scene.add.image(t.origin.x + col * size - o, t.origin.y + row * size - o, texKey);
+      img.setOrigin(0, 0).setDisplaySize(size + 2 * o, size + 2 * o).setDepth(level.depth);
       entry.image = img;
       entry.state = 'ready';
     };
 
-    this.scene.load.image(texKey, this.baseUrl + this.tileFiles.get(key));
+    this.scene.load.image(texKey, this.baseUrl + level.files.get(key.split(':')[1]));
     this.scene.load.once(`filecomplete-image-${texKey}`, done);
     if (!this.scene.load.isLoading()) this.scene.load.start();
   }

@@ -133,6 +133,9 @@ export class SeededNoiseField {
     this._mottleB = new ValueNoise2D(seed ^ 0x5be0cd19, 64);
     this.mottleScaleA = 64;  // logical-plane units (1 tile = 128)
     this.mottleScaleB = 22;
+    // 0..1: how much of the fine octave to use. The bake turns it down for low-resolution levels,
+    // where it would only alias (sparkle) instead of looking like fine detail.
+    this.mottleFine = 1;
 
     // World-pixels per noise-grid-cell. Larger = larger, calmer regions.
     // (Was 180 — patches were far too small/busy compared to RoK.)
@@ -192,7 +195,8 @@ export class SeededNoiseField {
   mottle(worldX, worldY) {
     const a = this._mottleA.sample(worldX / this.mottleScaleA, worldY / this.mottleScaleA);
     const b = this._mottleB.sample(worldX / this.mottleScaleB, worldY / this.mottleScaleB);
-    return (a * 0.62 + b * 0.38) * 2 - 1;
+    const wb = 0.38 * this.mottleFine;
+    return ((a * 0.62 + b * wb) / (0.62 + wb)) * 2 - 1;
   }
 
   static to01(v) {

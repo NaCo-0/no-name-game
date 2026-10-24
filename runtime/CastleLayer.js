@@ -14,9 +14,10 @@
  */
 import Phaser from 'phaser';
 import { CIVILIZATIONS, civById } from './civilizations.js';
+import { iconTexture, iconBlend, applyIconBlend, ICON_PX } from './MapIcons.js';
 
 /** Castle width on screen at zoom 1, in pixels (a mountain is ~730px wide). */
-export const CASTLE_DISPLAY_WIDTH = 260;
+export const CASTLE_DISPLAY_WIDTH = 170;
 /** Must match INSTANCE_DEPTH_BASE in the editor / exporter. */
 const DEPTH_BASE = 1000;
 const LABEL_DEPTH = 100000;
@@ -150,7 +151,16 @@ export class CastleLayer {
       this.events.emit('select', c);
     });
 
-    const entry = { data: c, sprite, shadow, label };
+    // Round icon for zoomed-out views (see MapIcons.js)
+    const icon = scene.add.image(world.x, world.y, iconTexture(scene, 'castle', civ.color, !!c.isPlayer));
+    icon.setOrigin(0.5, 0.6).setDepth(LABEL_DEPTH - 2 + (c.isPlayer ? 1 : 0)).setVisible(false);
+    icon.setInteractive({ useHandCursor: true });
+    icon.on('pointerup', (pointer) => {
+      if (pointer.getDistance() > 10) return;
+      this.events.emit('select', c);
+    });
+
+    const entry = { data: c, sprite, shadow, label, icon, world: { x: world.x, y: world.y }, topY, isPlayer: !!c.isPlayer, labelWanted: this.namesVisible };
     this.castles.push(entry);
     return entry;
   }
@@ -162,7 +172,7 @@ export class CastleLayer {
 
   setNamesVisible(visible) {
     this.namesVisible = !!visible;
-    for (const l of this._labels) l.setVisible(this.namesVisible);
+    for (const e of this.castles) { e.labelWanted = this.namesVisible; if (!e._iconLabel) e.label.setVisible(this.namesVisible); }
   }
 
   /** Multiplier for name plate size (1 = default). */
@@ -195,7 +205,7 @@ export class CastleLayer {
     const scene = this.scene;
     const text = scene.add.text(0, 0, c.name, {
       fontFamily: this.fontFamily,
-      fontSize: c.isPlayer ? '30px' : '26px',
+      fontSize: c.isPlayer ? '25px' : '22px',
       fontStyle: 'bold',
       color: '#ffffff',
       stroke: '#000000',
@@ -241,8 +251,13 @@ export class CastleLayer {
   /** Keeps name plates readable when zoomed out (never smaller than on-screen size at zoom 1). */
   _onUpdate() {
     const zoom = (this.scene.cameras.main.zoom || 1) / (this.scene.dpr || 1); // on-screen zoom (the camera zoom includes the pixel density)
+    const t = iconBlend(zoom);
     const s = Phaser.Math.Clamp(1 / zoom, 1, 2.4) * this.nameScale;
-    for (const l of this._labels) l.setScale(s);
+    for (const e of this.castles) {
+      if (t > 0 || e._iconLabel) applyIconBlend(e, t, zoom, this.nameScale);
+      if (t === 0) e.label.setScale(s);
+    }
+    if (this._ring) this._ring.setScale(t > 0 ? Math.max(1, (ICON_PX * 1.5) / zoom / (CASTLE_DISPLAY_WIDTH * 0.95)) : 1);
   }
 
   destroy() {
@@ -252,6 +267,7 @@ export class CastleLayer {
     this.events.removeAllListeners();
     for (const c of this.castles) {
       c.sprite.destroy();
+      c.icon?.destroy();
       c.shadow?.destroy();
       c.label.destroy();
     }

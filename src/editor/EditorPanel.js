@@ -371,6 +371,12 @@ export class EditorPanel {
     syncShadowRows();
 
     // Collision footprint used by the bake export (0 = decorative only).
+    // Zoomed-out views of the game: hide this object below this zoom (0 = never hide).
+    card.appendChild(
+      this._slider('Hide when zoomed out below', 0, 0.6, 0.01, type.minZoom ?? 0, (v) => {
+        this.controller.updateTypeParam(type.id, 'minZoom', v);
+      })
+    );
     card.appendChild(
       this._slider('Blocks movement (radius, tiles)', 0, 5, 0.1, type.blockRadius, (v) => {
         this.controller.updateTypeParam(type.id, 'blockRadius', v);
