@@ -7,6 +7,9 @@ import { CULTURE_TO_CIV } from '../constants.js';
 import { httpError } from '../httpError.js';
 import { config } from '../config.js';
 import * as live from '../live.js';
+import { publicConfig } from '../battleConfig.js';
+import * as pvp from '../pvp.js';
+
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const userJson = (p) => ({ id: p.id, username: p.username });
@@ -115,6 +118,11 @@ export default function gameRoutes(world) {
   });
   r.post('/game/attack', async (req, res) => res.status(201).json({ ok: true, ...(await world.attack(req.player, req.body)) }));
   r.post('/game/expeditions/claim', async (req, res) => res.json({ ok: true, ...(await world.claim(req.player, req.body)) }));
+    // ---------- nabard (PvP) ----------
+  r.get('/game/battle-config', (req, res) => res.json({ ok: true, ...publicConfig() }));
+  r.get('/game/defense', async (req, res) => res.json({ ok: true, ...(await pvp.getDefense(req.player)) }));
+  r.put('/game/defense', async (req, res) => res.json({ ok: true, ...(await pvp.setDefense(req.player, req.body)) }));
+  r.post('/game/attack-castle', async (req, res) => res.status(201).json({ ok: true, now: Date.now(), ...(await pvp.attackCastle(req.player, req.body)) }));
 
   // ---------- chat (hame-ye payam-ha dar ChatMessage sabt mishan; admin mitune bebine) ----------
   const lastMsgs = new Map(); // playerId -> [timestamps]

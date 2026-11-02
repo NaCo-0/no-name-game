@@ -6,9 +6,9 @@
  *   top-left      player card (avatar, name, civilization)
  *   top-right     minimap (click / drag to move) + camera coordinates
  *   right         zoom buttons
- *   bottom        action bar: My castle (H) · Kingdoms (K) · World map (M) · Settings
+ *   bottom        action bar: My castle (H) · Kingdoms (K) · World map (M) · Defense (D) · Settings
  *   bottom-left   go-to coordinates (press /)
- *   floating      castle info card, kingdoms list, settings, big map, toasts
+ *   floating      castle info card, kingdoms list, settings, big map, battle panels, toasts
  *
  * It works through a few plain calls on the scene, the map and the
  * CastleLayer, so it does not care how the rest of the game is organised.
@@ -23,11 +23,17 @@ import { settings } from './Settings.js';
 import { Toasts } from './Toasts.js';
 import { Minimap } from './Minimap.js';
 import { castleCard, kingdomsDrawer, settingsModal, modal } from './Panels.js';
+import { formationPanel } from './FormationPanel.js';
+import { battleReport } from './BattleReport.js';
+import { getBattleConfig, getDefense, setDefense, attackCastle } from './battleApi.js';
+import { bt } from './battleI18n.js';
 import { civById } from '../civilizations.js';
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2;
 const toLatinDigits = (s) => s.replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06f0).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660);
+// Only real player castles can be attacked (NPC castles have other ids).
+const attackable = (c, player) => c && c.id !== player.id && !c.isPlayer && String(c.id).startsWith('u_');
 
 /**
  * @param {object} o
@@ -36,8 +42,9 @@ const toLatinDigits = (s) => s.replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06
  * @param {import('../CastleLayer.js').CastleLayer} o.layer
  * @param {object} o.player   the player's castle data ({id,name,civId,tileX,tileY,...})
  * @param {() => void} [o.onChangeCiv] called when the player asks to pick a new civilization
+ * @param {(save:object) => void} [o.onArmyChanged] called after an attack with { version, troops, resources }
  */
-export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
+export function createGameUI({ scene, map, layer, player, onChangeCiv, onArmyChanged }) {
   installStyles();
   const cam = scene.cameras.main;
   const civ = civById(player.civId);
@@ -45,7 +52,7 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
   const root = h('div', { class: 'ui-root' });
   document.body.appendChild(root);
 
-  const ui = { panel: null, panelEl: null, minimap: null, goMsgTimer: null, bar: {} };
+  const ui = { panel: null, panelEl: null, minimap: null, goMsgTimer: null, bar: {}, target: null, busy: false };
   const castles = () => layer.getCastles();
   const distanceTo = (c) => Math.hypot(c.tileX - player.tileX, c.tileY - player.tileY);
 
@@ -67,6 +74,18 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
     syncBar();
   }
 
+  /** Show a ready element as the current panel. */
+  function showPanel(kind, el) {
+    if (ui.panel) {
+      if (ui.panel === 'castle') layer.setSelected(null);
+      ui.panelEl?.remove();
+    }
+    ui.panel = kind;
+    ui.panelEl = el;
+    root.appendChild(el);
+    syncBar();
+  }
+
   function openPanel(kind, data) {
     if (ui.panel) {
       if (ui.panel === 'castle') layer.setSelected(null);
@@ -83,6 +102,7 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
         onCenter: () => flyTo(data.worldX, data.worldY),
         onCopy: () => copyCoords(data),
       });
+      addBattleButtons(el, data);
     } else if (kind === 'kingdoms') {
       el = kingdomsDrawer({
         castles: castles(),
@@ -113,6 +133,93 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
   function togglePanel(kind) {
     if (ui.panel === kind) closePanel();
     else openPanel(kind);
+  }
+
+  // ---------- battle ----------
+  /** Extra buttons on the castle card: defense on your own castle, attack on other players. */
+  function addBattleButtons(card, c) {
+    const row = card.querySelector('.ui-card-actions');
+    if (!row) return;
+    if (c.id === player.id || c.isPlayer) {
+      row.appendChild(h('button', { class: 'ui-btn', type: 'button', onClick: openDefense }, icon('home', 18), bt('title.defense')));
+    } else if (attackable(c, player)) {
+      row.appendChild(h('button', { class: 'ui-btn danger', type: 'button', onClick: () => openAttack(c) }, icon('target', 18), bt('title.attack')));
+    }
+  }
+
+  async function openDefense() {
+    if (ui.busy) return;
+    ui.busy = true;
+    try {
+      const [config, d] = await Promise.all([getBattleConfig(), getDefense()]);
+      showPanel(
+        'defense',
+        formationPanel({
+          mode: 'defense',
+          army: d.army,
+          config,
+          onClose: closePanel,
+          onSubmit: async (layout) => {
+            try {
+              await setDefense(layout, d.version);
+              toasts.show('✓ ' + bt('title.defense'), 2000);
+              closePanel();
+            } catch (e) {
+              toasts.show(e.message, 3500);
+            }
+          },
+        })
+      );
+    } catch (e) {
+      toasts.show(e.message, 3500);
+    } finally {
+      ui.busy = false;
+    }
+  }
+
+  async function openAttack(c) {
+    if (ui.busy || !attackable(c, player)) return;
+    ui.busy = true;
+    ui.target = c;
+    try {
+      // the attacker's own troops come from the same endpoint as the defense
+      const [config, d] = await Promise.all([getBattleConfig(), getDefense()]);
+      showPanel(
+        'attack',
+        formationPanel({
+          mode: 'attack',
+          army: d.army,
+          config,
+          onClose: closePanel,
+          onSubmit: async (layout) => {
+            try {
+              const res = await attackCastle({ castleId: c.id, layout, baseVersion: d.version });
+              const r = res.report || {};
+              onArmyChanged?.(res.save);
+              showPanel(
+                'report',
+                battleReport({
+                  report: { ...r, castle: true, dead: r.defenderLosses, wounded: r.defenderWounded },
+                  onClose: closePanel,
+                })
+              );
+            } catch (e) {
+              const code = e.data?.code;
+              toasts.show(code === 'protected' ? `🛡 ${e.message}` : e.message, 3500);
+            }
+          },
+        })
+      );
+    } catch (e) {
+      toasts.show(e.message, 3500);
+    } finally {
+      ui.busy = false;
+    }
+  }
+
+  function toggleDefense() {
+    if (ui.panel === 'defense') closePanel();
+    else openDefense();
   }
 
   function bigMap() {
@@ -160,13 +267,14 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
   }
 
   // ---------- HUD ----------
-  function actionButton(name, labelKey, key, onClick, panelKind) {
+  /** label = already translated text */
+  function actionButton(name, label, key, onClick, panelKind) {
     const btn = h(
       'button',
-      { class: 'ui-act', type: 'button', 'aria-label': t(labelKey), title: key ? `${t(labelKey)} (${key})` : t(labelKey), onClick },
+      { class: 'ui-act', type: 'button', 'aria-label': label, title: key ? `${label} (${key})` : label, onClick },
       key ? h('kbd', {}, key) : null,
       icon(name, 24),
-      h('span', {}, t(labelKey))
+      h('span', {}, label)
     );
     if (panelKind) ui.bar[panelKind] = btn;
     return btn;
@@ -234,10 +342,11 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
         h(
           'div',
           { class: 'ui-bar-inner ui-glass ui-z' },
-          actionButton('home', 'hud.home', 'H', goHome),
-          actionButton('crown', 'hud.kingdoms', 'K', () => togglePanel('kingdoms'), 'kingdoms'),
-          actionButton('map', 'hud.map', 'M', () => togglePanel('map'), 'map'),
-          actionButton('gear', 'hud.settings', '', () => togglePanel('settings'), 'settings')
+          actionButton('home', t('hud.home'), 'H', goHome),
+          actionButton('crown', t('hud.kingdoms'), 'K', () => togglePanel('kingdoms'), 'kingdoms'),
+          actionButton('map', t('hud.map'), 'M', () => togglePanel('map'), 'map'),
+          actionButton('target', bt('title.defense'), 'D', toggleDefense, 'defense'),
+          actionButton('gear', t('hud.settings'), '', () => togglePanel('settings'), 'settings')
         )
       )
     );
@@ -271,7 +380,10 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
       ui.panelEl = null;
       const current = ui.selected;
       if (kind === 'castle' && current) openPanel('castle', current);
-      else if (kind !== 'castle') openPanel(kind);
+      else if (kind === 'defense') openDefense();
+      else if (kind === 'attack' && ui.target) openAttack(ui.target);
+      else if (kind === 'kingdoms' || kind === 'map' || kind === 'settings') openPanel(kind);
+      // 'report' is not rebuilt: it only shows a finished battle
     }
     syncBar();
   }
@@ -290,7 +402,7 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
   // ---------- keyboard ----------
   function onKey(e) {
     const tag = e.target?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.ctrlKey || e.metaKey || e.altKey) return;
     switch (e.key) {
       case 'h':
       case 'H':
@@ -303,6 +415,10 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
       case 'm':
       case 'M':
         togglePanel('map');
+        break;
+      case 'd':
+      case 'D':
+        toggleDefense();
         break;
       case '+':
       case '=':
@@ -361,6 +477,8 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv }) {
     flyToTile,
     openPanel,
     closePanel,
+    openDefense,
+    openAttack,
     destroy() {
       window.removeEventListener('keydown', onKey);
       scene.events.off('update', onUpdate);
