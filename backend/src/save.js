@@ -1,5 +1,5 @@
 /**
- * Validation of the save the game client sends. The client is still the one that
+ * Validation of the save the game client (and the admin panel) sends. The client is still the one that
  * calculates production, costs and training (see README "Server-authoritative later"),
  * so here we only make sure the data has the right SHAPE and sane limits: nothing
  * nested weirdly, no NaN / negative numbers, no huge payloads, only known cultures.
@@ -7,7 +7,7 @@
 import { CULTURES, RESOURCE_KEYS } from './constants.js';
 import { httpError } from './httpError.js';
 
-const bad = (what) => httpError(400, `invalid save: ${what}`);
+const bad = (what) => httpError(400, `invalid save: ${what}`, { code: 'invalid_save' });
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const num = (v, min, max, what) => {
   if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) throw bad(what);
@@ -103,7 +103,7 @@ export function assertOnlyCulture(clean, culture) {
     ...Object.keys((clean.army && clean.army.queue) || {}),
   ];
   const foreign = keys.find((k) => k !== culture);
-  if (foreign) throw httpError(403, `invalid save: data for "${foreign}" is not allowed (your civilization is "${culture}")`);
+  if (foreign) throw httpError(403, `invalid save: data for "${foreign}" is not allowed (your civilization is "${culture}")`, { code: 'wrong_culture' });
 }
 
 /** Returns only the parts the client actually sent, cleaned. */
@@ -119,15 +119,23 @@ export function sanitizeSave(body) {
 }
 
 
+/** Keys of `data` that the game itself writes. Anything else in `data` (e.g. added by an admin) is kept untouched. */
+export const GAME_KEYS = ['buildings', 'resources', 'army', 'marches', 'settings'];
+
+/** New data = old data + the cleaned parts the client sent (a partial save only changes what it carries). */
+export const mergeSave = (oldData, clean) => ({ ...(oldData || {}), ...clean });
+
+/** The shape game.html works with (`version` = the row's revision). */
 export function publicSave(row) {
+  const d = row.data || {};
   return {
     culture: row.culture,
-    version: row.version,
-    buildings: row.buildings ?? null, // null = never saved: the client builds its starting state
-    resources: row.resources ?? null,
-    army: row.army ?? null,
-    marches: row.marches ?? [],
-    settings: row.settings ?? {},
+    version: row.revision,
+    buildings: d.buildings ?? null, // null = never saved: the client builds its starting state
+    resources: d.resources ?? null,
+    army: d.army ?? null,
+    marches: d.marches ?? [],
+    settings: d.settings ?? {},
     savedAt: row.updatedAt,
   };
 }

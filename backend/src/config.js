@@ -1,21 +1,25 @@
-import crypto from 'crypto';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const isProd = process.env.NODE_ENV === 'production';
 
-export function loadConfig(env = process.env) {
-  const prod = env.NODE_ENV === 'production';
-  if (prod && !env.SESSION_SECRET) throw new Error('SESSION_SECRET is required in production');
-  return {
-    prod,
-    port: Number(env.PORT) || 3000,
-    projectRoot: path.resolve(env.PROJECT_ROOT || path.join(here, '..', '..')),
-    dbFile: env.DB_FILE || path.resolve(here, '..', 'data', 'game.sqlite'),
-    sessionSecret: env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
-    adminEmail: (env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase(),
-    adminPassword: (env.ADMIN_PASSWORD || '').trim(), // trimmed: cmd's `set X=abc && ...` puts a stray space at the end
-    // empty = a random one is generated on the first start (when there is no admin yet) and printed once
-    tokenTtlDays: Number(env.TOKEN_TTL_DAYS) || 30,
-  };
+let jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  if (isProd) throw new Error('JWT_SECRET bayad dar halat-e production set beshe');
+  jwtSecret = 'dev-only-secret-change-me';
+  console.warn('[config] JWT_SECRET set nashode; faghat baraye develop ok-e.');
 }
+
+export const config = {
+  isProd,
+  port: Number(process.env.PORT || 3000),
+  jwtSecret,
+  dbStorage: process.env.DB_STORAGE || path.join(here, '..', 'data', 'game.sqlite'),
+  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+    .split(',').map((s) => s.trim()).filter(Boolean),
+  authLimit: Number(process.env.AUTH_RATE_LIMIT || 30), // tedad-e darkhast-e register / login-e na-movafagh dar 15 daghighe (har IP)
+  projectRoot: path.resolve(process.env.PROJECT_ROOT || path.join(here, '..', '..')), // ja-ee ke public/map.json hast
+  adminDist: path.join(here, '..', '..', 'admin-panel', 'dist'),
+};

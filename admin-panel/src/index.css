@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body { @apply bg-ink text-text font-sans antialiased; font-feature-settings: 'tnum'; }
+  ::selection { background: #8FA2FF55; }
+  * { scrollbar-width: thin; scrollbar-color: #2A3351 transparent; }
+  :focus-visible { outline: 2px solid #8FA2FF; outline-offset: 2px; }
+  input[type=number]::-webkit-inner-spin-button { opacity: .4; }
+}
+
+@layer components {
+  .input { @apply w-full rounded-lg bg-ink border border-line px-3 py-2 text-sm text-text placeholder:text-faint transition-colors hover:border-faint focus:border-signal focus:outline-none; }
+  .input-sm { @apply py-1 px-2 text-[13px]; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none; }
+  .btn-primary { @apply btn bg-text text-ink hover:bg-white; }
+  .btn-ghost { @apply btn border border-line text-text hover:bg-raised; }
+  .btn-danger { @apply btn border border-danger/50 text-danger hover:bg-danger/10; }
+  .btn-sm { @apply px-2.5 py-1 text-[13px]; }
+  .label { @apply block text-[13px] text-mute mb-1.5; }
+  .th { @apply text-start font-medium text-[13px] text-mute px-4 py-2.5 whitespace-nowrap; }
+  .td { @apply px-4 py-3 text-sm; }
+  .ltr { direction: ltr; unicode-bidi: plaintext; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .35s ease-out both; }
+@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 #5FD08A66; } 50% { box-shadow: 0 0 0 5px #5FD08A00; } }
+.live-dot { animation: pulse-dot 2s infinite; }

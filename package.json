@@ -9,10 +9,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "game:dist": "vite build && vite preview --open /game.html",
-    "server": "node backend/src/index.js",
+    "server": "node backend/src/server.js",
     "server:install": "npm --prefix backend install",
     "server:test": "npm --prefix backend test",
-    "admin": "node backend/src/admin-cli.js"
+    "server:dev": "node --watch backend/src/server.js",
+    "seed": "npm --prefix backend run seed",
+    "seed:demo": "npm --prefix backend run seed:demo",
+    "admin:install": "npm --prefix admin-panel install",
+    "admin:dev": "npm --prefix admin-panel run dev",
+    "admin:build": "npm --prefix admin-panel run build"
   },
   "dependencies": {
     "jszip": "^3.10.2",

@@ -4,5 +4,7 @@ dist/
 *.log
 backend/node_modules/
 backend/data/
-backend/.adminjs/
+admin-panel/node_modules/
+admin-panel/dist/
+backend/.env
 .game-data/

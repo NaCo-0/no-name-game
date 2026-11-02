@@ -322,6 +322,78 @@
   .auth-btn { padding: 12px; border-radius: 10px; border: 1px solid #f0c95a; background: linear-gradient(155deg, #21879e, #155f72); color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; }
   .auth-btn:disabled { opacity: .6; cursor: wait; }
   .bk-queue div { display: flex; justify-content: space-between; background: rgba(255,255,255,.07); border-radius: 7px; padding: 4px 8px; }
+
+  /* ===== UI MOTION (faghat CSS: opacity / transform / filter - be icon ha va markup dast nemizane) ===== */
+  :root { --gm-ease: cubic-bezier(.2,.8,.2,1); }
+
+  @keyframes gm-fade   { from { opacity: 0; } }
+  @keyframes gm-rise   { from { opacity: 0; transform: translateY(10px); } }
+  @keyframes gm-drop   { from { opacity: 0; transform: translateY(-8px); } }
+  @keyframes gm-sheet  { from { opacity: 0; transform: translateY(28px) scale(.985); } }
+  @keyframes gm-msg    { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+  @keyframes gm-shake  { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+  @keyframes gm-pop-target { from { opacity: 0; transform: translate(-50%, -100%) scale(.92); } }
+
+  /* 1) Sheet ha (building, menu, ...): ba "overlay open" mount mishan, pas transition kar nemikone -> animation */
+  .overlay.open { animation: gm-fade .2s ease backwards; }
+  .overlay.open .sheet { animation: gm-sheet .3s var(--gm-ease) backwards; }
+  .overlay.open .sheet > * { animation: gm-rise .26s var(--gm-ease) backwards; }
+  .overlay.open .sheet > *:nth-child(2) { animation-delay: .04s; }
+  .overlay.open .sheet > *:nth-child(3) { animation-delay: .08s; }
+  .overlay.open .sheet > *:nth-child(4) { animation-delay: .12s; }
+  .overlay.open .sheet > *:nth-child(5) { animation-delay: .16s; }
+  .overlay.open .sheet > *:nth-child(n+6) { animation-delay: .2s; }
+
+  /* 2) Chat: panel narm tar miad bala (transition ghabli ba easing behtar) */
+  .chat-panel { transform: translateY(36px); transition: transform .32s var(--gm-ease); }
+  .chat-overlay.open .chat-panel { transform: translateY(0); }
+  .msg-row, .sys-msg { animation: gm-msg .2s var(--gm-ease) backwards; }
+
+  /* 3) Barracks: bala va paein ba ham vared mishan */
+  .barracks.open .bk-top   { animation: gm-drop .3s var(--gm-ease) backwards; }
+  .barracks.open .bk-panel { animation: gm-rise .34s var(--gm-ease) .05s backwards; }
+
+  /* 4) Toast: easing narm tar */
+  .toast { transition: opacity .25s ease, transform .32s var(--gm-ease); }
+
+  /* 5) Popup hedaf-e march va safhe-ye login */
+  .action-target-pop { animation: gm-pop-target .18s var(--gm-ease) backwards; }
+  .auth-card { animation: gm-rise .4s var(--gm-ease) backwards; }
+  .auth-err  { animation: gm-shake .36s ease backwards; }
+
+  /* 6) Dokme ha / tab ha: transition-e yekdast */
+  .collect-btn, .action-btn, .march-btn, .bk-go, .auth-btn, .chat-send, .close-btn, .menu-toggle,
+  .menu-item, .nav-btn, .bk-tab, .bk-card, .bk-qty button, .chat-tab, .auth-tabs button, .cost-chip {
+    transition: transform .14s var(--gm-ease), filter .14s ease, background-color .16s ease,
+                border-color .16s ease, color .16s ease, box-shadow .16s ease, opacity .16s ease;
+  }
+  .mode-switch-btn { transition: transform .14s var(--gm-ease), filter .14s ease; }
+
+  /* feedback-e feshordan (hame ja) */
+  .collect-btn:not(:disabled):active, .action-btn:not(:disabled):active, .march-btn:active,
+  .bk-go:not(:disabled):active, .auth-btn:not(:disabled):active, .chat-send:not(:disabled):active { transform: scale(.97); }
+  .close-btn:active, .menu-toggle:active, .bk-qty button:active { transform: scale(.9); }
+  .nav-btn:active, .bk-card:active, .culture-tab:active, .chat-tab:active, .bk-tab:active { transform: scale(.95); }
+  .menu-item:active { transform: scale(.985); }
+
+  /* hover faghat rooye mouse (rooye mobile "chasbidegi" nadare) */
+  @media (hover: hover) {
+    .collect-btn:not(:disabled):hover, .action-btn.primary:not(:disabled):hover, .march-btn:hover,
+    .bk-go:not(:disabled):hover, .auth-btn:not(:disabled):hover, .chat-send:not(:disabled):hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .action-btn.secondary:hover, .menu-item:hover, .close-btn:hover, .menu-toggle:hover, .bk-tab:hover, .bk-qty button:hover { filter: brightness(1.2); }
+    .bk-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.4); }
+    .culture-tab:not(.active):hover, .chat-tab:not(.active):hover { filter: brightness(1.2); }
+    .nav-btn:not(.active):hover { color: var(--ink-color); }
+  }
+
+  /* Agar karbar animation ro khamoosh karde bashe */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
+  }
+
+  /* Badge-e bardasht: vaghti zaher mishe ba pop miad (bob-e ghabli hamchenan edame dare) */
+  @keyframes gm-badge-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } }
+  .collect-badge { animation: gm-badge-in .35s var(--gm-ease) backwards, bob 1.1s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -468,19 +540,99 @@ const CAT_ICON = { hq: "hall", research: "scroll", alliance: "alliance", market:
 const RES_ICON = { food: "wheat", wood: "wood", stone: "stone", iron: "iron", coin: "coin" };
 
 function fmt(n) { n = Math.floor(n); if (n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+"M"; if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'')+"k"; return String(n); }
+
+// ---------- Collect animation: parvaz-e icon be ledger + count-up ----------
+const flyState = {}; // res -> zamani ke avalin zarre be ledger miresad (baraye hamzaman kardan-e count-up)
+function prefersReducedMotion() { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) { return false; } }
+
+function flyCollect(srcEl, res, amount) {
+  try {
+    if (!srcEl || !srcEl.getBoundingClientRect || prefersReducedMotion() || !document.body.animate) return;
+    const cell = document.querySelector('.ledger-cell[data-res="' + res + '"]');
+    const cellIcon = cell && cell.querySelector("svg.icon");
+    if (!cell || !cellIcon) return;
+
+    const sr = srcEl.getBoundingClientRect();
+    const sx = sr.left + sr.width / 2, sy = sr.top + sr.height / 2;
+    const tr = cell.getBoundingClientRect();
+    const tx = Math.min(Math.max(tr.left + tr.width / 2, 14), window.innerWidth - 14), ty = tr.top + tr.height / 2;
+
+    // 1) Badge: yek kopi az badge ba pop + mahv shodan (badge-e asli ba state az bein miravad)
+    if (srcEl.classList.contains("collect-badge") && srcEl.parentNode) {
+      const ghost = srcEl.cloneNode(true);
+      ghost.style.animation = "none";
+      ghost.style.pointerEvents = "none";
+      srcEl.parentNode.appendChild(ghost);
+      const ga = ghost.animate([
+        { transform: "translate(-50%, -50%) scale(1)", opacity: 1 },
+        { transform: "translate(-50%, -50%) scale(1.25)", opacity: 1, offset: 0.35 },
+        { transform: "translate(-50%, -50%) scale(.3)", opacity: 0 }
+      ], { duration: 300, easing: "ease-out" });
+      ga.onfinish = ga.oncancel = () => ghost.remove();
+    }
+
+    // 2) Zarre ha: hamoon icon-e ledger, ba yek monhani be samt-e selool-e hamoon manba
+    const n = amount < 10 ? 2 : amount < 100 ? 3 : 4;
+    const DUR = 640, GAP = 70;
+    flyState[res] = performance.now() + DUR - 40;
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement("div");
+      p.style.cssText = "position:fixed;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;z-index:300;pointer-events:none;" +
+        "display:flex;align-items:center;justify-content:center;color:#2a1d0e;border:1.5px solid #fffaf0;box-shadow:0 3px 8px rgba(0,0,0,.5);" +
+        "background:radial-gradient(circle at 35% 30%,#fff6d6,#f0c95a 60%,#c98f2a);will-change:transform,opacity;";
+      const ic = cellIcon.cloneNode(true);
+      ic.style.cssText = "width:14px;height:14px;";
+      p.appendChild(ic);
+      document.body.appendChild(p);
+
+      const jx = (Math.random() - 0.5) * 40, jy = (Math.random() - 0.5) * 20;
+      const mx = sx + (tx - sx) * 0.4 + jx * 1.5, my = sy + (ty - sy) * 0.4 - 50 + jy;
+      const a = p.animate([
+        { transform: "translate(" + (sx + jx) + "px," + (sy + jy) + "px) scale(.4)", opacity: 0 },
+        { transform: "translate(" + mx + "px," + my + "px) scale(1.1)", opacity: 1, offset: 0.35 },
+        { transform: "translate(" + tx + "px," + ty + "px) scale(.55)", opacity: 0.95 }
+      ], { duration: DUR, delay: i * GAP, easing: "cubic-bezier(.45,.05,.55,.95)", fill: "backwards" });
+      a.onfinish = () => {
+        p.remove();
+        cell.animate([
+          { transform: "scale(1)", filter: "brightness(1)" },
+          { transform: "scale(1.12)", filter: "brightness(1.5)" },
+          { transform: "scale(1)", filter: "brightness(1)" }
+        ], { duration: 240, easing: "ease-out" });
+      };
+      a.oncancel = () => p.remove();
+    }
+  } catch (_) { /* animation hich vaght nabayad bazi ro kharab kone */ }
+}
+
+// Adad-e manba: ba avaz shodan-e meghdar, narm "bala/paein mishmarad"
+function CountNum({ value, res }) {
+  const [shown, setShown] = useState(value);
+  const cur = useRef(value);
+  useEffect(() => {
+    const from = cur.current, to = value;
+    if (from === to || !isFinite(from) || !isFinite(to) || prefersReducedMotion()) { cur.current = to; setShown(to); return; }
+    const delay = Math.max(0, (flyState[res] || 0) - performance.now());
+    const DUR = 380;
+    let t0 = 0, raf = 0;
+    const step = (ts) => {
+      if (!t0) t0 = ts + delay;
+      const p = Math.min(1, Math.max(0, (ts - t0) / DUR));
+      const v = from + (to - from) * (1 - Math.pow(1 - p, 3));
+      cur.current = v; setShown(v);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return fmt(shown);
+}
 function upgradeCost(l) { const b = 40 * Math.pow(1.6, l - 1); return { wood: Math.round(b), stone: Math.round(b * .8), coin: Math.round(b * .5) }; }
 function productionRate(l) { return 5 + (l - 1) * 3; }
 function capacity(l) { return 200 + (l - 1) * 150; }
 function isPersian(s) { return /[\u0600-\u06FF]/.test(s); }
 function nowHHMM() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ":" + String(d.getMinutes()).padStart(2,'0'); }
 
-const CHAT_SEED = [
-  { kind: "sys", text: "Commander connected to realm network" },
-  { kind: "msg", from: "them", name: "Ragnar", text: "درود بر شما فرمانده! قلعه در آرامش و آمادگی است.", lang: "fa", time: "10:02" },
-  { kind: "msg", from: "them", name: "Kourosh", text: "دیده‌بان‌ها گزارش دادند که معادن آهن شمال فعال شده‌اند.", lang: "fa", time: "10:03" },
-  { kind: "msg", from: "them", name: "Astrid", text: "All territorial borders are secure. Ready for the next march.", lang: "en", time: "10:15" },
-  { kind: "sys", text: "Territory defense bonus +15% active" }
-];
 
 // ---------- Hotspot component for City View ----------
 function Hotspot({ b, theme, showCollect, active, onSelect, onCollect }) {
@@ -494,7 +646,7 @@ function Hotspot({ b, theme, showCollect, active, onSelect, onCollect }) {
       e("div", { className: "plate-icon" }, Icon(CAT_ICON[b.category] || "hall")),
       e("div", { className: "plate-text" }, e("span", { className: "plate-name" }, label.name), e("span", { className: "plate-level" }, "Lv. " + b.level))
     ),
-    showCollect && e("div", { className: "collect-badge", style: badgePos, onClick: (ev) => { ev.stopPropagation(); onCollect(b); } },
+    showCollect && e("div", { className: "collect-badge", style: badgePos, onClick: (ev) => { ev.stopPropagation(); onCollect(b, ev.currentTarget); } },
       Icon("hand"), e("div", { className: "res" }, Icon(RES_ICON[b.produces])))
   );
 }
@@ -519,7 +671,7 @@ function DetailSheet({ building, theme, resources, onClose, onCollect, onUpgrade
         e("div", { className: "prod-row" },
           e("div", { className: "prod-info" }, Icon(RES_ICON[building.produces]), rate + "/sec · " + fmt(stored) + " / " + fmt(cap)),
           e("div", { className: "prod-amount" }, "+" + fmt(stored))),
-        e("button", { className: "collect-btn", disabled: stored < 1, onClick: () => onCollect(building) }, Icon("hand"), stored < 1 ? "Nothing to collect" : "Collect " + fmt(stored) + " " + theme.resourceNames[building.produces])),
+        e("button", { className: "collect-btn", disabled: stored < 1, onClick: (ev) => onCollect(building, ev.currentTarget) }, Icon("hand"), stored < 1 ? "Nothing to collect" : "Collect " + fmt(stored) + " " + theme.resourceNames[building.produces])),
       e("div", { className: "upgrade-box" },
         e("div", { className: "ub-head" }, e("b", null, "Upgrade to Level " + (building.level + 1)), isProducer && e("span", { className: "arrow" }, rate + "/s → " + productionRate(building.level + 1) + "/s")),
         e("div", { className: "cost-list" },
@@ -627,48 +779,62 @@ function BarracksSheet({ open, building, culture, theme, resources, army, onClos
       }))));
 }
 
-// ---------- Chat Panel ----------
-function ChatPanel({ open, onClose }) {
-  const [messages, setMessages] = useState(CHAT_SEED);
+// ---------- Chat Panel (every message is stored on the server and visible in the admin panel) ----------
+function ChatPanel({ open, onClose, me, culture }) {
+  const [tab, setTab] = useState("civ"); // civ = your civilization ("Alliance"), global = everybody
+  const [lists, setLists] = useState({ civ: [], global: [] });
   const [val, setVal] = useState("");
-  const [tab, setTab] = useState("alliance");
-  const [typing, setTyping] = useState(false);
+  const [err, setErr] = useState("");
   const bodyRef = useRef(null);
-  const timer = useRef(null);
-  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [messages, open, typing]);
-  const send = () => {
-    if (!val.trim()) return;
+  const timeOf = (iso) => { const d = new Date(iso); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const load = useCallback(async (ch) => {
+    try { const r = await api.getChat(ch); setLists((l) => ({ ...l, [ch]: r.messages })); } catch (e) { /* the panel just stays as it was */ }
+  }, []);
+  useEffect(() => { if (open && tab !== "history") load(tab); }, [open, tab, load]);
+  useEffect(() => {
+    const onSrv = (ev) => {
+      const m = ev.detail;
+      if (m.type === "chat") setLists((l) => { const ch = m.message.channel; return l[ch].some((x) => x.id === m.message.id) ? l : { ...l, [ch]: [...l[ch], m.message].slice(-100) }; });
+      else if (m.type === "chat_deleted") setLists((l) => ({ civ: l.civ.filter((x) => x.id !== m.id), global: l.global.filter((x) => x.id !== m.id) }));
+    };
+    window.addEventListener("kingdoms:server", onSrv);
+    return () => window.removeEventListener("kingdoms:server", onSrv);
+  }, []);
+  const shown = tab === "history" ? [] : lists[tab];
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [shown, open, tab]);
+  const send = async () => {
+    const text = val.trim();
+    if (!text || tab === "history") return;
     sound.playClick();
-    setMessages((m) => [...m, { kind: "msg", from: "me", name: "You", text: val.trim(), lang: isPersian(val) ? "fa" : "en", time: nowHHMM() }]);
-    setVal(""); setTyping(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      setTyping(false);
-      const R = ["اطاعت شد فرمانده، یگان‌ها مستقر شدند.", "نیروها آماده حرکت به سمت مرز هستند.", "Excellent command. Reinforcements are ready.", "دریافت شد، دیده‌بان‌ها اعزام شدند."];
-      const r = R[Math.floor(Math.random() * R.length)];
-      setMessages((m) => [...m, { kind: "msg", from: "them", name: "Ragnar", text: r, lang: isPersian(r) ? "fa" : "en", time: nowHHMM() }]);
-    }, 1500);
+    setVal(""); setErr("");
+    try {
+      const r = await api.sendChat(tab, text);
+      setLists((l) => l[tab].some((x) => x.id === r.message.id) ? l : { ...l, [tab]: [...l[tab], r.message] });
+    } catch (e) { setVal(text); setErr(e.message); }
   };
   return e("div", { className: "chat-overlay" + (open ? " open" : ""), onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
     e("div", { className: "chat-panel" },
       e("div", { className: "chat-head" },
         e("div", { className: "chat-head-info" }, e("div", { className: "chat-head-avatar" }, Icon("alliance")),
-          e("div", { className: "chat-head-text" }, e("b", null, "Alliance Network"), e("span", null, e("span", { className: "online-dot" }), "6 realms connected"))),
+          e("div", { className: "chat-head-text" }, e("b", null, "Alliance Network"), e("span", null, e("span", { className: "online-dot" }), tab === "global" ? "All realms" : "Your realm"))),
         e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
       e("div", { className: "chat-tabs" },
-        e("button", { className: "chat-tab" + (tab === "alliance" ? " active" : ""), onClick: () => setTab("alliance") }, Icon("alliance"), "Alliance"),
+        e("button", { className: "chat-tab" + (tab === "civ" ? " active" : ""), onClick: () => setTab("civ") }, Icon("alliance"), "Alliance"),
         e("button", { className: "chat-tab" + (tab === "global" ? " active" : ""), onClick: () => setTab("global") }, Icon("globe"), "Global"),
         e("button", { className: "chat-tab" + (tab === "history" ? " active" : ""), onClick: () => setTab("history") }, Icon("clock"), "Reports")),
       e("div", { className: "chat-body", ref: bodyRef },
-        messages.map((m, i) => m.kind === "sys" ? e("div", { key: i, className: "sys-msg" }, Icon("shield"), m.text) :
-          e("div", { key: i, className: "msg-row " + (m.from === "me" ? "me" : "them") },
-            e("div", { className: "msg-avatar" }, m.name ? m.name[0] : "?"),
-            e("div", { className: "msg-col" }, m.from !== "me" && e("span", { className: "msg-name" }, m.name),
-              e("div", { className: "msg-bubble" + (m.lang === "fa" ? " fa" : "") }, m.text), e("span", { className: "msg-time" }, m.time)))),
-        typing && e("div", { className: "typing-row" }, e("div", { className: "typing-dots" }, e("span"), e("span"), e("span")))),
+        tab === "history" && e("div", { className: "sys-msg" }, Icon("shield"), "Battle reports appear after your armies come home."),
+        tab !== "history" && !shown.length && e("div", { className: "sys-msg" }, Icon("shield"), "No messages yet - say hello!"),
+        shown.map((m) => {
+          const mine = m.username === me;
+          return e("div", { key: m.id, className: "msg-row " + (mine ? "me" : "them") },
+            e("div", { className: "msg-avatar" }, m.username ? m.username[0] : "?"),
+            e("div", { className: "msg-col" }, !mine && e("span", { className: "msg-name" }, m.username),
+              e("div", { className: "msg-bubble" + (isPersian(m.text) ? " fa" : "") }, m.text), e("span", { className: "msg-time" }, timeOf(m.createdAt))));
+        })),
       e("div", { className: "chat-input-row" },
-        e("input", { className: isPersian(val) ? "fa" : "", value: val, onChange: (ev) => setVal(ev.target.value), placeholder: "Type a command or message...", onKeyDown: (ev) => { if (ev.key === "Enter") send(); } }),
-        e("button", { className: "chat-send", disabled: !val.trim(), onClick: send }, Icon("send")))));
+        e("input", { className: isPersian(val) ? "fa" : "", value: val, maxLength: 300, onChange: (ev) => setVal(ev.target.value), placeholder: err || "Type a message...", onKeyDown: (ev) => { if (ev.key === "Enter") send(); } }),
+        e("button", { className: "chat-send", disabled: !val.trim() || tab === "history", onClick: send }, Icon("send")))));
 }
 
 // ---------- Storage / Treasury Sheet ----------
@@ -1550,6 +1716,7 @@ function App({ account, onLogout, onAuthLost }) {
   // overwrite newer progress (version check) -> the "opened elsewhere" screen below.
   const [saveState, setSaveState] = useState("saved"); // saved | saving | error
   const [conflict, setConflict] = useState(false);
+  const [conflictMsg, setConflictMsg] = useState("");
   const snapRef = useRef(null);
   snapRef.current = { bByC, rByC, army, marches, soundEnabled };
   const verRef = useRef(account.save.version);
@@ -1563,6 +1730,18 @@ function App({ account, onLogout, onAuthLost }) {
   const errShownRef = useRef(false);
 
   useEffect(() => { revRef.current++; }, [bByC, rByC, army, marches, soundEnabled]);
+
+  // Live messages from the server: admin messages, "an admin changed your data", account opened elsewhere
+  useEffect(() => {
+    const onSrv = (ev) => {
+      const m = ev.detail || {};
+      if (m.type === "admin_message") showToast("Admin: " + m.text);
+      else if (m.type === "save_changed") { stoppedRef.current = true; setConflictMsg("An admin changed your account data. Reload to continue with the updated data."); setConflict(true); }
+      else if (m.type === "replaced") { stoppedRef.current = true; setConflictMsg(""); setConflict(true); }
+    };
+    window.addEventListener("kingdoms:server", onSrv);
+    return () => window.removeEventListener("kingdoms:server", onSrv);
+  }, [showToast]);
 
   const buildSave = useCallback(() => {
     const s = snapRef.current, c = culture;
@@ -1789,10 +1968,11 @@ function App({ account, onLogout, onAuthLost }) {
     setTimeout(() => setPops((p) => p.filter((x) => x.id !== pid)), 950);
   };
 
-  const collect = (building) => {
+  const collect = (building, srcEl) => {
     const amount = Math.floor(building.stored || 0);
     if (amount < 1) return;
     sound.playCollect();
+    flyCollect(srcEl, building.produces, amount);
     setBByC((prev) => ({ ...prev, [culture]: prev[culture].map((b) => b.id === building.id ? { ...b, stored: 0, readyAt: 0 } : b) }));
     setRByC((prev) => ({ ...prev, [culture]: { ...prev[culture], [building.produces]: prev[culture][building.produces] + amount } }));
     spawnPop(building.id, "+" + fmt(amount), RES_ICON[building.produces]);
@@ -1852,8 +2032,8 @@ function App({ account, onLogout, onAuthLost }) {
       e("div", { className: "hud-row1" },
         e("div", { className: "realm-crest" }, Icon("crown")),
         e("div", { className: "ledger" },
-          resKeys.map((r) => e("div", { key: r, className: "ledger-cell" }, Icon(RES_ICON[r]), e("b", null, fmt(resources[r])))),
-          e("div", { className: "ledger-cell coin" }, Icon("coin"), e("b", null, fmt(resources.coin)))),
+          resKeys.map((r) => e("div", { key: culture + "-" + r, className: "ledger-cell", "data-res": r }, Icon(RES_ICON[r]), e("b", null, e(CountNum, { value: resources[r], res: r })))),
+          e("div", { key: culture + "-coin", className: "ledger-cell coin", "data-res": "coin" }, Icon("coin"), e("b", null, e(CountNum, { value: resources.coin, res: "coin" })))),
         e("button", {
           className: "mode-switch-btn",
           onClick: () => {
@@ -1890,7 +2070,7 @@ function App({ account, onLogout, onAuthLost }) {
             e("img", { src: `./kingdom_art/${culture}.jpg`, alt: theme.kingdomName, draggable: false }),
             buildings.map((b) => e(Hotspot, {
               key: culture + "-" + b.id, b, theme,
-              showCollect: !!b.produces && (b.stored || 0) >= 1 && (b.readyAt || 0) > 0 && (now - b.readyAt) < COLLECT_ICON_MS,
+              showCollect: !!b.produces && (b.stored || 0) >= 1,
               active: selectedId === b.id,
               onSelect: (bb) => setSelectedId(bb.id),
               onCollect: collect
@@ -1918,7 +2098,7 @@ function App({ account, onLogout, onAuthLost }) {
     // Sheets & Overlays
     e(DetailSheet, { building: selected && selected.category !== "barracks" ? selected : null, theme, resources, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
     e(BarracksSheet, { open: !!selected && selected.category === "barracks", building: selected, culture, theme, resources, army, onClose: () => setSelectedId(null), onTrain: train }),
-    e(ChatPanel, { open: chatOpen, onClose: () => setChatOpen(false) }),
+    e(ChatPanel, { open: chatOpen, onClose: () => setChatOpen(false), me: account.user.username, culture }),
     e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme }),
     e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, onNewMarch: (m) => setMarches(p => [...p, m]), expeds, serverNow }),
     e(CampSheet, {
@@ -1932,8 +2112,8 @@ function App({ account, onLogout, onAuthLost }) {
     e("div", { className: "toast" + (toast ? " show" : "") }, toast),
     conflict && e("div", { className: "auth-screen", style: { position: "fixed", zIndex: 9999 } },
       e("div", { className: "auth-card" },
-        e("h1", null, "Opened somewhere else"),
-        e("p", { className: "auth-sub" }, "This account was saved from another tab or device. To keep your newest progress safe, this tab stopped saving."),
+        e("h1", null, conflictMsg ? "Your data was updated" : "Opened somewhere else"),
+        e("p", { className: "auth-sub" }, conflictMsg || "This account was saved from another tab or device. To keep your newest progress safe, this tab stopped saving."),
         e("button", { className: "auth-btn", onClick: () => location.reload() }, "Reload with latest progress")))
   );
 }

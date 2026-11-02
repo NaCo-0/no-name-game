@@ -4,9 +4,14 @@
  *   login / register -> token   (kept in localStorage, or sessionStorage when "Remember me" is off)
  *   join(civId)      -> your castle + all castles + your save
  *   getSave / putSave / flushSave
+ *   getChat / sendChat           (every message is also recorded for the admin panel)
+ *   socketUrl()                  (WebSocket: other players' castles, camps, chat, admin messages)
  *
  * Only the login TOKEN is stored in the browser. Game data (buildings, resources, army ...)
  * lives on the server; the browser never keeps its own copy.
+ *
+ * The server stores the save as { culture, data, revision }. The game works with the flat shape
+ * { version, buildings, resources, army, marches, settings }, so this file converts between the two.
  */
 const TOKEN_KEY = 'kingdoms.token';
 
@@ -43,9 +48,26 @@ async function request(method, path, body, { keepalive = false, auth = true } = 
     throw new ApiError(0, 'cannot reach the game server');
   }
   const data = await res.json().catch(() => null);
-  if (!res.ok || !data || data.ok === false) throw new ApiError(res.status, (data && data.error) || `request failed (${res.status})`, data || {});
+  if (!res.ok || !data || data.ok === false) {
+    const body = data && typeof data === 'object' ? data : {};
+    // another tab / the admin saved in between: the game shows its "opened elsewhere" screen for code === 'stale'
+    if (body.error === 'revision_conflict' || body.error === 'stale') { body.code = 'stale'; body.version = body.revision ?? body.version; }
+    throw new ApiError(res.status, body.message || FRIENDLY[body.error] || body.error || `request failed (${res.status})`, body);
+  }
   return data;
 }
+
+const FRIENDLY = {
+  bad_credentials: 'wrong username or password',
+  bad_username: 'username: 3-24 letters, digits or _',
+  bad_password: 'password: 8-72 characters',
+  username_taken: 'this username is taken',
+  unauthorized: 'not logged in',
+  banned: 'account banned',
+  muted: 'you are muted',
+  slow_down: 'you are sending messages too fast',
+  too_many_requests: 'too many attempts: try again in a few minutes',
+};
 
 /** True when the game server answers (false on plain static hosting / server stopped). */
 export async function probeServer(timeoutMs = 2500) {
@@ -81,19 +103,30 @@ export async function logout() {
 export const me = () => request('GET', '/api/auth/me');
 /** First call chooses the civilization (once). Later calls ignore civId: the server's choice wins. */
 export const join = (civId) => request('POST', '/api/game/join', { civId });
-export const getSave = () => request('GET', '/api/game/save');
+/** Server shape { culture, data, revision } -> the flat shape game.html uses. */
+const toSave = (d) => {
+  const x = d.data || {};
+  return {
+    culture: d.culture, version: d.revision,
+    buildings: x.buildings ?? null, resources: x.resources ?? null, army: x.army ?? null,
+    marches: x.marches ?? [], settings: x.settings ?? {},
+  };
+};
+export const getSave = async () => ({ save: toSave(await request('GET', '/api/game/save')) });
 
-/** @returns {Promise<{version:number}>}  rejects with ApiError(409, data.code === 'stale') if another tab saved in between */
-export const putSave = (save, baseVersion) => request('PUT', '/api/game/save', { ...save, baseVersion });
+/** @returns {Promise<{version:number}>}  rejects with ApiError(409, data.code === 'stale') if another tab (or the admin) saved in between */
+export const putSave = (save, baseVersion) => request('PUT', '/api/game/save', { data: save, revision: baseVersion });
 
-/** Save that survives the page closing (tab hidden / closed). Fire and forget. */
+/** Save that survives the page closing (tab hidden / closed). Fire and forget. `save.baseVersion` = the version we last saw. */
 export function flushSave(save) {
   const token = getToken();
   if (!token) return;
+  const { baseVersion, ...data } = save;
+  const body = JSON.stringify({ data, revision: baseVersion });
   try {
-    fetch('/api/game/save', { method: 'PUT', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(save) }).catch(() => {});
+    fetch('/api/game/save', { method: 'PUT', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body }).catch(() => {});
   } catch {
-    try { navigator.sendBeacon(`/api/game/save?token=${encodeURIComponent(token)}`, new Blob([JSON.stringify(save)], { type: 'text/plain' })); } catch { /* nothing more to try */ }
+    try { navigator.sendBeacon(`/api/game/save?token=${encodeURIComponent(token)}`, new Blob([body], { type: 'text/plain' })); } catch { /* nothing more to try */ }
   }
 }
 
@@ -104,4 +137,12 @@ export const attackCamp = (a) => request('POST', '/api/game/attack', a);
 /** Armies that are back hand over survivors + loot. -> { save:{version, troops, resources}, reports, now } */
 export const claimExpeditions = (baseVersion) => request('POST', '/api/game/expeditions/claim', { baseVersion });
 
-export const eventsUrl = () => `/api/game/events?token=${encodeURIComponent(getToken())}`;
+/** Chat. channel: 'global' (everybody) or 'civ' (only your civilization). */
+export const getChat = (channel = 'global', limit = 50) => request('GET', `/api/game/chat?channel=${encodeURIComponent(channel)}&limit=${limit}`);
+export const sendChat = (channel, text) => request('POST', '/api/game/chat', { channel, text });
+
+/** Live connection (ws://host/ws?token=...): castle, camp, campGone, expedition, presence, chat, chat_deleted, save_changed, admin_message, kicked. */
+export const socketUrl = () => {
+  const loc = window.location;
+  return `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}/ws?token=${encodeURIComponent(getToken())}`;
+};

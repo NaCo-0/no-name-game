@@ -3,7 +3,7 @@
  * -------------
  * Same job as PlayerSession.js (castles on the map), but the player is a logged-in
  * account: the castles come from the backend (backend/src) and other players'
- * castles appear live. The civilization was chosen once at the first login and the
+ * castles appear live (WebSocket). The civilization was chosen once at the first login and the
  * server's choice always wins.
  *
  *   this.session = await startOnlineSession(this, this.map, { civId: 'persia', assetBase, ui: false });
@@ -60,9 +60,9 @@ export async function startOnlineSession(scene, map, opts = {}) {
   const player = byId.get(joined.you.id);
   loading.setProgress(1);
 
-  // ---- live updates ------------------------------------------------------------
+  // ---- live updates (WebSocket) --------------------------------------------------------
   let closed = false;
-  let es = null;
+  let ws = null;
 
   const applyPresence = (ids) => {
     const online = new Set(ids);
@@ -72,25 +72,34 @@ export async function startOnlineSession(scene, map, opts = {}) {
       entry.label.setAlpha(online.has(c.id) ? 1 : 0.5); // offline players: dimmed name plate
     }
   };
+  // chat, admin messages, "your save was changed", "kicked" ... are handled by the game page
+  const toGame = (detail) => window.dispatchEvent(new CustomEvent('kingdoms:server', { detail }));
+
+  const onMessage = (msg) => {
+    switch (msg.type) {
+      case 'castle': {
+        const added = addCastle(msg.castle);
+        if (added && opts.onNotice) opts.onNotice(`${added.name} joined the world`);
+        break;
+      }
+      case 'camp': campLayer.addCamp(msg.camp); break;
+      case 'campGone': campLayer.removeCamp(msg.id); break;
+      case 'presence': applyPresence(msg.ids || []); break;
+      // the game (React side) listens to this: an army arrived or is back home
+      case 'expedition': window.dispatchEvent(new CustomEvent('kingdoms:expedition', { detail: msg })); break;
+      case 'kicked': closed = true; if (opts.onAuthLost) opts.onAuthLost(); break;
+      default: toGame(msg);
+    }
+  };
 
   const watch = () => {
-    es = new EventSource(api.eventsUrl());
-    es.addEventListener('castle', (ev) => {
-      const added = addCastle(JSON.parse(ev.data));
-      if (added && opts.onNotice) opts.onNotice(`${added.name} joined the world`);
-    });
-    es.addEventListener('camp', (ev) => campLayer.addCamp(JSON.parse(ev.data)));
-    es.addEventListener('campGone', (ev) => campLayer.removeCamp(JSON.parse(ev.data).id));
-    // the game (React side) listens to this: an army arrived or is back home
-    es.addEventListener('expedition', (ev) => window.dispatchEvent(new CustomEvent('kingdoms:expedition', { detail: JSON.parse(ev.data) })));
-    es.addEventListener('presence', (ev) => applyPresence(JSON.parse(ev.data)));
-    es.onerror = () => {
-      // EventSource retries by itself while the server is just restarting; once it gives up
-      // (the old token is unknown after a restart) we join again with the same account.
-      if (!closed && es.readyState === EventSource.CLOSED) {
-        es.close();
-        setTimeout(rejoin, 2000);
-      }
+    ws = new WebSocket(api.socketUrl());
+    ws.onmessage = (ev) => { try { onMessage(JSON.parse(ev.data)); } catch { /* ignore a broken message */ } };
+    ws.onclose = (ev) => {
+      if (closed) return;
+      if (ev.code === 4001) { if (opts.onAuthLost) opts.onAuthLost(); return; }       // login no longer valid / banned
+      if (ev.code === 4002) { closed = true; toGame({ type: 'replaced' }); return; }   // the account was opened in another tab
+      setTimeout(rejoin, 2000); // server restarting or network hiccup: join again with the same account
     };
   };
 
@@ -122,7 +131,7 @@ export async function startOnlineSession(scene, map, opts = {}) {
     online: true,
     close() {
       closed = true;
-      if (es) es.close();
+      if (ws) ws.close();
     },
   };
 }
