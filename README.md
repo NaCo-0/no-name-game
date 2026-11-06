@@ -76,10 +76,16 @@ Other scripts: `npm run build`, `npm run preview`, `npm run game:dist`
   province layer, and the player's castle from the server.
 - Has a World Map view and a City view for each civilization, with an animated
   switch between them (`runtime/ui/ViewTransition.js`).
-- The UI is a React app written inside `game.html` (the UI modules in
-  `runtime/ui/` belong to the editor's player session — see "Known gaps").
+- The UI is a React app written inside `game.html`, plus the PvP sheets in
+  `runtime/ui/BattleSheets.js`.
 - Fighting NPC camps: pick troops, send a march, collect the loot when the
   expedition comes home.
+- **PvP** (`runtime/ui/BattleSheets.js`): tap another player's castle, choose a
+  formation and place your troops in the four slots (live caps, power and a
+  rock-paper-scissors hint; *Auto-arrange* picks a formation that fits your
+  troop mix), then read the battle report. *Battle → Castle defense* edits your
+  own defense. When someone attacks you, the game applies the losses and loot,
+  shows a notice and saves again.
 
 ## Game server (`backend/`)
 
@@ -118,19 +124,24 @@ All balance numbers are in `backend/src/battleConfig.js`; the simulation is in
   limited by what the surviving troops can carry.
 - **Beginner protection:** a player whose save revision is below 5, or whose
   army power is below 200, cannot be attacked.
-- NPC castles cannot be attacked yet. Wounded troops are tracked in the report
-  only; nothing heals them yet.
+- When a castle is attacked, the defender gets a live `attacked` message
+  (`by`, `win`, `losses`, `wounded`, `loot`).
 
 Tests: `npm run server:test` (runs `backend/test/*.test.js`).
+`backend/test/battleUi.test.js` keeps the client's layout helpers identical to
+the server's rules.
 
 ## Known gaps
 
-- `game.html` has no UI for defense, formations or castle attacks yet. The
-  panels exist in `runtime/ui/` (`FormationPanel.js`, `BattleReport.js`,
-  `battleApi.js`) but are only used by the editor's player session
-  (`runtime/PlayerSession.js`), not by `game.html`.
-- `src/api.js` (used by `game.html`) has no wrappers for the PvP endpoints.
+- Offline players get no report when they are attacked (the server only sends a
+  live message). They see the lost troops and loot, but not who did it.
+- NPC castles cannot be attacked, and there is no scouting: you do not see the
+  defender's army before you attack.
+- Wounded troops are only reported; nothing heals them.
 - The PvP code has no integration test against a real database.
+- The editor's own player session (`runtime/PlayerSession.js`,
+  `runtime/ui/GameUI.js`, `FormationPanel.js`, `BattleReport.js`) still uses the
+  older vanilla-DOM panels; `game.html` uses `runtime/ui/BattleSheets.js`.
 
 ## Where to make changes
 
@@ -140,5 +151,6 @@ Tests: `npm run server:test` (runs `backend/test/*.test.js`).
 - `src/rendering/TerrainRenderTilePainter.js` — the terrain paint passes
 - `runtime/provinces.js` — province count, names, layout seed and shape
 - `runtime/civilizations.js` — civilization ids, names and visuals
+- `runtime/ui/BattleSheets.js` — formation editor, castle sheet, battle report
 - `backend/src/battleConfig.js` — all battle balance numbers
 - `backend/src/npcConfig.js` — NPC camp types, levels, loot and counts

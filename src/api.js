@@ -137,6 +137,14 @@ export const attackCamp = (a) => request('POST', '/api/game/attack', a);
 /** Armies that are back hand over survivors + loot. -> { save:{version, troops, resources}, reports, now } */
 export const claimExpeditions = (baseVersion) => request('POST', '/api/game/expeditions/claim', { baseVersion });
 
+/** PvP. Formation rules and numbers: GET /api/game/battle-config. Layout = { formation, slots: { S1: {troopId: n}, S2, S3, S4 } }. */
+export const getBattleConfig = () => request('GET', '/api/game/battle-config');
+/** -> { layout, saved, army, version }  (the saved formation, or an automatic one that fits the saved army) */
+export const getDefense = () => request('GET', '/api/game/defense');
+export const setDefense = (layout) => request('PUT', '/api/game/defense', { layout });
+/** Instant battle. Save first, then send the save version. @param {{castleId:string, layout:object, baseVersion:number}} a -> { report, save:{version, troops, resources}, now } */
+export const attackCastle = (a) => request('POST', '/api/game/attack-castle', a);
+
 /** Chat. channel: 'global' (everybody) or 'civ' (only your civilization). */
 export const getChat = (channel = 'global', limit = 50) => request('GET', `/api/game/chat?channel=${encodeURIComponent(channel)}&limit=${limit}`);
 export const sendChat = (channel, text) => request('POST', '/api/game/chat', { channel, text });

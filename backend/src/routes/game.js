@@ -9,6 +9,7 @@ import { config } from '../config.js';
 import * as live from '../live.js';
 import { publicConfig } from '../battleConfig.js';
 import * as pvp from '../pvp.js';
+import * as mail from '../mail.js';
 
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
@@ -123,6 +124,12 @@ export default function gameRoutes(world) {
   r.get('/game/defense', async (req, res) => res.json({ ok: true, ...(await pvp.getDefense(req.player)) }));
   r.put('/game/defense', async (req, res) => res.json({ ok: true, ...(await pvp.setDefense(req.player, req.body)) }));
   r.post('/game/attack-castle', async (req, res) => res.status(201).json({ ok: true, now: Date.now(), ...(await pvp.attackCastle(req.player, req.body)) }));
+
+  // ---------- letters + battle reports ----------
+  r.get('/game/mail', async (req, res) => res.json({ ok: true, ...(await mail.list(req.player, { kind: req.query.kind, limit: req.query.limit })) }));
+  r.post('/game/mail', async (req, res) => res.status(201).json({ ok: true, ...(await mail.send(req.player, req.body)) }));
+  r.post('/game/mail/read', async (req, res) => res.json({ ok: true, ...(await mail.markRead(req.player, req.body)) }));
+  r.delete('/game/mail/:id', async (req, res) => res.json({ ok: true, ...(await mail.remove(req.player, req.params.id)) }));
 
   // ---------- chat (hame-ye payam-ha dar ChatMessage sabt mishan; admin mitune bebine) ----------
   const lastMsgs = new Map(); // playerId -> [timestamps]

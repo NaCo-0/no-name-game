@@ -14,6 +14,7 @@ import { fight, armyPower } from './battle.js';
 import { rollLevel, makeCampArmy, makeCampLoot, newCampKey } from './camps.js';
 import * as NPC from './npcConfig.js';
 import * as live from './live.js';
+import * as mail from './mail.js';
 
 export function createWorld({ spawner, npc = {} }) {
   const N = {
@@ -26,7 +27,7 @@ export function createWorld({ spawner, npc = {} }) {
   const castleJson = (c) => ({ id: c.key, name: c.name, civId: c.civId, tileX: c.tileX, tileY: c.tileY });
   const campJson = (c) => ({
     id: c.key, type: c.type, name: NPC.CAMP_TYPES[c.type].name, level: c.level, tileX: c.tileX, tileY: c.tileY,
-    army: c.army, power: Math.round(armyPower(c.army, {})), loot: c.loot,
+    army: c.army, formation: NPC.CAMP_TYPES[c.type].formation || 'wedge', power: Math.round(armyPower(c.army, {})), loot: c.loot,
   });
   const expJson = (e, now = Date.now()) => ({
     id: e.id, campId: e.campKey, campType: e.campType, campLevel: e.campLevel, troops: e.troops,
@@ -152,8 +153,13 @@ export function createWorld({ spawner, npc = {} }) {
         if (!camp) {
           report = { gone: true, win: false, survivors: e.troops, losses: {}, loot: {} }; // yeki dige zoodtar bood
         } else {
-          const r = fight(e.troops, camp.army);
-          report = { gone: false, win: r.win, attackerPower: r.attackerPower, defenderPower: r.defenderPower, survivors: r.attackerSurvivors, losses: r.attackerLosses, loot: r.win ? camp.loot : {} };
+          const r = fight(e.troops, camp.army, { defenderFormation: NPC.CAMP_TYPES[camp.type].formation });
+          report = {
+            gone: false, win: r.win, ticks: r.ticks, log: r.log, events: r.events, attackerPower: r.attackerPower, defenderPower: r.defenderPower,
+            attackerFormation: r.attackerFormation, defenderFormation: r.defenderFormation, effects: r.effects, slots: r.slots,
+            survivors: r.attackerSurvivors, losses: r.attackerLosses, defenderLosses: r.defenderLosses, defenderSent: r.defenderSent,
+            loot: r.win ? camp.loot : {},
+          };
           if (r.win) {
             await camp.destroy();
             live.broadcast({ type: 'campGone', id: camp.key });
@@ -271,6 +277,15 @@ export function createWorld({ spawner, npc = {} }) {
       await Expedition.update({ claimed: true }, { where: { id: home.map((e) => e.id) } });
       return { version: revision, troops, resources, reports };
     });
+    // Every returned army leaves a report in the letters (already read: the player gets the report sheet right now).
+    for (const rep of out.reports) {
+      const name = NPC.CAMP_TYPES[rep.campType]?.name || 'Camp';
+      await mail.deliver({
+        playerId: player.id, kind: 'report', read: true,
+        subject: rep.gone ? `Too late: ${name} was already destroyed` : `${rep.win ? 'Victory' : 'Defeat'}: ${name} (Lv ${rep.campLevel})`,
+        data: { role: 'attacker', source: 'camp', at: Date.now(), report: rep },
+      }).catch(() => {});
+    }
     return { now: Date.now(), save: { version: out.version, troops: out.troops, resources: out.resources }, reports: out.reports };
   }
 

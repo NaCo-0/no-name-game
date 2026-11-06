@@ -394,6 +394,236 @@
   /* Badge-e bardasht: vaghti zaher mishe ba pop miad (bob-e ghabli hamchenan edame dare) */
   @keyframes gm-badge-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } }
   .collect-badge { animation: gm-badge-in .35s var(--gm-ease) backwards, bob 1.1s ease-in-out infinite; }
+
+  /* =====================================================================
+     UI v2 — visual redesign (overrides the older rules above).
+     Same class names / markup contract, so no game logic is touched.
+     Language: dark glass surfaces, civilization accent, big touch targets,
+     one radius scale, one type scale (min 12px), Vazirmatn for Persian.
+     ===================================================================== */
+  :root {
+    --font-ui: 'Inter', 'Vazirmatn', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --r-sm: 10px; --r-md: 14px; --r-lg: 22px;
+    --line: color-mix(in srgb, var(--border-color) 70%, rgba(255,255,255,.14));
+    --glass: color-mix(in srgb, var(--panel-color) 86%, #000);
+    --glass-soft: color-mix(in srgb, var(--paneldeep-color) 72%, transparent);
+    --shadow-1: 0 6px 20px rgba(0,0,0,.35);
+    --shadow-2: 0 -18px 50px rgba(0,0,0,.55);
+    --c-food: #e9b949; --c-wood: #cf9460; --c-stone: #b4bcc6; --c-iron: #86aadb;
+  }
+  body, button, input { font-family: var(--font-ui); }
+  .fa, .msg-bubble.fa { font-family: 'Vazirmatn', 'Inter', sans-serif; }
+  button { -webkit-appearance: none; appearance: none; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--highlight-color); outline-offset: 2px; }
+
+  /* ---------- TOP HUD ---------- */
+  .hud-top {
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--panel-color) 96%, #000), color-mix(in srgb, var(--panel-color) 84%, #000));
+    border-bottom: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .hud-row1 { gap: 10px; }
+  .player-chip { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  .realm-crest { width: 40px; height: 40px; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 10px rgba(0,0,0,.4); border: 1px solid color-mix(in srgb, var(--highlight-color) 60%, transparent); }
+  .realm-crest .icon { width: 21px; height: 21px; }
+  .player-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+  .player-meta b { font-size: 15px; font-weight: 700; color: var(--ink-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-meta span { font-size: 12px; color: var(--inksoft-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu-toggle { width: 42px; height: 42px; border-radius: 12px; background: var(--glass-soft); border: 1px solid var(--line); }
+  .menu-toggle .icon { width: 20px; height: 20px; }
+
+  .ledger { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; overflow: visible; }
+  .ledger-cell {
+    flex-direction: column; justify-content: center; gap: 3px; padding: 7px 2px 6px; border-radius: var(--r-sm);
+    background: var(--glass-soft); border: 1px solid var(--line); min-width: 0;
+  }
+  .ledger-cell .icon { width: 18px; height: 18px; color: var(--c-res, var(--accent-color)); }
+  .ledger-cell b { font-size: 13px; font-weight: 700; line-height: 1; }
+  .ledger-cell[data-res=food]  { --c-res: var(--c-food); }
+  .ledger-cell[data-res=wood]  { --c-res: var(--c-wood); }
+  .ledger-cell[data-res=stone] { --c-res: var(--c-stone); }
+  .ledger-cell[data-res=iron]  { --c-res: var(--c-iron); }
+  .ledger-cell.coin { --c-res: var(--highlight-color); background: color-mix(in srgb, var(--highlight-color) 14%, var(--paneldeep-color)); border-color: color-mix(in srgb, var(--highlight-color) 45%, transparent); }
+  .ledger-cell.coin b { color: var(--highlight-color); }
+
+  /* ---------- BOTTOM NAV ---------- */
+  .hud-bottom {
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 2px;
+    background: linear-gradient(0deg, color-mix(in srgb, var(--panel-color) 96%, #000), color-mix(in srgb, var(--panel-color) 86%, #000));
+    border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(0,0,0,.35);
+  }
+  .nav-btn { max-width: none; gap: 4px; padding: 4px 2px; border-radius: var(--r-md); min-height: 56px; justify-content: center; }
+  .nav-btn .nic { width: 46px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; transition: background-color .2s ease, color .2s ease, transform .2s var(--gm-ease); }
+  .nav-btn .nic .icon { width: 22px; height: 22px; }
+  .nav-btn span { font-size: 11.5px; font-weight: 600; letter-spacing: .01em; }
+  .nav-btn.active { color: var(--ink-color); }
+  .nav-btn.active .nic { background: color-mix(in srgb, var(--accent-color) 70%, transparent); color: #fff; box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color) 45%, transparent), 0 4px 14px color-mix(in srgb, var(--accent-color) 55%, transparent); }
+  .nav-btn .badge { top: 0; right: 50%; margin-right: -30px; min-width: 18px; height: 18px; font-size: 11px; font-weight: 700; padding: 0 5px; border: 2px solid var(--panel-color); }
+
+  /* ---------- MAP / CITY OVERLAYS ---------- */
+  .minimap-radar { top: 12px; right: 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: color-mix(in srgb, var(--paneldeep-color) 80%, transparent); box-shadow: var(--shadow-1); }
+  .minimap-label { font-size: 9px; }
+  .world-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--glass); border: 1px solid var(--line); color: var(--ink-color); }
+  .world-btn .icon { width: 20px; height: 20px; }
+  .world-controls { gap: 10px; bottom: 18px; right: 12px; }
+  .territory-hud { bottom: 18px; padding: 8px 16px; font-size: 13px; background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow-1); max-width: calc(100% - 140px); white-space: nowrap; overflow: hidden; }
+  .territory-dot { width: 10px; height: 10px; }
+  .action-target-pop { background: var(--glass); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; gap: 8px; min-width: 168px; box-shadow: 0 10px 30px rgba(0,0,0,.6); backdrop-filter: blur(10px); }
+  .action-target-pop b { font-size: 14px; }
+  .action-target-pop .coord { font-size: 12px; }
+  .march-btn { padding: 10px 12px; border-radius: var(--r-sm); font-size: 13px; min-height: 40px; }
+  .action-target-pop .action-btn.secondary { padding: 8px !important; font-size: 12px !important; min-width: 0; min-height: 36px; }
+  .scroll-hint { font-size: 12px; padding: 8px 18px; background: var(--glass); letter-spacing: .06em; }
+  .plate-level { opacity: .9; }
+
+  /* ---------- SHEETS (bottom sheets / dialogs) ---------- */
+  .overlay, .chat-overlay { background: rgba(3,5,9,.62); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .sheet {
+    max-width: 520px; border-radius: var(--r-lg) var(--r-lg) 0 0; border: 1px solid var(--line); border-bottom: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--panel-color) 100%, #fff 4%), var(--panel-color));
+    padding: 22px 18px calc(18px + env(safe-area-inset-bottom, 0px)); box-shadow: var(--shadow-2); position: relative;
+  }
+  .sheet::before { content: ""; position: absolute; top: 8px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 99px; background: rgba(255,255,255,.22); }
+  .sheet::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 110px; border-radius: inherit; pointer-events: none; background: radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--accent-color) 30%, transparent), transparent 70%); }
+  .sheet > * { position: relative; z-index: 1; }
+  @media (min-width: 720px) { .sheet { border-radius: var(--r-lg); border-bottom: 1px solid var(--line); padding-top: 18px; } .sheet::before { display: none; } }
+  .sheet-head { align-items: center; margin-top: 4px; }
+  .sheet-title { gap: 12px; min-width: 0; }
+  .sheet-title .icon-wrap { width: 48px; height: 48px; border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 6px 14px rgba(0,0,0,.35); }
+  .sheet-title .icon-wrap .icon { width: 24px; height: 24px; }
+  .sheet-head h2 { font-size: 19px; font-weight: 700; line-height: 1.25; }
+  .level-pill { padding: 3px 10px; font-size: 12px; letter-spacing: .02em; }
+  .close-btn { width: 40px; height: 40px; background: var(--glass-soft); border: 1px solid var(--line); }
+  .close-btn .icon { width: 16px; height: 16px; }
+  .sheet-desc { font-size: 14px; line-height: 1.65; margin: 14px 2px 16px; }
+
+  .prod-row { border-radius: var(--r-md); padding: 13px 14px; background: var(--glass-soft); border: 1px solid var(--line); margin-bottom: 10px; }
+  .prod-row .prod-info { font-size: 14px; gap: 10px; color: var(--ink-color); }
+  .prod-row .prod-info .icon { width: 20px; height: 20px; }
+  .prod-row .prod-amount { font-size: 16px; }
+  .collect-btn { min-height: 52px; border-radius: var(--r-md); font-size: 15px; box-shadow: 0 6px 18px color-mix(in srgb, var(--highlight-color) 30%, transparent), inset 0 1px 0 rgba(255,255,255,.4); }
+  .collect-btn .icon { width: 20px; height: 20px; }
+  .upgrade-box { border-radius: var(--r-md); padding: 16px; background: var(--glass-soft); border: 1px solid var(--line); }
+  .upgrade-box .ub-head b { font-size: 15px; }
+  .upgrade-box .ub-head .arrow { font-size: 13px; color: var(--highlight-color); font-weight: 600; }
+  .cost-chip { padding: 8px 12px; border-radius: var(--r-sm); font-size: 14px; font-weight: 700; background: rgba(0,0,0,.28); gap: 7px; }
+  .cost-chip .icon { width: 16px; height: 16px; }
+  .cost-chip.insufficient { background: rgba(224,101,90,.12); }
+  .action-btn { min-height: 50px; border-radius: var(--r-md); font-size: 15px; padding: 12px 16px; }
+  .action-btn .icon { width: 18px; height: 18px; }
+  .action-btn.primary { box-shadow: 0 6px 18px color-mix(in srgb, var(--accent-color) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.25); border: 1px solid color-mix(in srgb, var(--highlight-color) 35%, transparent); }
+  .action-btn.secondary { background: var(--glass-soft); border: 1px solid var(--line); }
+  .sheet input[type=number] { min-height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--ink-color); font-size: 16px; text-align: center; }
+  .menu-list { gap: 10px; }
+  .menu-item { min-height: 54px; border-radius: var(--r-md); padding: 12px 16px; font-size: 15px; background: var(--glass-soft); border: 1px solid var(--line); }
+  .menu-item .icon { width: 22px; height: 22px; }
+
+  /* ---------- CHAT ---------- */
+  .chat-panel { max-width: 520px; height: 84vh; border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--panel-color); border: 1px solid var(--line); border-bottom: none; box-shadow: var(--shadow-2); }
+  .chat-head { padding: 14px 16px; }
+  .chat-head-avatar { width: 40px; height: 40px; border-radius: 12px; }
+  .chat-head-text b { font-size: 16px; }
+  .chat-head-text span { font-size: 12px; }
+  .chat-tabs { padding: 12px 16px 2px; gap: 8px; }
+  .chat-tab { padding: 8px 14px; font-size: 13px; min-height: 36px; }
+  .chat-body { padding: 14px 16px; gap: 6px; }
+  .msg-avatar { width: 32px; height: 32px; border-radius: 10px; font-size: 13px; }
+  .msg-name { font-size: 12px; }
+  .msg-bubble { font-size: 15px; padding: 10px 14px; border-radius: 16px 16px 16px 6px; }
+  .msg-row.me .msg-bubble { border-radius: 16px 16px 6px 16px; }
+  .msg-time { font-size: 11px; }
+  .sys-msg { font-size: 12.5px; }
+  .chat-input-row { padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); gap: 10px; background: color-mix(in srgb, var(--paneldeep-color) 60%, transparent); }
+  .chat-input-row input { font-size: 16px; padding: 12px 18px; min-height: 46px; background: rgba(0,0,0,.3); }
+  .chat-send { width: 46px; height: 46px; }
+  .chat-send .icon { width: 20px; height: 20px; }
+
+  /* ---------- BARRACKS ---------- */
+  .bk-top { padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 8px; }
+  .bk-title { font-size: 19px; }
+  .bk-title small { font-size: 12px; margin-top: 2px; }
+  .barracks .close-btn { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.2); color: #fff; }
+  .bk-panel { max-width: 560px; padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(180deg, rgba(8,10,14,.55), rgba(8,10,14,.82)); border: 1px solid rgba(255,255,255,.12); border-bottom: none; border-radius: var(--r-lg) var(--r-lg) 0 0; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .bk-tabs { gap: 4px; padding: 4px; border-radius: var(--r-md); background: rgba(0,0,0,.38); border: 1px solid rgba(255,255,255,.1); margin-bottom: 12px; }
+  .bk-tab { border: none; background: transparent; padding: 10px 4px; font-size: 13px; border-radius: 10px; color: rgba(244,239,227,.75); }
+  .bk-tab.active { color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+  .bk-cards { gap: 10px; padding: 2px 2px 8px; }
+  .bk-card { width: 92px; border-radius: var(--r-md); padding: 6px 6px 8px; background: rgba(255,255,255,.07); }
+  .bk-card img { height: 88px; }
+  .bk-card span { font-size: 12px; margin-top: 4px; }
+  .bk-card span:not(.bk-lv):not(.bk-own) { min-height: 28px; display: flex; align-items: center; justify-content: center; }
+  .bk-lv, .bk-own { font-size: 11px; padding: 2px 6px; top: 5px; }
+  .bk-lv { left: 5px; } .bk-own { right: 5px; }
+  .bk-info { margin: 4px 2px 10px; flex-wrap: wrap; }
+  .bk-info b { font-size: 16px; }
+  .bk-info small { font-size: 12.5px; }
+  .bk-train { gap: 10px; }
+  .bk-qty { gap: 6px; }
+  .bk-qty button { width: 40px; height: 40px; border-radius: var(--r-sm); font-size: 18px; }
+  .bk-qty button.max { padding: 0 12px; font-size: 12px; }
+  .bk-qty b { font-size: 17px; min-width: 38px; }
+  .bk-go { min-height: 46px; padding: 0 22px; border-radius: var(--r-md); font-size: 15px; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent-color) 45%, transparent); }
+  .bk-queue { font-size: 13px; margin-top: 12px; }
+  .bk-queue div { padding: 8px 12px; border-radius: var(--r-sm); }
+
+  /* ---------- LOGIN: same look as the civilization picker ---------- */
+  .auth-screen { background: radial-gradient(ellipse at 30% 15%, color-mix(in srgb, #21879e 34%, #0b0f16), #07090d 72%); }
+  .auth-card { max-width: 400px; padding: 28px 24px; gap: 14px; border-radius: var(--r-lg); background: rgba(14,18,26,.78); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 24px 60px rgba(0,0,0,.55); }
+  .auth-card h1 { font-size: 26px; line-height: 1.2; }
+  .auth-sub { font-size: 14px; margin-bottom: 6px; }
+  .auth-tabs { padding: 4px; border-radius: var(--r-md); background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.1); gap: 4px; }
+  .auth-tabs button { border: none; background: transparent; padding: 11px; font-size: 14px; border-radius: 10px; }
+  .auth-tabs button.on { background: linear-gradient(155deg, #21879e, #155f72); box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+  .auth-field { font-size: 13px; gap: 7px; }
+  .auth-field input { min-height: 48px; border-radius: var(--r-md); background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.14); font-size: 16px; }
+  .auth-field input:focus { border-color: #21879e; box-shadow: 0 0 0 3px rgba(33,135,158,.28); }
+  .auth-check { font-size: 14px; min-height: 36px; }
+  .auth-check input { width: 18px; height: 18px; accent-color: #21879e; }
+  .auth-err { font-size: 14px; border-radius: var(--r-sm); }
+  .auth-btn { min-height: 52px; font-size: 17px; border-radius: var(--r-md); border-color: transparent; box-shadow: 0 8px 22px rgba(33,135,158,.4); }
+
+  /* ---------- TOAST ---------- */
+  .toast { font-size: 14px; padding: 12px 22px; background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--line); color: var(--ink-color); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); white-space: normal; text-align: center; }
+
+  /* Small phones */
+  @media (max-width: 360px) { .ledger-cell b { font-size: 12px; } .nav-btn span { font-size: 11px; } }
+
+  /* v2 fixes */
+  .bk-own { top: auto; bottom: 36px; right: 6px; }
+  .bk-card.special .bk-lv { font-size: 10px; letter-spacing: 0; padding: 2px 5px; }
+  .action-btn.secondary, .menu-item { background: rgba(255,255,255,.07); }
+
+  .prod-row { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+  .prod-row[data-res] .prod-info .icon { color: var(--c-res); }
+  .prod-row[data-res] .prod-amount { color: var(--ink-color); }
+  .prod-row[data-res=food]  { --c-res: var(--c-food); }
+  .prod-row[data-res=wood]  { --c-res: var(--c-wood); }
+  .prod-row[data-res=stone] { --c-res: var(--c-stone); }
+  .prod-row[data-res=iron]  { --c-res: var(--c-iron); }
+  .prod-row[data-res=coin]  { --c-res: var(--highlight-color); }
+  .prod-row[data-res=coin] .prod-amount { color: var(--highlight-color); }
+  .prod-row .prod-info span { color: var(--inksoft-color); font-size: 12.5px; }
+
+  /* v2 battle helpers */
+  .bt-chip.warn { color: #f0c26a; border-color: color-mix(in srgb, #e6a84a 40%, transparent); background: color-mix(in srgb, #e6a84a 12%, transparent); }
+  .bt2-stat.foe b { color: #f08a80; }
+  .bt-steps { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; font-size: 14px; color: var(--ink-color); }
+  .bt-steps > div { display: flex; align-items: center; gap: 12px; line-height: 1.35; }
+  .bt-steps b { flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; background: linear-gradient(155deg, var(--accent-color), var(--accent2-color)); }
+
+  /* ===== UX pass: clearer focus, nav, sheets, toast ===== */
+  :focus-visible { outline: 2px solid var(--highlight-color); outline-offset: 2px; }
+  .nav-btn { position: relative; min-height: 52px; }
+  .nav-btn span:not(.badge) { font-size: 10.5px; }
+  .nav-btn.active::before { content: ""; position: absolute; top: -7px; left: 22%; right: 22%; height: 3px; border-radius: 0 0 3px 3px; background: var(--highlight-color); }
+  .nav-btn .badge { right: 18%; top: 2px; z-index: 1; }
+  .sheet { max-height: 92vh; overflow-y: auto; overscroll-behavior: contain; }
+  .overlay .sheet.mp-sheet { overflow: hidden; }
+  .toast { max-width: min(92vw, 420px); text-align: center; }
+  .action-btn, .close-btn { min-height: 44px; }
+  .close-btn { min-width: 44px; width: 44px; height: 44px; }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 </style>
 </head>
 <body>
@@ -408,6 +638,9 @@ import { showJoinScreen } from './runtime/JoinScreen.js';
 import * as api from './src/api.js';
 import { civById, civByTerritory } from './runtime/civilizations.js';
 import { switchView } from './runtime/ui/ViewTransition.js';
+import { createBattleUI, injectBattleCss, campPreview, fname as formName } from './runtime/ui/BattleSheets.js';
+import { createMailUI, injectMailCss } from './runtime/ui/MailPanel.js';
+import * as battleApi from './runtime/ui/battleApi.js';
 
 const { useState, useEffect, useRef, useCallback } = React;
 const e = React.createElement;
@@ -529,6 +762,7 @@ function Icon(name) {
     hand: e("path", { d: "M8 13V6.5a1.5 1.5 0 0 1 3 0V11" }),
     globe: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "8.5" }), e("path", { d: "M3.5 12h17" })),
     clock: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "8.5" }), e("path", { d: "M12 7v5.3l3.6 2.1" })),
+    mail: e(React.Fragment, null, e("rect", { x: "3.5", y: "5.5", width: "17", height: "13", rx: "2" }), e("path", { d: "M4 7.5l8 6 8-6" })),
     plus: e("path", { d: "M12 5v14M5 12h14" }),
     minus: e("path", { d: "M5 12h14" }),
     locate: e(React.Fragment, null, e("circle", { cx: "12", cy: "12", r: "3" }), e("path", { d: "M12 2v3M12 19v3M2 12h3M19 12h3" }))
@@ -780,7 +1014,7 @@ function BarracksSheet({ open, building, culture, theme, resources, army, onClos
 }
 
 // ---------- Chat Panel (every message is stored on the server and visible in the admin panel) ----------
-function ChatPanel({ open, onClose, me, culture }) {
+function ChatView({ me, active }) {
   const [tab, setTab] = useState("civ"); // civ = your civilization ("Alliance"), global = everybody
   const [lists, setLists] = useState({ civ: [], global: [] });
   const [val, setVal] = useState("");
@@ -790,7 +1024,7 @@ function ChatPanel({ open, onClose, me, culture }) {
   const load = useCallback(async (ch) => {
     try { const r = await api.getChat(ch); setLists((l) => ({ ...l, [ch]: r.messages })); } catch (e) { /* the panel just stays as it was */ }
   }, []);
-  useEffect(() => { if (open && tab !== "history") load(tab); }, [open, tab, load]);
+  useEffect(() => { if (active) load(tab); }, [active, tab, load]);
   useEffect(() => {
     const onSrv = (ev) => {
       const m = ev.detail;
@@ -800,11 +1034,11 @@ function ChatPanel({ open, onClose, me, culture }) {
     window.addEventListener("kingdoms:server", onSrv);
     return () => window.removeEventListener("kingdoms:server", onSrv);
   }, []);
-  const shown = tab === "history" ? [] : lists[tab];
-  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [shown, open, tab]);
+  const shown = lists[tab];
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [shown, active, tab]);
   const send = async () => {
     const text = val.trim();
-    if (!text || tab === "history") return;
+    if (!text) return;
     sound.playClick();
     setVal(""); setErr("");
     try {
@@ -812,29 +1046,22 @@ function ChatPanel({ open, onClose, me, culture }) {
       setLists((l) => l[tab].some((x) => x.id === r.message.id) ? l : { ...l, [tab]: [...l[tab], r.message] });
     } catch (e) { setVal(text); setErr(e.message); }
   };
-  return e("div", { className: "chat-overlay" + (open ? " open" : ""), onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
-    e("div", { className: "chat-panel" },
-      e("div", { className: "chat-head" },
-        e("div", { className: "chat-head-info" }, e("div", { className: "chat-head-avatar" }, Icon("alliance")),
-          e("div", { className: "chat-head-text" }, e("b", null, "Alliance Network"), e("span", null, e("span", { className: "online-dot" }), tab === "global" ? "All realms" : "Your realm"))),
-        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
-      e("div", { className: "chat-tabs" },
-        e("button", { className: "chat-tab" + (tab === "civ" ? " active" : ""), onClick: () => setTab("civ") }, Icon("alliance"), "Alliance"),
-        e("button", { className: "chat-tab" + (tab === "global" ? " active" : ""), onClick: () => setTab("global") }, Icon("globe"), "Global"),
-        e("button", { className: "chat-tab" + (tab === "history" ? " active" : ""), onClick: () => setTab("history") }, Icon("clock"), "Reports")),
-      e("div", { className: "chat-body", ref: bodyRef },
-        tab === "history" && e("div", { className: "sys-msg" }, Icon("shield"), "Battle reports appear after your armies come home."),
-        tab !== "history" && !shown.length && e("div", { className: "sys-msg" }, Icon("shield"), "No messages yet - say hello!"),
-        shown.map((m) => {
-          const mine = m.username === me;
-          return e("div", { key: m.id, className: "msg-row " + (mine ? "me" : "them") },
-            e("div", { className: "msg-avatar" }, m.username ? m.username[0] : "?"),
-            e("div", { className: "msg-col" }, !mine && e("span", { className: "msg-name" }, m.username),
-              e("div", { className: "msg-bubble" + (isPersian(m.text) ? " fa" : "") }, m.text), e("span", { className: "msg-time" }, timeOf(m.createdAt))));
-        })),
-      e("div", { className: "chat-input-row" },
-        e("input", { className: isPersian(val) ? "fa" : "", value: val, maxLength: 300, onChange: (ev) => setVal(ev.target.value), placeholder: err || "Type a message...", onKeyDown: (ev) => { if (ev.key === "Enter") send(); } }),
-        e("button", { className: "chat-send", disabled: !val.trim() || tab === "history", onClick: send }, Icon("send")))));
+  return e(React.Fragment, null,
+    e("div", { className: "chat-tabs" },
+      e("button", { className: "chat-tab" + (tab === "civ" ? " active" : ""), onClick: () => setTab("civ") }, Icon("alliance"), "Your realm"),
+      e("button", { className: "chat-tab" + (tab === "global" ? " active" : ""), onClick: () => setTab("global") }, Icon("globe"), "Everyone")),
+    e("div", { className: "chat-body", ref: bodyRef },
+      !shown.length && e("div", { className: "sys-msg" }, Icon("shield"), "No messages yet - say hello!"),
+      shown.map((m) => {
+        const mine = m.username === me;
+        return e("div", { key: m.id, className: "msg-row " + (mine ? "me" : "them") },
+          e("div", { className: "msg-avatar" }, m.username ? m.username[0] : "?"),
+          e("div", { className: "msg-col" }, !mine && e("span", { className: "msg-name" }, m.username),
+            e("div", { className: "msg-bubble" + (isPersian(m.text) ? " fa" : "") }, m.text), e("span", { className: "msg-time" }, timeOf(m.createdAt))));
+      })),
+    e("div", { className: "chat-input-row" },
+      e("input", { className: isPersian(val) ? "fa" : "", value: val, maxLength: 300, onChange: (ev) => setVal(ev.target.value), placeholder: err || "Type a message...", onKeyDown: (ev) => { if (ev.key === "Enter") send(); } }),
+      e("button", { className: "chat-send", disabled: !val.trim(), onClick: send }, Icon("send"))));
 }
 
 // ---------- Storage / Treasury Sheet ----------
@@ -854,7 +1081,7 @@ function StorageSheet({ open, onClose, resources, buildings, theme }) {
       e("p", { className: "sheet-desc" }, "Overview of stockpiled provisions and net hourly yields for this civilization."),
       resKeys.map(r => {
         const ratePerHour = (rates[r] || 0) * 3600;
-        return e("div", { key: r, className: "prod-row" },
+        return e("div", { key: r, className: "prod-row", "data-res": r },
           e("div", { className: "prod-info" }, Icon(RES_ICON[r]), theme.resourceNames[r] || "Coin", r !== 'coin' && e("span", null, " (+" + fmt(ratePerHour) + "/hr)")),
           e("div", { className: "prod-amount" }, fmt(resources[r])));
       }),
@@ -873,85 +1100,153 @@ const troopName = (id) => (TROOP_BY_ID[id] ? TROOP_BY_ID[id].name : id);
 const lootText = (loot) => Object.entries(loot || {}).filter(([, n]) => n > 0).map(([k, n]) => n + " " + k).join(" · ") || "nothing";
 const troopsText = (t) => Object.entries(t || {}).filter(([, n]) => n > 0).map(([id, n]) => n + "× " + troopName(id)).join(", ") || "none";
 
-function CampSheet({ camp, home, rules, troops, activeCount, onClose, onAttack }) {
+// PvP sheets (formation / defense editor, castle sheet, battle report, raid notice): runtime/ui/BattleSheets.js
+const BattleUI = createBattleUI({ React, Icon, troopName });
+injectBattleCss();
+const MailUI = createMailUI({ React, Icon, BattleUI, mailApi: battleApi });
+injectMailCss();
+
+function CampSheet({ camp, home, rules, troops, config, activeCount, onClose, onAttack }) {
   const [sel, setSel] = useState({});
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setSel({}); setBusy(false); }, [camp && camp.id]);
-  if (!camp) return null;
-  const owned = Object.entries(troops || {}).filter(([, n]) => n > 0);
+  const [mode, setMode] = useState("rec"); // rec | all | custom
   const unitPower = (rules && rules.unitPower) || { 1: 10, 2: 22, 3: 45, 4: 90 };
-  const myPower = Object.entries(sel).reduce((sum, [id, n]) => sum + n * (unitPower[(TROOP_BY_ID[id] || {}).level] || 0), 0);
+  // the same power numbers the server uses for battles (falls back to the level table until the config is loaded)
+  const pwr = (id) => (config && config.power && config.power[id] != null) ? config.power[id] : (unitPower[(TROOP_BY_ID[id] || {}).level] || 0);
+  const owned = Object.entries(troops || {}).filter(([, n]) => n > 0);
+  // Smallest force that is about 30% stronger than the camp (weakest troops first, so your elites stay home).
+  const recommend = () => {
+    if (!camp) return {};
+    const need = camp.power * 1.3; let have = 0; const out = {};
+    for (const [id, n] of owned.slice().sort((x, y) => pwr(x[0]) - pwr(y[0]))) {
+      const p = pwr(id); if (!p || have >= need) continue;
+      const k = Math.min(n, Math.ceil((need - have) / p)); out[id] = k; have += k * p;
+    }
+    return out;
+  };
+  const sendAll = () => Object.fromEntries(owned);
+  useEffect(() => { setSel(recommend()); setBusy(false); setMode("rec"); }, [camp && camp.id, config]);
+  if (!camp) return null;
   const total = Object.values(sel).reduce((a, b) => a + b, 0);
+  // formation counters, troop counters and slot bonuses are all included here (same maths as the server)
+  const preview = campPreview(sel, camp, config);
+  const rawPower = Object.entries(sel).reduce((sum, [id, n]) => sum + n * pwr(id), 0);
+  const myPower = preview ? preview.myPower : rawPower;
+  const foePower = preview ? preview.foePower : camp.power;
   const dist = home ? Math.hypot(camp.tileX - home.tileX, camp.tileY - home.tileY) : 0;
   const oneWay = rules ? Math.max(rules.marchMinMs, dist * rules.marchMsPerTile) : 0;
   const full = rules && activeCount >= rules.maxActive;
-  const setN = (id, n, max) => setSel((p) => ({ ...p, [id]: Math.max(0, Math.min(max, Math.floor(Number(n) || 0))) }));
+  const ratio = foePower > 0 ? myPower / foePower : 0;
+  // [style, icon, headline, advice]
+  const verdict = total === 0 ? ["none", "?", "Choose troops to send", "Tap Recommended and we pick them for you."]
+    : ratio >= 1.25 ? ["good", "\u2713", "You should win", "Your army is clearly stronger than the camp."]
+    : ratio >= 0.9 ? ["warn", "!", "Too close to call", "Send more troops, or bring troop types that counter theirs."]
+    : ["bad", "\u2715", "You will probably lose", "Send more troops, or pick an easier camp."];
+  const split = Math.round((myPower / ((myPower + foePower) || 1)) * 100);
+  const setN = (id, n, max) => { setMode("custom"); setSel((p) => ({ ...p, [id]: Math.max(0, Math.min(max, Math.floor(Number(n) || 0))) })); };
+  const pick = (m) => { setMode(m); if (m === "rec") setSel(recommend()); if (m === "all") setSel(sendAll()); };
   const go = async () => { setBusy(true); const ok = await onAttack(camp, Object.fromEntries(Object.entries(sel).filter(([, n]) => n > 0))); if (!ok) setBusy(false); };
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
-    e("div", { className: "sheet" },
+    e("div", { className: "sheet bt-sheet" },
       e("div", { className: "sheet-head" },
         e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("sword")),
-          e("div", null, e("h2", null, camp.name), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, "Level " + camp.level)))),
-        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
-      e("p", { className: "sheet-desc" }, "Defenders: " + troopsText(camp.army)),
-      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "Enemy power"), e("div", { className: "prod-amount" }, "≈ " + camp.power)),
-      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "Loot if you win"), e("div", { className: "prod-amount", style: { fontSize: "12px" } }, lootText(camp.loot))),
-      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "March (one way)"), e("div", { className: "prod-amount" }, fmtTime(oneWay / 1000))),
-      owned.length === 0 ? e("div", { style: { padding: "16px 0", textAlign: "center", color: "var(--inksoft-color)" } }, "You have no troops. Train some in the Barracks first.") :
-        owned.map(([id, n]) => e("div", { key: id, className: "prod-row" },
-          e("div", { className: "prod-info" }, troopName(id) + " (" + n + ")"),
-          e("div", { style: { display: "flex", gap: "6px", alignItems: "center" } },
-            e("input", { type: "number", min: 0, max: n, value: sel[id] || 0, style: { width: "70px" }, onChange: (ev) => setN(id, ev.target.value, n) }),
-            e("button", { className: "action-btn secondary", style: { flex: "none", minWidth: 0, padding: "6px 10px" }, onClick: () => setN(id, n, n) }, "All")))),
-      e("div", { className: "prod-row" }, e("div", { className: "prod-info" }, "Your power (before class bonuses)"), e("div", { className: "prod-amount" }, "≈ " + myPower)),
-      full && e("p", { className: "sheet-desc" }, "All " + rules.maxActive + " armies are already out."),
-      e("div", { className: "action-row" },
-        e("button", { className: "action-btn primary", disabled: busy || total === 0 || full, onClick: go }, Icon("sword"), busy ? "Sending…" : "Attack"),
-        e("button", { className: "action-btn secondary", onClick: onClose }, "Cancel"))));
+          e("div", null, e("h2", null, camp.name), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, "Level " + camp.level), camp.formation && e("span", { className: "level-pill" }, formName(camp.formation))))),
+        e("button", { className: "close-btn", onClick: onClose, "aria-label": "Close" }, Icon("close"))),
+      e("p", { className: "bt-sub" }, "Defended by " + troopsText(camp.army)),
+      owned.length === 0 ? e("div", { className: "bt2-empty" }, e("div", { className: "big" }, Icon("barracks")), e("b", null, "You have no troops yet"), e("p", null, "Train some in the Barracks first, then come back.")) : e(React.Fragment, null,
+        /* 1. the answer: will I win? */
+        e("div", { className: "bt2-verdict " + verdict[0], role: "status" },
+          e("span", { className: "vi" }, e("span", null, verdict[1])),
+          e("div", null, e("b", null, verdict[2]), e("small", null, verdict[3]))),
+        e("div", { className: "bt2-vs" }, e("span", null, "You", e("br"), e("b", null, fmt(Math.round(myPower)))), e("span", { className: "foe" }, "Camp", e("br"), e("b", null, fmt(foePower)))),
+        e("div", { className: "bt-split" }, e("i", { style: { width: split + "%" } }), e("i", { style: { width: (100 - split) + "%" } })),
+        /* 2. the matchup: which formation we use and what counters what */
+        e(BattleUI.CampMatchup, { preview }),
+        /* 3. what it costs / gives */
+        e("div", { className: "bt2-facts" },
+          e("div", { className: "bt2-fact" }, e("small", null, "Loot if you win"), e("b", null, lootText(camp.loot))),
+          e("div", { className: "bt2-fact" }, e("small", null, "Time to get there"), e("b", null, fmtTime(oneWay / 1000)))),
+        /* 4. who goes */
+        e("div", { className: "bt2-sec" },
+          e("div", { className: "bt2-sec-h" }, "Who goes", e("span", { className: "bt2-sec-sub" }, total + " soldiers")),
+          e("div", { className: "bt2-seg", style: { gridTemplateColumns: "repeat(3, 1fr)" }, role: "group", "aria-label": "Troops to send" },
+            [["rec", "Recommended"], ["all", "Everyone"], ["custom", "Custom"]].map(([m, label]) =>
+              e("button", { key: m, type: "button", "aria-pressed": String(mode === m), onClick: () => pick(m) }, label))),
+          mode === "custom" && owned.map(([id, n]) => e("div", { key: id, className: "bt-troop" },
+            e("div", { className: "bt-troop-row" }, e("span", null, troopName(id)), e("span", { className: "bt-have" }, n + " available")),
+            e("div", { className: "bt-ctl" },
+              e("input", { type: "range", min: 0, max: n, step: 1, value: Math.min(sel[id] || 0, n), onChange: (ev) => setN(id, ev.target.value, n), "aria-label": troopName(id) }),
+              e("input", { className: "bt-num", type: "number", inputMode: "numeric", min: 0, max: n, value: sel[id] || 0, onChange: (ev) => setN(id, ev.target.value, n) }),
+              e("button", { type: "button", className: "bt-mini", onClick: () => setN(id, n, n) }, "Max")))))),
+      full && e("p", { className: "bt-sub", style: { color: "#f08a80" } }, "All " + rules.maxActive + " armies are already out. Wait for one to come back."),
+      e("div", { className: "bt2-foot" },
+        e("div", { className: "action-row" },
+          e("button", { className: "action-btn primary bt2-go", disabled: busy || total === 0 || full, onClick: go }, Icon("sword"), busy ? "Sending…" : "Attack" + (total ? " · " + total + " soldiers" : "")),
+          e("button", { className: "action-btn secondary", onClick: onClose }, "Cancel")))));
 }
 
-function ReportSheet({ reports, onClose }) {
+// Reports of camp attacks that just came home (they are also kept in Letters & reports).
+const campTitle = (r) => String(r.campType || "camp").replace(/^./, (c) => c.toUpperCase()) + " camp (Lv " + (r.campLevel || "?") + ")";
+function ReportSheet({ reports, onClose, onOpenAll }) {
   if (!reports || !reports.length) return null;
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
-    e("div", { className: "sheet" },
+    e("div", { className: "sheet bt-sheet" },
       e("div", { className: "sheet-head" },
-        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("scroll")), e("div", null, e("h2", null, "Battle report"))),
-        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
-      reports.map((r) => e("div", { key: r.id, style: { padding: "10px 0", borderBottom: "1px solid var(--border-color)" } },
-        e("div", { style: { fontWeight: 700, color: r.gone ? "var(--inksoft-color)" : r.win ? "#7bd88f" : "#e8574a" } },
-          (r.gone ? "Camp already destroyed" : r.win ? "Victory" : "Defeat") + " · " + (r.campType || "") + " Lv " + (r.campLevel || "")),
-        !r.gone && e("div", { className: "sheet-desc" }, "Power " + r.attackerPower + " vs " + r.defenderPower),
-        e("div", { className: "sheet-desc" }, "Sent: " + troopsText(r.sent)),
-        e("div", { className: "sheet-desc" }, "Lost: " + troopsText(r.losses)),
-        e("div", { className: "sheet-desc" }, "Returned: " + troopsText(r.survivors)),
-        e("div", { className: "sheet-desc" }, "Loot: " + lootText(r.loot)))),
-      e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))));
+        e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("scroll")), e("div", null, e("h2", null, "Battle report"), reports.length > 1 && e("div", { className: "level-row" }, e("span", { className: "level-pill" }, reports.length + " battles")))),
+        e("button", { className: "close-btn", onClick: onClose, "aria-label": "Close" }, Icon("close"))),
+      reports.map((r, i) => e("div", { key: r.id, style: { marginTop: i ? "22px" : "12px", paddingTop: i ? "16px" : 0, borderTop: i ? "1px solid var(--border-color)" : "none" } },
+        e("h4", { className: "bt-sub", style: { margin: "0 0 4px", fontWeight: 800 } }, campTitle(r)),
+        e(BattleUI.ReportView, { report: r, role: "attacker", title: campTitle(r) }))),
+      e("div", { className: "action-row", style: { marginTop: "14px" } },
+        e("button", { className: "action-btn primary", onClick: onClose }, "Done"),
+        onOpenAll && e("button", { className: "action-btn secondary", onClick: onOpenAll }, Icon("mail"), "All reports"))));
 }
 
-// ---------- Battle / Marches Sheet ----------
-function BattleSheet({ open, onClose, marches, onNewMarch, expeds, serverNow }) {
+// ---------- Battle / Marches Sheet (War Room) ----------
+function BattleSheet({ open, onClose, marches, expeds, serverNow, maxActive, unreadReports, onOpenDefense, onOpenMap, onOpenReports, onOpenGuide }) {
   if (!open) return null;
+  const list = expeds || [];
+  const out = marches.length + list.length;
+  const row = (icon, title, text, onClick, badge) => e("button", { type: "button", className: "bt-row-btn", onClick },
+    e("span", { className: "ic" }, Icon(icon)),
+    e("span", { style: { flex: 1 } }, e("strong", null, title), e("small", null, text)),
+    badge > 0 && e("span", { className: "mp-dot" }, badge));
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
-    e("div", { className: "sheet" },
+    e("div", { className: "sheet bt-sheet" },
       e("div", { className: "sheet-head" },
         e("div", { className: "sheet-title" }, e("div", { className: "icon-wrap" }, Icon("sword")),
-          e("div", null, e("h2", null, "War Room & Expeditions"), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, marches.length + " Active Marches")))),
-        e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
-      e("p", { className: "sheet-desc" }, "Scouts and armies marching across the isometric world territories."),
-      (expeds || []).map((x) => {
-        const t = serverNow();
-        const label = t < x.arriveAt ? "Marching to " + x.campType + " camp (Lv " + x.campLevel + ")" : t < x.returnAt ? "Returning from " + x.campType + " camp" + (x.report ? (x.report.win ? " · victory" : x.report.gone ? " · camp already gone" : " · defeat") : "") : "Home - collecting…";
-        const left = t < x.arriveAt ? x.arriveAt - t : x.returnAt - t;
-        return e("div", { key: "x" + x.id, className: "prod-row" },
-          e("div", { className: "prod-info" }, Icon("sword"), label),
-          e("div", { className: "prod-amount", style: { fontSize: "12px", color: "var(--highlight-color)" } }, fmtTime(left / 1000)));
-      }),
-      marches.length === 0 && (!expeds || expeds.length === 0) ? e("div", { style: { padding: "20px 0", textAlign: "center", color: "var(--inksoft-color)" } }, "No active marches. Tap an NPC camp on the World Map to attack it.") :
-        marches.map(m => e("div", { key: m.id, className: "prod-row" },
-          e("div", { className: "prod-info" }, Icon("sword"), m.title),
-          e("div", { className: "prod-amount", style: { fontSize: "12px", color: "var(--highlight-color)" } }, Math.max(0, Math.ceil(m.timeLeft)) + "s"))),
-      e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
-    ));
+          e("div", null, e("h2", null, "War Room"), e("div", { className: "level-row" }, e("span", { className: "level-pill" }, out === 0 ? "All armies home" : out + (out === 1 ? " army out" : " armies out"))))),
+        e("button", { className: "close-btn", onClick: onClose, "aria-label": "Close" }, Icon("close"))),
+      e("div", { className: "bt2-hero", style: { marginTop: "12px" } },
+        e("div", { className: "bt2-stat" }, e("small", null, "Armies out"), e("b", null, list.length + " / " + (maxActive || 3))),
+        e("div", { className: "bt2-stat" }, e("small", null, "New reports"), e("b", null, unreadReports || 0))),
+      out > 0
+        ? e("div", { className: "bt2-sec" },
+          e("div", { className: "bt2-sec-h" }, "On the march"),
+          list.map((x) => {
+            const t = serverNow();
+            const leg = Math.max(1, x.returnAt - x.arriveAt);
+            const going = t < x.arriveAt, coming = !going && t < x.returnAt;
+            const title = going ? "Marching to a " + x.campType + " camp" : coming ? "Coming home" : "Home, collecting loot";
+            const sub = going ? "Level " + x.campLevel + " camp" : coming ? (x.report ? (x.report.win ? "Victory. Loot is on the way" : x.report.gone ? "The camp was already gone" : "Defeat") : "") : "";
+            const left = going ? x.arriveAt - t : coming ? x.returnAt - t : 0;
+            const prog = going ? 1 - left / leg : coming ? 1 - left / leg : 1;
+            return e("div", { key: "x" + x.id, className: "bt2-army" },
+              e("div", { className: "bt2-army-top" }, e("div", null, e("b", null, title), sub && e("small", null, sub)), going || coming ? e("span", { className: "t" }, fmtTime(left / 1000)) : null),
+              e("div", { className: "bt2-timer" }, e("i", { style: { width: Math.max(4, Math.min(100, prog * 100)) + "%" } })));
+          }),
+          marches.map((m) => e("div", { key: m.id, className: "bt2-army" },
+            e("div", { className: "bt2-army-top" }, e("b", null, m.title), e("span", { className: "t" }, Math.max(0, Math.ceil(m.timeLeft)) + "s")))))
+        : e("div", { className: "bt2-empty" },
+          e("div", { className: "big" }, Icon("map")),
+          e("b", null, "No armies out"),
+          e("p", null, "To attack, open the map and tap an enemy camp or another player\u2019s castle.")),
+      e("div", { className: "bt2-sec" },
+        row("map", "Open world map", "Pick a camp or a castle to attack.", onOpenMap),
+        row("shield", "Castle defense", "How your troops stand when you are attacked. They arrange themselves if you skip it.", onOpenDefense),
+        row("scroll", "Battle reports", "Every fight, with what decided it.", onOpenReports, unreadReports),
+        row("help", "Battle guide", "Positions, formations and what counters what.", onOpenGuide)),
+      e("button", { type: "button", className: "bt2-more", onClick: onClose }, "Close")));
 }
 
 // ---------- Rankings Sheet ----------
@@ -1615,7 +1910,13 @@ function App({ account, onLogout, onAuthLost }) {
   const culture = account.save.culture;
   const [viewMode, setViewMode] = useState("world"); // "city" or "world"
   const [selectedId, setSelectedId] = useState(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
+  const [mailTab, setMailTab] = useState("report");   // report | letter | chat
+  const [mailFocus, setMailFocus] = useState(null);   // report to open straight away
+  const [mailUnread, setMailUnread] = useState({ report: 0, letter: 0 });
+  const [mailTick, setMailTick] = useState(0);        // bumps when a new letter/report arrives while the panel is open
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [battleCfg, setBattleCfg] = useState(null);
   const [storageOpen, setStorageOpen] = useState(false);
   const [battleOpen, setBattleOpen] = useState(false);
   const [ranksOpen, setRanksOpen] = useState(false);
@@ -1720,6 +2021,7 @@ function App({ account, onLogout, onAuthLost }) {
   const snapRef = useRef(null);
   snapRef.current = { bByC, rByC, army, marches, soundEnabled };
   const verRef = useRef(account.save.version);
+  const lastRaidRef = useRef(0);    // when our castle was last attacked (the save version changes without our own save)
   const revRef = useRef(0);        // counts changes of the game state
   const savedRevRef = useRef(1);   // last change that reached the server (1 = the mount itself is not a change)
   const inflightRef = useRef(false);
@@ -1768,7 +2070,11 @@ function App({ account, onLogout, onAuthLost }) {
       errShownRef.current = false;
       setSaveState("saved");
     } catch (err) {
-      if (err.status === 409 && err.data && err.data.code === "stale") { stoppedRef.current = true; setConflict(true); }
+      if (err.status === 409 && err.data && err.data.code === "stale") {
+        // our castle was just attacked: the raid handler is catching up with the server's new version, save again soon
+        if (Date.now() - lastRaidRef.current < 15000) setTimeout(saveNow, 1500);
+        else { stoppedRef.current = true; setConflict(true); }
+      }
       else if (err.status === 401) { stoppedRef.current = true; onAuthLost(); }
       else {
         setSaveState("error");
@@ -1891,6 +2197,111 @@ function App({ account, onLogout, onAuthLost }) {
       return true;
     } catch (err) { handleApiError(err); return false; } finally { expBusyRef.current = false; }
   }, [flushSaved, adoptServer, showToast, handleApiError]);
+
+  // ===== PLAYER VS PLAYER: attack another castle, set the castle defense, get raided =====
+  // A castle attack is instant and decided by the SERVER (like the camps: save first, send the save version, adopt the answer).
+  // The defense formation is kept on the server too; it is checked against the SAVED army, so we save before we open it.
+  const [castleSel, setCastleSel] = useState(null);   // another player's castle that was tapped on the map
+  const [fm, setFm] = useState(null);                 // open formation editor: { mode, config, castle?, initial?, army?, key }
+  const [fmBusy, setFmBusy] = useState(false);
+  const [castleReport, setCastleReport] = useState(null);
+  const [raid, setRaid] = useState(null);             // "your castle was attacked" message from the server
+  const pvpBusyRef = useRef(false);
+  const battleCfgRef = useRef(null);
+
+  const loadBattleConfig = useCallback(async () => {
+    if (!battleCfgRef.current) battleCfgRef.current = await api.getBattleConfig();
+    return battleCfgRef.current;
+  }, []);
+
+  // the battle numbers (caps, bonuses, counters) are needed by the camp sheet and the guide too
+  useEffect(() => { loadBattleConfig().then(setBattleCfg).catch(() => {}); }, [loadBattleConfig]);
+
+  // Letters + reports: unread counter, live notices
+  const openMail = useCallback((tab, focus) => { setMailTab(tab || "report"); setMailFocus(focus || null); setMailOpen(true); setBattleOpen(false); setRaid(null); }, []);
+  useEffect(() => { battleApi.getMail(null, 1).then((r) => setMailUnread(r.unread)).catch(() => {}); }, []);
+  useEffect(() => {
+    const onSrv = (ev) => {
+      const m = ev.detail || {};
+      if (m.type !== "mail" || !m.mail) return;
+      setMailUnread((u) => ({ ...u, [m.mail.kind]: (u[m.mail.kind] || 0) + 1 }));
+      setMailTick((n) => n + 1);
+      if (m.mail.kind === "letter") showToast("New letter from " + (m.mail.fromName || "a player"));
+    };
+    window.addEventListener("kingdoms:server", onSrv);
+    return () => window.removeEventListener("kingdoms:server", onSrv);
+  }, [showToast]);
+
+  const openAttackEditor = useCallback(async (castle) => {
+    try {
+      const config = await loadBattleConfig();
+      setCastleSel(null);
+      setFm({ mode: "attack", config, castle, key: "a" + Date.now() });
+    } catch (err) { handleApiError(err); }
+  }, [loadBattleConfig, handleApiError]);
+
+  const openDefenseEditor = useCallback(async () => {
+    if (pvpBusyRef.current) return;
+    pvpBusyRef.current = true;
+    try {
+      if (!(await flushSaved())) { showToast("Saving… try again in a moment"); return; }
+      const [config, d] = await Promise.all([loadBattleConfig(), api.getDefense()]);
+      setBattleOpen(false);
+      setRaid(null);
+      setFm({ mode: "defense", config, initial: d.layout, army: d.army, key: "d" + Date.now() });
+    } catch (err) { handleApiError(err); } finally { pvpBusyRef.current = false; }
+  }, [flushSaved, loadBattleConfig, showToast, handleApiError]);
+
+  const submitFormation = useCallback(async (layout) => {
+    if (!fm || pvpBusyRef.current) return;
+    pvpBusyRef.current = true;
+    setFmBusy(true);
+    try {
+      if (fm.mode === "defense") {
+        await api.setDefense(layout);
+        setFm(null);
+        showToast("Defense saved");
+      } else {
+        if (!(await flushSaved())) { showToast("Saving… try again in a moment"); return; }
+        const r = await api.attackCastle({ castleId: fm.castle.id, layout, baseVersion: verRef.current });
+        syncClock(r.now);
+        adoptServer(r.save);
+        setFm(null);
+        setCastleReport(r.report);
+        showToast(r.report.win ? "Victory! The loot is in your storage" : "Defeat. Your army fought hard");
+      }
+    } catch (err) { handleApiError(err); } finally { pvpBusyRef.current = false; setFmBusy(false); }
+  }, [fm, flushSaved, adoptServer, showToast, handleApiError]);
+
+  // Somebody attacked OUR castle. The server already took the losses and the loot out of its copy of our save, and this
+  // client is the one that writes the save, so: take the server's new version, apply the same losses and loot here, save.
+  const onAttacked = useCallback(async (m) => {
+    if (stoppedRef.current) return;
+    lastRaidRef.current = Date.now();
+    try {
+      const { save } = await api.getSave();
+      verRef.current = save.version;
+    } catch (err) { if (err.status === 401) { stoppedRef.current = true; onAuthLost(); } return; }
+    setArmy((prev) => {
+      const cur = { ...(prev.troops[culture] || {}) };
+      for (const [id, n] of Object.entries(m.losses || {})) { cur[id] = Math.max(0, (cur[id] || 0) - n); if (!cur[id]) delete cur[id]; }
+      return { ...prev, troops: { ...prev.troops, [culture]: cur } };
+    });
+    setRByC((prev) => {
+      const cur = { ...(prev[culture] || {}) };
+      for (const [k, n] of Object.entries(m.loot || {})) cur[k] = Math.max(0, (cur[k] || 0) - n);
+      return { ...prev, [culture]: cur };
+    });
+    setRaid(m);
+    showToast((m.by || "Someone") + " attacked your castle" + (m.win ? " and was beaten back" : ""));
+    saveSoon();
+  }, [culture, onAuthLost, showToast, saveSoon]);
+
+  useEffect(() => {
+    const onSrv = (ev) => { const m = ev.detail || {}; if (m.type === "attacked") onAttacked(m); };
+    window.addEventListener("kingdoms:server", onSrv);
+    return () => window.removeEventListener("kingdoms:server", onSrv);
+  }, [onAttacked]);
 
   useEffect(() => { refreshExpeds(); }, [refreshExpeds]);
   useEffect(() => {
@@ -2030,22 +2441,16 @@ function App({ account, onLogout, onAuthLost }) {
     // Top HUD
     e("div", { className: "hud-top" },
       e("div", { className: "hud-row1" },
-        e("div", { className: "realm-crest" }, Icon("crown")),
-        e("div", { className: "ledger" },
-          resKeys.map((r) => e("div", { key: culture + "-" + r, className: "ledger-cell", "data-res": r }, Icon(RES_ICON[r]), e("b", null, e(CountNum, { value: resources[r], res: r })))),
-          e("div", { key: culture + "-coin", className: "ledger-cell coin", "data-res": "coin" }, Icon("coin"), e("b", null, e(CountNum, { value: resources.coin, res: "coin" })))),
-        e("button", {
-          className: "mode-switch-btn",
-          onClick: () => {
-            sound.playClick();
-            goView(viewMode === "city" ? "world" : "city");
-          }
-        }, Icon(viewMode === "city" ? "map" : "hall"), viewMode === "city" ? "World Map" : "City Base"),
+        e("div", { className: "player-chip" },
+          e("div", { className: "realm-crest" }, Icon("crown")),
+          e("div", { className: "player-meta" },
+            e("b", null, account.user.username),
+            e("span", null, (themes[culture] && themes[culture].kingdomName) || (themes[culture] && themes[culture].name) || culture))),
         e("button", { className: "menu-toggle", onClick: () => { sound.playClick(); setMenuOpen(true); }, "aria-label": "Menu" }, Icon("menu"))),
-      
-      // Own civilization only: it is chosen once and cannot be switched
-      e("div", { className: "culture-row" },
-        e("div", { className: "culture-tab active", style: { cursor: "default" } }, (themes[culture]?.name || culture) + " · " + account.user.username))),
+      // All five resources are always visible (no sideways scrolling)
+      e("div", { className: "ledger" },
+        resKeys.map((r) => e("div", { key: culture + "-" + r, className: "ledger-cell", "data-res": r, title: theme.resourceNames[r] }, Icon(RES_ICON[r]), e("b", null, e(CountNum, { value: resources[r], res: r })))),
+        e("div", { key: culture + "-coin", className: "ledger-cell coin", "data-res": "coin", title: "Coins" }, Icon("coin"), e("b", null, e(CountNum, { value: resources.coin, res: "coin" }))))),
 
     // Main Stage Area (Dual View)
     e("div", { className: "stage", ref: stageRef },
@@ -2057,7 +2462,7 @@ function App({ account, onLogout, onAuthLost }) {
         onJoin: (c, player) => { showToast("Welcome, " + player.name + "!"); },
         onNotice: showToast,
         onAuthLost,
-        onCastleSelect: (castle) => showToast(castle.name + " · " + ((civById(castle.civId) || {}).name || castle.civId)),
+        onCastleSelect: (castle) => setCastleSel(castle),
         onCampSelect: (camp, extra) => setCampSel({ camp, home: extra.home, rules: extra.rules }),
         expeds, expOffset,
         onOpenCity: (origin) => goView("city", origin),
@@ -2085,28 +2490,49 @@ function App({ account, onLogout, onAuthLost }) {
     // Bottom Navigation HUD
     e("div", { className: "hud-bottom" },
       e("button", { className: "nav-btn" + (viewMode === "city" ? " active" : ""), onClick: () => { sound.playClick(); goView("city"); } }, e("div", { className: "nic" }, Icon("hall")), e("span", null, "City")),
-      e("button", { className: "nav-btn" + (viewMode === "world" ? " active" : ""), onClick: () => { sound.playClick(); goView("world"); } }, e("div", { className: "nic" }, Icon("map")), e("span", null, "World Map")),
+      e("button", { className: "nav-btn" + (viewMode === "world" ? " active" : ""), onClick: () => { sound.playClick(); goView("world"); } }, e("div", { className: "nic" }, Icon("map")), e("span", null, "Map")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setBattleOpen(true); } },
         (marches.length + expeds.length) > 0 && e("span", { className: "badge" }, marches.length + expeds.length),
         e("div", { className: "nic" }, Icon("sword")), e("span", null, "Battle")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setStorageOpen(true); } }, e("div", { className: "nic" }, Icon("chest")), e("span", null, "Storage")),
-      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setChatOpen(true); } },
-        e("span", { className: "badge" }, "3"),
-        e("div", { className: "nic" }, Icon("chat")), e("span", null, "Chat")),
+      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); openMail(mailUnread.report > 0 || mailUnread.letter === 0 ? "report" : "letter"); } },
+        (mailUnread.report + mailUnread.letter) > 0 && e("span", { className: "badge" }, mailUnread.report + mailUnread.letter),
+        e("div", { className: "nic" }, Icon("mail")), e("span", null, "Letters")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setRanksOpen(true); } }, e("div", { className: "nic" }, Icon("trophy")), e("span", null, "Ranks"))),
 
     // Sheets & Overlays
     e(DetailSheet, { building: selected && selected.category !== "barracks" ? selected : null, theme, resources, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
     e(BarracksSheet, { open: !!selected && selected.category === "barracks", building: selected, culture, theme, resources, army, onClose: () => setSelectedId(null), onTrain: train }),
-    e(ChatPanel, { open: chatOpen, onClose: () => setChatOpen(false), me: account.user.username, culture }),
+    e(MailUI.MailPanel, {
+      open: mailOpen, tab: mailTab, onTab: setMailTab, focusId: mailFocus, refreshKey: mailTick, unread: mailUnread, onUnread: setMailUnread,
+      onClose: () => { setMailOpen(false); setMailFocus(null); }, onToast: showToast,
+      renderChat: () => e(ChatView, { me: account.user.username, active: mailOpen && mailTab === "chat" })
+    }),
+    guideOpen && battleCfg && e(BattleUI.GuideSheet, { config: battleCfg, onClose: () => setGuideOpen(false) }),
     e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme }),
-    e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, onNewMarch: (m) => setMarches(p => [...p, m]), expeds, serverNow }),
+    e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, expeds, serverNow, maxActive: (campSel && campSel.rules && campSel.rules.maxActive) || 3, unreadReports: mailUnread.report, onOpenDefense: openDefenseEditor, onOpenMap: () => { setBattleOpen(false); goView("world"); }, onOpenReports: () => openMail("report"), onOpenGuide: () => { setBattleOpen(false); setGuideOpen(true); } }),
     e(CampSheet, {
       camp: campSel && campSel.camp, home: campSel && campSel.home, rules: campSel && campSel.rules,
-      troops: army.troops[culture] || {}, activeCount: expeds.length,
+      troops: army.troops[culture] || {}, config: battleCfg, activeCount: expeds.length,
       onClose: () => setCampSel(null), onAttack: attackCamp
     }),
-    e(ReportSheet, { reports, onClose: () => setReports(null) }),
+    e(ReportSheet, { reports, onClose: () => setReports(null), onOpenAll: () => { setReports(null); openMail("report"); } }),
+    castleSel && e(BattleUI.CastleSheet, { castle: castleSel, civName: (civById(castleSel.civId) || {}).name, onClose: () => setCastleSel(null), onAttack: openAttackEditor }),
+    fm && e(BattleUI.FormationSheet, {
+      key: fm.key, mode: fm.mode, config: fm.config,
+      army: fm.mode === "defense" ? fm.army : (army.troops[culture] || {}),
+      initial: fm.initial,
+      title: fm.mode === "defense" ? "Castle defense" : "Attack " + fm.castle.name,
+      subtitle: fm.mode === "defense"
+        ? "This is how your troops stand when another player attacks your castle. Your troops are not used up."
+        : "We arranged your troops for you. Choose how many to send, then attack. The battle is decided at once.",
+      submitLabel: fm.mode === "defense" ? "Save defense" : "Attack",
+      busy: fmBusy,
+      onClose: () => { if (!fmBusy) setFm(null); },
+      onSubmit: submitFormation
+    }),
+    e(BattleUI.ReportSheet, { report: castleReport, role: "attacker", title: castleReport && castleReport.castleName, onClose: () => setCastleReport(null) }),
+    e(BattleUI.RaidSheet, { raid, onClose: () => setRaid(null), onOpenDefense: openDefenseEditor, onOpenReport: (r) => openMail("report", r.mailId) }),
     e(RankingsSheet, { open: ranksOpen, onClose: () => setRanksOpen(false), culture, buildingsByCulture: bByC }),
     e(MenuSheet, { open: menuOpen, onClose: () => setMenuOpen(false), soundEnabled, onToggleSound: toggleSound, username: account.user.username, saveState, onLogout: logout }),
     e("div", { className: "toast" + (toast ? " show" : "") }, toast),

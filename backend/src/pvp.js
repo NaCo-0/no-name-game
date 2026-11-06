@@ -1,7 +1,8 @@
 /** PvP: defense layout (Meta) + instant castle attack. */
 import { Castle, GameSave, Meta, sequelize } from './models.js';
 import { httpError } from './httpError.js';
-import { normalizeLayout, autoLayout, layoutArmy, simulate } from './battle.js';
+import { normalizeLayout, bestAutoLayout, layoutArmy, simulate } from './battle.js';
+import * as mail from './mail.js';
 import * as C from './battleConfig.js';
 import * as live from './live.js';
 
@@ -42,7 +43,7 @@ async function savedLayout(playerId) {
 /** Saved layout if it still fits the army, else an auto layout. */
 function usable(saved, army) {
   if (saved) { try { return normalizeLayout(saved, army); } catch { /* troops changed */ } }
-  return autoLayout(army, saved?.formation);
+  return bestAutoLayout(army, saved?.formation);
 }
 
 /** Lost troops: the wounded share comes back. */
@@ -84,7 +85,7 @@ export const attackCastle = (player, body = {}) => serial(async () => {
   const def = await loadRow(castle.playerId);
 
   const attHave = troopsOf(att), defHave = troopsOf(def);
-  const attLayout = normalizeLayout(body.layout ?? autoLayout(body.troops || {}), attHave);
+  const attLayout = normalizeLayout(body.layout ?? bestAutoLayout(body.troops || {}), attHave);
   if (def.revision < C.PROTECT_REVISION || C.armyPower(defHave, {}) < C.PROTECT_POWER) {
     throw httpError(409, 'this player is under beginner protection', { code: 'protected' });
   }
@@ -111,13 +112,26 @@ export const attackCastle = (player, body = {}) => serial(async () => {
     attackerPower: r.attackerPower, defenderPower: r.defenderPower,
     attackerFormation: attLayout.formation, defenderFormation: defLayout.formation,
     sent: layoutArmy(attLayout), survivors: r.attackerSurvivors, losses: A.dead, wounded: A.wounded,
-    defenderLosses: D.dead, defenderWounded: D.wounded, loot,
+    defenderLosses: D.dead, defenderWounded: D.wounded, defenderSent: r.defenderSent, defenderSurvivors: r.defenderSurvivors, loot,
+    effects: r.effects, slots: r.slots, events: r.events,
   };
   const version = await sequelize.transaction(async (t) => {
     const v = await write(att, withState(att, A.left, attRes), t);
     await write(def, withState(def, D.left, defRes), t);
     return v;
   });
-  live.send(castle.playerId, { type: 'attacked', by: player.username, win: !r.win, losses: D.dead, wounded: D.wounded, loot });
+  // Both sides keep the report in their letters. The attacker sees it at once (read); the defender gets a live notice.
+  const stamp = { castleId: castle.key, castleName: castle.name, attacker: player.username, defender: def.playerId, at: Date.now() };
+  const dm = await mail.deliver({
+    playerId: castle.playerId, kind: 'report', fromName: player.username,
+    subject: `${r.win ? 'Raided' : 'Held'}: ${player.username} attacked ${castle.name}`,
+    data: { role: 'defender', source: 'castle', ...stamp, report },
+  });
+  await mail.deliver({
+    playerId: player.id, kind: 'report', read: true,
+    subject: `${r.win ? 'Victory' : 'Defeat'}: attacked ${castle.name}`,
+    data: { role: 'attacker', source: 'castle', ...stamp, report },
+  });
+  live.send(castle.playerId, { type: 'attacked', by: player.username, win: !r.win, losses: D.dead, wounded: D.wounded, loot, mailId: dm.id });
   return { report, save: { version, troops: A.left, resources: attRes } };
 });

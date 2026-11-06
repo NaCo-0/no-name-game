@@ -30,3 +30,9 @@ export const getBattleConfig = () => request('GET', '/api/game/battle-config');
 export const getDefense = () => request('GET', '/api/game/defense');
 export const setDefense = (layout, baseVersion) => request('PUT', '/api/game/defense', { layout, baseVersion });
 export const attackCastle = ({ castleId, troops, layout, baseVersion }) => request('POST', '/api/game/attack-castle', { castleId, troops, layout, baseVersion });
+
+// ---- letters + battle reports ----
+export const getMail = (kind, limit) => request('GET', `/api/game/mail?${new URLSearchParams({ ...(kind ? { kind } : {}), ...(limit ? { limit } : {}) })}`);
+export const sendMail = ({ to, subject, text }) => request('POST', '/api/game/mail', { to, subject, text });
+export const markMailRead = (body) => request('POST', '/api/game/mail/read', body || {});
+export const deleteMail = (id) => request('DELETE', `/api/game/mail/${encodeURIComponent(id)}`);

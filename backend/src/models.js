@@ -85,6 +85,18 @@ export const ChatMessage = sequelize.define('ChatMessage', {
   ip: { type: DataTypes.STRING, allowNull: true },
 }, { updatedAt: false, indexes: [{ fields: ['createdAt'] }, { fields: ['channel', 'culture', 'id'] }, { fields: ['playerId'] }] });
 
+// Letters between players and battle reports (one row per recipient). Reports keep their full data in `data`.
+export const Mail = sequelize.define('Mail', {
+  playerId: { type: DataTypes.INTEGER, allowNull: false }, // recipient
+  kind: { type: DataTypes.STRING(8), allowNull: false },   // 'letter' | 'report'
+  fromId: { type: DataTypes.INTEGER, allowNull: true },
+  fromName: { type: DataTypes.STRING, allowNull: true },
+  subject: { type: DataTypes.STRING(120), allowNull: false },
+  body: { type: DataTypes.STRING(2000), allowNull: true },
+  data: { type: DataTypes.JSON, allowNull: true },
+  isRead: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+}, { updatedAt: false, indexes: [{ fields: ['playerId', 'kind', 'id'] }] });
+
 export const Meta = sequelize.define('Meta', {
   key: { type: DataTypes.STRING(40), primaryKey: true },
   value: { type: DataTypes.TEXT, allowNull: true },
