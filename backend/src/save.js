@@ -1,11 +1,12 @@
 /**
- * Validation of the save the game client (and the admin panel) sends. The client is still the one that
- * calculates production, costs and training (see README "Server-authoritative later"),
- * so here we only make sure the data has the right SHAPE and sane limits: nothing
- * nested weirdly, no NaN / negative numbers, no huge payloads, only known cultures.
+ * Validation of the save the admin panel sends (and the shape of what a player may save).
+ * Players only save `marches` + `settings` themselves (CLIENT_KEYS): buildings, resources and army are
+ * calculated by the server (economy.js). Here we make sure the data has the right SHAPE and sane limits:
+ * nothing nested weirdly, no NaN / negative numbers, no huge payloads, only known cultures.
  */
 import { CULTURES, RESOURCE_KEYS } from './constants.js';
 import { httpError } from './httpError.js';
+import { MAX_LEVEL } from './economy.js';
 
 const bad = (what) => httpError(400, `invalid save: ${what}`, { code: 'invalid_save' });
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
@@ -47,7 +48,7 @@ function buildings(list, what) {
   return list.map((b, i) => {
     const o = flat(b, `${what}[${i}]`);
     str(o.id, 40, `${what}[${i}].id`);
-    o.level = int(o.level ?? 1, 1, 200, `${what}[${i}].level`);
+    o.level = int(o.level ?? 1, 1, MAX_LEVEL, `${what}[${i}].level`);
     o.stored = num(o.stored ?? 0, 0, 1e9, `${what}[${i}].stored`);
     o.readyAt = num(o.readyAt ?? 0, 0, 4e12, `${what}[${i}].readyAt`);
     return o;
@@ -121,6 +122,8 @@ export function sanitizeSave(body) {
 
 /** Keys of `data` that the game itself writes. Anything else in `data` (e.g. added by an admin) is kept untouched. */
 export const GAME_KEYS = ['buildings', 'resources', 'army', 'marches', 'settings'];
+/** What a PLAYER's client may write itself. Buildings, resources and army are calculated by the server (economy.js). */
+export const CLIENT_KEYS = ['marches', 'settings'];
 
 /** New data = old data + the cleaned parts the client sent (a partial save only changes what it carries). */
 export const mergeSave = (oldData, clean) => ({ ...(oldData || {}), ...clean });

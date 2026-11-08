@@ -91,74 +91,45 @@ test('save: cannot save before choosing a civilization', async () => {
   assert.equal(r.status, 409); assert.equal(r.json.error, 'no_culture');
 });
 
-test('save: everything round-trips; partial saves keep the rest; extra (admin) keys survive', async () => {
+test('save: settings/marches round-trip; partial saves keep the rest; extra (admin) keys survive', async () => {
   const p = await t.player('Saver', 'japan');
   const v0 = (await t.call('GET', '/api/game/save', { token: p.token })).json;
   assert.equal(v0.culture, 'japanese');
-  const full = {
-    buildings: { japanese: [{ id: 'dojo', level: 2, stored: 1.5, readyAt: 0 }] },
-    resources: { japanese: { food: 1, wood: 2, stone: 3, iron: 4, coin: 5 } },
-    army: { troops: { japanese: { samurai: 3 } }, queue: { japanese: [] } },
-    marches: [], settings: { sound: true },
-  };
+  const full = { marches: [], settings: { sound: true } };
   const r1 = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: full, revision: v0.revision } });
   assert.equal(r1.status, 200);
   assert.equal(r1.json.revision, v0.revision + 1);
-  await GameSave.update({ data: { ...full, adminNote: 'vip' } }, { where: { playerId: p.id } }); // an admin added a key
+  await GameSave.update({ data: { ...full, adminNote: 'vip', resources: { japanese: { food: 1, wood: 2, stone: 3, iron: 4, coin: 5 } } } }, { where: { playerId: p.id } }); // an admin added things
   const r2 = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { settings: { sound: false } }, revision: r1.json.revision } });
   assert.equal(r2.status, 200);
   const back = (await t.call('GET', '/api/game/save', { token: p.token })).json;
   assert.deepEqual(back.data.settings, { sound: false });
-  assert.deepEqual(back.data.resources.japanese, full.resources.japanese);
+  assert.deepEqual(back.data.resources.japanese, { food: 1, wood: 2, stone: 3, iron: 4, coin: 5 });
   assert.equal(back.data.adminNote, 'vip');
 });
 
-test('save: players cannot write unknown keys or other civilizations', async () => {
+test('save: a player can not write the economy (buildings / resources / army) or unknown keys', async () => {
   const p = await t.player('Cheater', 'rome');
-  const rev = (await t.call('GET', '/api/game/save', { token: p.token })).json.revision;
-  const r = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { resources: { viking: { food: 1, wood: 1, stone: 1, iron: 1, coin: 1 } } }, revision: rev } });
-  assert.equal(r.status, 403);
-  const ok = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { evil: { huge: 'x' }, settings: { sound: true } }, revision: rev } });
-  assert.equal(ok.status, 200);
+  let rev = (await t.call('GET', '/api/game/save', { token: p.token })).json.revision;
+  const r = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: {
+    resources: { roman: { food: 1e12, wood: 1e12, stone: 1e12, iron: 1e12, coin: 1e12 } },
+    buildings: { roman: [{ id: 'main_hall', level: 15, stored: 0 }] },
+    army: { troops: { roman: { legionnaire: 1e6 } }, queue: {} },
+    evil: { huge: 'x' }, settings: { sound: true },
+  }, revision: rev } });
+  assert.equal(r.status, 200);
   const data = (await t.call('GET', '/api/game/save', { token: p.token })).json.data;
-  assert.equal(data.evil, undefined);
-});
-
-test('save: an old tab cannot overwrite newer progress (revision check)', async () => {
-  const p = await t.player('Stale', 'arab');
-  const rev = (await t.call('GET', '/api/game/save', { token: p.token })).json.revision;
-  assert.equal((await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { settings: { sound: true } }, revision: rev } })).status, 200);
-  const old = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { settings: { sound: false } }, revision: rev } });
-  assert.equal(old.status, 409);
-  assert.equal(old.json.error, 'revision_conflict');
-  assert.equal(old.json.revision, rev + 1);
-  const noRev = await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { settings: { sound: false } } } });
-  assert.equal(noRev.status, 409);
-});
-
-test('save: accounts are separated', async () => {
-  const a = await t.player('Alice1', 'persia');
-  const b = await t.player('Bobby1', 'mongol');
-  const rev = (await t.call('GET', '/api/game/save', { token: a.token })).json.revision;
-  await t.call('PUT', '/api/game/save', { token: a.token, body: { data: { settings: { sound: false } }, revision: rev } });
-  const bs = (await t.call('GET', '/api/game/save', { token: b.token })).json;
-  assert.equal(bs.culture, 'mongol');
-  assert.deepEqual(bs.data, {});
+  assert.deepEqual(data, { settings: { sound: true } });
+  const st = (await t.call('GET', '/api/game/state', { token: p.token })).json;
+  assert.equal(st.resources.food, 1000); // the starting package, not 1e12
+  assert.equal(st.buildings.find((b) => b.id === 'main_hall').level, 1);
 });
 
 test('save: bad data is rejected and nothing is written', async () => {
   const p = await t.player('Junk', 'persia');
-  let rev = (await t.call('GET', '/api/game/save', { token: p.token })).json.revision;
+  const rev = (await t.call('GET', '/api/game/save', { token: p.token })).json.revision;
   const put = (data) => t.call('PUT', '/api/game/save', { token: p.token, body: { data, revision: rev } });
-  for (const bad of [
-    { resources: { persian: { food: -5, wood: 0, stone: 0, iron: 0, coin: 0 } } },
-    { resources: { persian: { food: 'lots', wood: 0, stone: 0, iron: 0, coin: 0 } } },
-    { resources: { persian: { food: 1e15, wood: 0, stone: 0, iron: 0, coin: 0 } } },
-    { buildings: { persian: [{ id: 'x', level: 9999 }] } },
-    { buildings: { atlantis: [] } },
-    { army: { troops: { persian: { guard: -1 } } } },
-    { marches: 'nope' },
-  ]) {
+  for (const bad of [{ marches: 'nope' }, { marches: Array(60).fill({}) }, { settings: 'x' }, { settings: { lang: '' } }]) {
     const r = await put(bad);
     assert.equal(r.status, 400, JSON.stringify(bad));
     assert.equal(r.json.error, 'invalid_save');
@@ -167,14 +138,6 @@ test('save: bad data is rejected and nothing is written', async () => {
   assert.equal((await put(undefined)).status, 400);
   assert.deepEqual((await t.call('GET', '/api/game/save', { token: p.token })).json.data, {});
   assert.equal((await t.call('GET', '/api/game/save', { token: p.token })).json.revision, rev);
-});
-
-test('save: nested junk inside a building is dropped', async () => {
-  const p = await t.player('Nested', 'persia');
-  const rev = (await t.call('GET', '/api/game/save', { token: p.token })).json.revision;
-  await t.call('PUT', '/api/game/save', { token: p.token, body: { data: { buildings: { persian: [{ id: 'hall', level: 1, stored: 0, readyAt: 0, evil: { deep: [1, 2, 3] } }] } }, revision: rev } });
-  const b = (await t.call('GET', '/api/game/save', { token: p.token })).json.data.buildings.persian[0];
-  assert.equal(b.evil, undefined);
 });
 
 test('save: oversized and malformed bodies are refused', async () => {

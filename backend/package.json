@@ -8,7 +8,8 @@
     "dev": "node --watch src/server.js",
     "seed": "node src/seed.js",
     "seed:demo": "node src/seed.js --demo",
-    "test": "node --test --test-force-exit --test-timeout=120000 test/*.test.js"
+    "test": "node --test --test-force-exit --test-timeout=120000 test/*.test.js",
+    "balance": "node scripts/balance-sim.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

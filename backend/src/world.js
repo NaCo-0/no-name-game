@@ -15,6 +15,7 @@ import { rollLevel, makeCampArmy, makeCampLoot, newCampKey } from './camps.js';
 import * as NPC from './npcConfig.js';
 import * as live from './live.js';
 import * as mail from './mail.js';
+import { prepare } from './economy.js';
 
 export function createWorld({ spawner, npc = {} }) {
   const N = {
@@ -216,7 +217,7 @@ export function createWorld({ spawner, npc = {} }) {
       const camp = await NpcCamp.findOne({ where: { key: String(body.campId || '') } });
       if (!camp) throw httpError(404, 'this camp does not exist (any more)', { code: 'no_camp' });
       if (!body.troops || typeof body.troops !== 'object' || Array.isArray(body.troops)) throw httpError(400, 'troops: choose the troops to send');
-      const data = row.data || {};
+      const data = prepare(row.data, row.culture, Date.now()); // finished training batches count as troops
       const have = ((data.army || {}).troops || {})[row.culture] || {};
       const sent = {};
       let total = 0;
@@ -260,7 +261,7 @@ export function createWorld({ spawner, npc = {} }) {
       staleCheck(row, body.baseVersion, 'claim');
       const now = Date.now();
       const home = await Expedition.findAll({ where: { playerId: player.id, status: 'returning', claimed: false, returnAt: { [Op.lte]: now } }, order: [['id', 'ASC']] });
-      const data = row.data || {};
+      const data = prepare(row.data, row.culture, now);
       const army = { ...(data.army || { troops: {}, queue: {} }) };
       const troops = { ...(((army.troops || {})[row.culture]) || {}) };
       const resources = { food: 0, wood: 0, stone: 0, iron: 0, coin: 0, ...(((data.resources || {})[row.culture]) || {}) };

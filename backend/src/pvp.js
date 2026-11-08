@@ -5,6 +5,7 @@ import { normalizeLayout, bestAutoLayout, layoutArmy, simulate } from './battle.
 import * as mail from './mail.js';
 import * as C from './battleConfig.js';
 import * as live from './live.js';
+import { prepare } from './economy.js';
 
 let chain = Promise.resolve();
 const serial = (fn) => { const run = chain.then(fn, fn); chain = run.catch(() => {}); return run; };
@@ -32,6 +33,7 @@ async function write(row, data, transaction) {
 async function loadRow(playerId) {
   const row = await GameSave.findOne({ where: { playerId } });
   if (!row?.culture) throw httpError(409, 'choose a civilization first (POST /api/game/join)', { code: 'no_culture' });
+  row.data = prepare(row.data, row.culture, Date.now()); // economy up to date (finished training counts as troops); written back with the battle result
   return row;
 }
 

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { Player, GameSave, ChatMessage, sequelize } from '../models.js';
 import { hashPassword, verifyPassword, signPlayer, playerAuth, playerAuthQuery, validPassword, validUsername } from '../auth.js';
-import { sanitizeSave, assertOnlyCulture, mergeSave, publicSave, GAME_KEYS } from '../save.js';
+import { sanitizeSave, assertOnlyCulture, mergeSave, publicSave, CLIENT_KEYS } from '../save.js';
 import { CULTURE_TO_CIV } from '../constants.js';
 import { httpError } from '../httpError.js';
 import { config } from '../config.js';
@@ -10,7 +10,7 @@ import * as live from '../live.js';
 import { publicConfig } from '../battleConfig.js';
 import * as pvp from '../pvp.js';
 import * as mail from '../mail.js';
-
+import * as eco from '../economy.js';
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const userJson = (p) => ({ id: p.id, username: p.username });
@@ -68,7 +68,8 @@ export default function gameRoutes(world) {
   async function saveHandler(req, res) {
     const { data, revision } = req.body || {};
     if (!isObj(data)) return res.status(400).json({ error: 'bad_data', message: 'data must be an object' });
-    const game = Object.fromEntries(GAME_KEYS.filter((k) => k in data).map((k) => [k, data[k]])); // faghat kelid-haye bazi
+    // Buildings / resources / army are owned by the SERVER (economy.js): the client can only save marches + settings.
+    const game = Object.fromEntries(CLIENT_KEYS.filter((k) => k in data).map((k) => [k, data[k]]));
     const clean = sanitizeSave(game);
     const out = await sequelize.transaction(async (t) => {
       const s = await GameSave.findOne({ where: { playerId: req.player.id }, transaction: t });
@@ -92,6 +93,43 @@ export default function gameRoutes(world) {
     res.json({ culture: s.culture, data: s.data, revision: s.revision });
   });
   r.put('/game/save', saveHandler);
+
+  // ---------- economy (server-authoritative: the client asks, the server calculates) ----------
+  const econLimiter = rateLimit({ windowMs: 60 * 1000, limit: 120, keyGenerator: (req) => `p${req.player.id}`, standardHeaders: true, legacyHeaders: false, message: { error: 'too_many_requests', message: 'too many actions: slow down a little' } });
+
+  /** One locked read-modify-write of the save: prepare (init + settle), apply `fn`, write with revision+1, answer with the new state. */
+  function mutate(playerId, fn) {
+    return sequelize.transaction(async (t) => {
+      const row = await GameSave.findOne({ where: { playerId }, transaction: t });
+      if (!row.culture) throw httpError(409, 'choose a civilization first (POST /api/game/join)', { code: 'no_culture' });
+      const now = Date.now();
+      const d = eco.prepare(row.data, row.culture, now);
+      fn(d, row.culture, now);
+      const [changed] = await GameSave.update({ data: d, revision: row.revision + 1 }, { where: { id: row.id, revision: row.revision }, transaction: t });
+      if (!changed) throw httpError(409, 'stale save: try again', { code: 'stale', version: row.revision });
+      return { ok: true, version: row.revision + 1, ...eco.view(d, row.culture, now) };
+    });
+  }
+
+  r.get('/game/state', async (req, res) => {
+    const row = await GameSave.findOne({ where: { playerId: req.player.id } });
+    if (!row.culture) throw httpError(409, 'choose a civilization first (POST /api/game/join)', { code: 'no_culture' });
+    if (eco.needsInit(row.data, row.culture)) return res.json(await mutate(req.player.id, () => {})); // first visit / old save: create it once
+    const now = Date.now();
+    res.json({ ok: true, version: row.revision, ...eco.view(eco.prepare(row.data, row.culture, now), row.culture, now) });
+  });
+  r.post('/game/collect', econLimiter, async (req, res) => {
+    const id = typeof req.body?.id === 'string' ? req.body.id : null;
+    res.json(await mutate(req.player.id, (d, c) => { eco.collect(d, c, id); }));
+  });
+  r.post('/game/upgrade', econLimiter, async (req, res) => {
+    const id = String(req.body?.id ?? '');
+    res.status(201).json(await mutate(req.player.id, (d, c, now) => eco.startUpgrade(d, c, id, now)));
+  });
+  r.post('/game/train', econLimiter, async (req, res) => {
+    const { troopId, count } = req.body || {};
+    res.status(201).json(await mutate(req.player.id, (d, c, now) => eco.startTraining(d, c, String(troopId ?? ''), count, now)));
+  });
 
   // ---------- donya ----------
   // Vorood: avvalin bar tamaddon va ghale entekhab mishe (yek bar). Bad az on tamaddon-e server hamishe bar-e.

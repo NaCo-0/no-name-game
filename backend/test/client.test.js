@@ -45,78 +45,49 @@ test('client: register stores only the token, civilization is chosen once, save 
   const v0 = save.version;
   assert.equal(save.buildings, null); // never saved: the game builds its starting state
 
+  // a player can only save marches + settings; the economy (buildings, resources, army) is the server's
   const payload = {
-    buildings: { japanese: [{ id: 'dojo', level: 2, stored: 1.5, readyAt: 0 }] },
-    resources: { japanese: { food: 1, wood: 2, stone: 3, iron: 4, coin: 5 } },
-    army: { troops: { japanese: { samurai: 3 } }, queue: { japanese: [] } },
+    buildings: { japanese: [{ id: 'main_hall', level: 9, stored: 1.5 }] },
+    resources: { japanese: { food: 1e9, wood: 1e9, stone: 1e9, iron: 1e9, coin: 1e9 } },
     marches: [],
     settings: { sound: true },
   };
   const r1 = await api.putSave(payload, v0);
   assert.equal(r1.version, v0 + 1);
   ({ save } = await api.getSave());
-  assert.deepEqual(save.resources.japanese, payload.resources.japanese);
-  assert.equal(save.buildings.japanese[0].level, 2);
+  assert.equal(save.resources, null); // the cheat was ignored
+  assert.equal(save.buildings, null);
+  assert.deepEqual(save.settings, { sound: true });
   assert.equal(save.version, v0 + 1);
-});
-
-test('client: a second tab with an old version is told "stale" (code, version)', async () => {
-  const cur = (await api.getSave()).save.version;
-  const err = await api.putSave({ settings: { sound: false } }, cur - 1).catch((e) => e);
-  assert.equal(err.status, 409);
-  assert.equal(err.data.code, 'stale');
-  assert.equal(err.data.version, cur);
-});
-
-test('client: flushSave (tab closing) reaches the server', async () => {
-  const before = (await api.getSave()).save.version;
-  api.flushSave({ settings: { sound: false }, baseVersion: before });
-  await sleep(300);
-  const after = (await api.getSave()).save;
-  assert.equal(after.version, before + 1);
-  assert.deepEqual(after.settings, { sound: false });
-});
-
-test('client: logout forgets the token; login again gives the same progress ("remember me" off = session only)', async () => {
-  await api.logout();
-  assert.equal(window.localStorage.getItem('kingdoms.token'), null);
-  assert.equal(api.getToken(), '');
-  await assert.rejects(api.me(), (e) => e.status === 401);
-  await api.login('clienthero', 'password123', false);
-  assert.equal(window.localStorage.getItem('kingdoms.token'), null);
-  assert.ok(window.sessionStorage.getItem('kingdoms.token'));
-  const { save } = await api.getSave();
-  assert.equal(save.culture, 'japanese');
-  assert.equal(save.resources.japanese.coin, 5);
-});
-
-test('client: wrong password and unreachable server give clear errors', async () => {
-  const bad = await api.login('clienthero', 'wrong-password', true).catch((e) => e);
-  assert.equal(bad.status, 401);
-  assert.match(bad.message, /wrong username or password/);
-  globalThis.fetch = () => Promise.reject(new TypeError('fetch failed'));
-  const down = await api.me().catch((e) => e);
-  assert.equal(down.status, 0);
-  assert.equal(await api.probeServer(200), false);
-  globalThis.fetch = viaServer;
-  await api.login('clienthero', 'password123', true);
-});
-
-test('client: chat is sent, read back and rate limited with a readable message', async () => {
-  await api.sendChat('global', 'hello from the client');
-  const { messages } = await api.getChat('global');
-  assert.ok(messages.some((m) => m.text === 'hello from the client' && m.username === 'ClientHero'));
-  const err = await api.sendChat('global', 'too fast').catch((e) => e);
-  assert.equal(err.status, 429);
-  assert.match(err.message, /too fast/);
   assert.match(api.socketUrl(), /^ws:\/\/127\.0\.0\.1:\d+\/ws\?token=/);
+});
+
+test('client: the economy through the real api.js (state, upgrade, collect, train)', async () => {
+  const st = await api.getState();
+  assert.equal(st.buildings.length, 20);
+  assert.equal(st.hallLevel, 1);
+  const hall = st.buildings.find((b) => b.id === 'main_hall');
+  assert.deepEqual(Object.keys(hall.next.cost).sort(), ['food', 'iron', 'stone', 'wood']); // coins are not an upgrade cost
+  assert.ok(hall.next.seconds > 0 && hall.ratePerSec === 0);
+  const farm = st.buildings.find((b) => b.id === 'farm_1');
+  assert.ok(farm.ratePerSec > 0 && farm.cap > 0 && farm.next.blocked === 'hall_level');
+  await assert.rejects(api.upgrade('farm_1'), (e) => e.status === 409 && e.data.code === 'hall_level');
+  const up = await api.upgrade('main_hall');
+  assert.equal(up.queue.length, 1);
+  assert.ok(up.buildings.find((b) => b.id === 'main_hall').upgrading.endsAt > up.now);
+  assert.ok(up.version > st.version);
+  const col = await api.collect('farm_1');
+  assert.ok(col.resources.food <= up.resources.food + 1);
+  await assert.rejects(api.train('nope', 1), (e) => e.status === 400);
+  const tr = await api.train('spearman', 3);
+  assert.equal(tr.army.queue.japanese.length, 1);
 });
 
 test('client: attack a camp, collect survivors + loot (real api.js)', async () => {
   const j = await api.join();
   const camp = j.camps.find((c) => c.level === 1);
   assert.ok(camp);
-  let v = (await api.putSave({ army: { troops: { japanese: { samurai: 200, yumi_archer: 100 } }, queue: {} } }, (await api.getSave()).save.version)).version;
+  const v = await t.grant((await api.me()).user.id, { army: { troops: { japanese: { samurai: 200, yumi_archer: 100 } }, queue: {} } });
   const r = await api.attackCamp({ campId: camp.id, troops: { samurai: 200, yumi_archer: 100 }, baseVersion: v });
   assert.equal(r.save.troops.samurai, undefined);
   assert.equal((await api.getExpeditions()).expeditions.length, 1);

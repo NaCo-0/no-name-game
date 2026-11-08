@@ -6,12 +6,9 @@ let t;
 before(async () => { t = await boot({ npc: { marchMinMs: 30, marchMsPerTile: 0, respawnMs: 60000 } }); });
 after(async () => { await t.close(); });
 
-async function giveTroops(token, troops, revision) {
-  const r = await t.call('PUT', '/api/game/save', {
-    token, body: { revision, data: { army: { troops: { persian: troops }, queue: {} }, resources: { persian: { food: 0, wood: 0, stone: 0, iron: 0, coin: 0 } } } },
-  });
-  assert.equal(r.status, 200);
-  return r.json.revision;
+async function giveTroops(token, troops) {
+  const id = (await t.call('GET', '/api/auth/me', { token })).json.user.id;
+  return t.grant(id, { army: { troops: { persian: troops }, queue: { persian: [] } }, resources: { persian: { food: 0, wood: 0, stone: 0, iron: 0, coin: 0 } } });
 }
 const atk = (token, campId, troops, baseVersion) => t.call('POST', '/api/game/attack', { token, body: { campId, troops, baseVersion } });
 const claim = (token, baseVersion) => t.call('POST', '/api/game/expeditions/claim', { token, body: { baseVersion } });

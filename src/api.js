@@ -112,6 +112,15 @@ const toSave = (d) => {
     marches: x.marches ?? [], settings: x.settings ?? {},
   };
 };
+/** The whole economy, calculated by the server: { now, version, buildings[{level, stored, ratePerSec, cap, upgrading, next{cost,seconds,blocked}}], resources, queue, army, slots, hallLevel }. */
+export const getState = () => request('GET', '/api/game/state');
+/** Move what the producers hold into the treasury (one building by id, or everything). Same answer shape as getState. */
+export const collect = (id) => request('POST', '/api/game/collect', id ? { id } : {});
+/** Start an upgrade (needs the money, a free builder and a Main Hall that is at least as high). Same answer shape as getState. */
+export const upgrade = (id) => request('POST', '/api/game/upgrade', { id });
+/** Start training `count` of a troop. Same answer shape as getState. */
+export const train = (troopId, count) => request('POST', '/api/game/train', { troopId, count });
+
 export const getSave = async () => ({ save: toSave(await request('GET', '/api/game/save')) });
 
 /** @returns {Promise<{version:number}>}  rejects with ApiError(409, data.code === 'stale') if another tab (or the admin) saved in between */

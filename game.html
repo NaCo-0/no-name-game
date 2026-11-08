@@ -861,15 +861,14 @@ function CountNum({ value, res }) {
   }, [value]);
   return fmt(shown);
 }
-function upgradeCost(l) { const b = 40 * Math.pow(1.6, l - 1); return { wood: Math.round(b), stone: Math.round(b * .8), coin: Math.round(b * .5) }; }
-function productionRate(l) { return 5 + (l - 1) * 3; }
-function capacity(l) { return 200 + (l - 1) * 150; }
+// Costs, production rates, capacities and upgrade times are NOT calculated here: the server (backend/src/economy.js)
+// sends them with every building (b.next, b.ratePerSec, b.cap, b.upgrading).
 function isPersian(s) { return /[\u0600-\u06FF]/.test(s); }
 function nowHHMM() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ":" + String(d.getMinutes()).padStart(2,'0'); }
 
 
 // ---------- Hotspot component for City View ----------
-function Hotspot({ b, theme, showCollect, active, onSelect, onCollect }) {
+function Hotspot({ b, theme, showCollect, active, upgradeLeft, onSelect, onCollect }) {
   const label = theme.labels[b.id] || { name: b.id };
   const zone = { left: b.x + "%", top: b.y + "%", width: b.w + "%", height: b.h + "%" };
   const plate = { left: b.plateX + "%", top: b.plateY + "%", width: b.cover ? b.plateW + "%" : "auto", justifyContent: b.cover ? "center" : "flex-start" };
@@ -878,7 +877,7 @@ function Hotspot({ b, theme, showCollect, active, onSelect, onCollect }) {
     e("div", { className: "hotspot", style: zone, role: "button", tabIndex: 0, onClick: () => { sound.playClick(); onSelect(b); } }),
     e("div", { className: "plate" + (active ? " active" : ""), style: plate, onClick: () => { sound.playClick(); onSelect(b); } },
       e("div", { className: "plate-icon" }, Icon(CAT_ICON[b.category] || "hall")),
-      e("div", { className: "plate-text" }, e("span", { className: "plate-name" }, label.name), e("span", { className: "plate-level" }, "Lv. " + b.level))
+      e("div", { className: "plate-text" }, e("span", { className: "plate-name" }, label.name), e("span", { className: "plate-level" }, upgradeLeft ? "Lv. " + b.level + " → " + b.upgrading.toLevel + " · " + upgradeLeft : "Lv. " + b.level))
     ),
     showCollect && e("div", { className: "collect-badge", style: badgePos, onClick: (ev) => { ev.stopPropagation(); onCollect(b, ev.currentTarget); } },
       Icon("hand"), e("div", { className: "res" }, Icon(RES_ICON[b.produces])))
@@ -886,14 +885,22 @@ function Hotspot({ b, theme, showCollect, active, onSelect, onCollect }) {
 }
 
 // ---------- Detail Sheet ----------
-function DetailSheet({ building, theme, resources, onClose, onCollect, onUpgrade }) {
+const RES_ORDER = ["food", "wood", "stone", "iron"];
+function DetailSheet({ building, theme, resources, hallLevel, serverNow, onClose, onCollect, onUpgrade }) {
   if (!building) return e("div", { className: "overlay" });
   const label = theme.labels[building.id] || { name: building.id, desc: "" };
   const isProducer = !!building.produces;
-  const rate = productionRate(building.level), cap = capacity(building.level);
+  const cap = building.cap || 0;
   const stored = Math.min(building.stored || 0, cap);
-  const cost = upgradeCost(building.level);
-  const canAfford = resources.wood >= cost.wood && resources.stone >= cost.stone && resources.coin >= cost.coin;
+  const next = building.next, up = building.upgrading;
+  const cost = next ? next.cost : {};
+  const canAfford = next && RES_ORDER.every((r) => !cost[r] || (resources[r] || 0) >= cost[r]);
+  const blockedText = !next ? "Maximum level reached"
+    : next.blocked === "hall_level" ? "Upgrade the Main Hall to Level " + (building.level + 1) + " first"
+    : next.blocked === "queue_full" ? "All builders are busy"
+    : null;
+  const left = up ? Math.max(0, (up.endsAt - serverNow()) / 1000) : 0;
+  const pct = up ? Math.min(100, Math.round(100 * (1 - (up.endsAt - serverNow()) / Math.max(1, up.endsAt - up.startedAt)))) : 0;
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
     e("div", { className: "sheet" },
       e("div", { className: "sheet-head" },
@@ -903,16 +910,20 @@ function DetailSheet({ building, theme, resources, onClose, onCollect, onUpgrade
       e("p", { className: "sheet-desc" }, label.desc),
       isProducer && e(React.Fragment, null,
         e("div", { className: "prod-row" },
-          e("div", { className: "prod-info" }, Icon(RES_ICON[building.produces]), rate + "/sec · " + fmt(stored) + " / " + fmt(cap)),
+          e("div", { className: "prod-info" }, Icon(RES_ICON[building.produces]), fmt(building.ratePerHour) + "/hr · " + fmt(stored) + " / " + fmt(cap)),
           e("div", { className: "prod-amount" }, "+" + fmt(stored))),
         e("button", { className: "collect-btn", disabled: stored < 1, onClick: (ev) => onCollect(building, ev.currentTarget) }, Icon("hand"), stored < 1 ? "Nothing to collect" : "Collect " + fmt(stored) + " " + theme.resourceNames[building.produces])),
       e("div", { className: "upgrade-box" },
-        e("div", { className: "ub-head" }, e("b", null, "Upgrade to Level " + (building.level + 1)), isProducer && e("span", { className: "arrow" }, rate + "/s → " + productionRate(building.level + 1) + "/s")),
-        e("div", { className: "cost-list" },
-          e("div", { className: "cost-chip" + (resources.wood < cost.wood ? " insufficient" : "") }, Icon("wood"), fmt(cost.wood)),
-          e("div", { className: "cost-chip" + (resources.stone < cost.stone ? " insufficient" : "") }, Icon("stone"), fmt(cost.stone)),
-          e("div", { className: "cost-chip" + (resources.coin < cost.coin ? " insufficient" : "") }, Icon("coin"), fmt(cost.coin))),
-        e("div", { className: "action-row" }, e("button", { className: "action-btn primary", disabled: !canAfford, onClick: () => onUpgrade(building, cost) }, Icon("arrowUp"), "Upgrade"))),
+        up ? e(React.Fragment, null,
+          e("div", { className: "ub-head" }, e("b", null, "Upgrading to Level " + up.toLevel), e("span", { className: "arrow" }, fmtTime(left) + " left")),
+          e("div", { className: "cost-list" }, e("div", { className: "cost-chip" }, pct + "% done")))
+        : next ? e(React.Fragment, null,
+          e("div", { className: "ub-head" }, e("b", null, "Upgrade to Level " + next.level), e("span", { className: "arrow" }, "takes " + fmtTime(next.seconds))),
+          e("div", { className: "cost-list" },
+            RES_ORDER.filter((r) => cost[r] > 0).map((r) => e("div", { key: r, className: "cost-chip" + ((resources[r] || 0) < cost[r] ? " insufficient" : "") }, Icon(RES_ICON[r]), fmt(cost[r])))),
+          blockedText && e("p", { className: "sheet-desc" }, blockedText),
+          e("div", { className: "action-row" }, e("button", { className: "action-btn primary", disabled: !canAfford || !!blockedText, onClick: () => onUpgrade(building) }, Icon("arrowUp"), "Upgrade")))
+        : e("div", { className: "ub-head" }, e("b", null, blockedText))),
       e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
     ));
 }
@@ -1065,11 +1076,11 @@ function ChatView({ me, active }) {
 }
 
 // ---------- Storage / Treasury Sheet ----------
-function StorageSheet({ open, onClose, resources, buildings, theme }) {
+function StorageSheet({ open, onClose, resources, buildings, theme, onCollectAll }) {
   if (!open) return null;
   const rates = { food: 0, wood: 0, stone: 0, iron: 0 };
   buildings.forEach(b => {
-    if (b.produces && rates[b.produces] !== undefined) rates[b.produces] += productionRate(b.level);
+    if (b.produces && rates[b.produces] !== undefined) rates[b.produces] += (b.ratePerHour || 0);
   });
   const resKeys = ["food", "wood", "stone", "iron", "coin"];
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
@@ -1080,11 +1091,12 @@ function StorageSheet({ open, onClose, resources, buildings, theme }) {
         e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
       e("p", { className: "sheet-desc" }, "Overview of stockpiled provisions and net hourly yields for this civilization."),
       resKeys.map(r => {
-        const ratePerHour = (rates[r] || 0) * 3600;
+        const ratePerHour = rates[r] || 0;
         return e("div", { key: r, className: "prod-row", "data-res": r },
           e("div", { className: "prod-info" }, Icon(RES_ICON[r]), theme.resourceNames[r] || "Coin", r !== 'coin' && e("span", null, " (+" + fmt(ratePerHour) + "/hr)")),
           e("div", { className: "prod-amount" }, fmt(resources[r])));
       }),
+      e("div", { className: "action-row" }, e("button", { className: "action-btn primary", onClick: onCollectAll }, Icon("hand"), "Collect all")),
       e("div", { className: "action-row" }, e("button", { className: "action-btn secondary", onClick: onClose }, "Close"))
     ));
 }
@@ -1960,27 +1972,7 @@ function App({ account, onLogout, onAuthLost }) {
     const a = account.save.army;
     return a && a.troops && a.queue ? { troops: a.troops, queue: a.queue } : { troops: {}, queue: {} };
   });
-  // Finish batches whose time is up (also catches batches that finished while the game was closed).
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setArmy((prev) => {
-        const now = Date.now();
-        let changed = false;
-        const troops = { ...prev.troops }, queue = { ...prev.queue };
-        for (const c of Object.keys(queue)) {
-          const done = queue[c].filter((j) => j.endsAt <= now);
-          if (!done.length) continue;
-          changed = true;
-          const mine = { ...(troops[c] || {}) };
-          for (const j of done) mine[j.troopId] = (mine[j.troopId] || 0) + j.count;
-          troops[c] = mine;
-          queue[c] = queue[c].filter((j) => j.endsAt > now);
-        }
-        return changed ? { troops, queue } : prev;
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, []);
+  // (finished training batches / upgrades are applied by the SERVER; the tick below asks for the new state when one is due)
 
   useEffect(() => { sound.enabled = soundEnabled; }, [soundEnabled]);
 
@@ -1997,6 +1989,9 @@ function App({ account, onLogout, onAuthLost }) {
   const buildings = bByC[culture] || [];
   const resources = rByC[culture] || { food: 0, wood: 0, stone: 0, iron: 0, coin: 0 };
   const selected = buildings.find((b) => b.id === selectedId) || null;
+  const available = { ...resources };
+  for (const b of buildings) if (b.produces) available[b.produces] = (available[b.produces] || 0) + Math.floor(b.stored || 0);
+  const hallLevel = (buildings.find((b) => b.id === "main_hall") || { level: 1 }).level;
 
   const vars = {
     "--panel-color": theme.panel, "--paneldeep-color": theme.panelDeep, "--ink-color": theme.ink, "--inksoft-color": theme.inkSoft,
@@ -2031,7 +2026,7 @@ function App({ account, onLogout, onAuthLost }) {
   const soonTimer = useRef(null);
   const errShownRef = useRef(false);
 
-  useEffect(() => { revRef.current++; }, [bByC, rByC, army, marches, soundEnabled]);
+  useEffect(() => { revRef.current++; }, [marches, soundEnabled]);
 
   // Live messages from the server: admin messages, "an admin changed your data", account opened elsewhere
   useEffect(() => {
@@ -2047,10 +2042,8 @@ function App({ account, onLogout, onAuthLost }) {
 
   const buildSave = useCallback(() => {
     const s = snapRef.current, c = culture;
+    // only marches + settings: buildings, resources and army belong to the server
     return {
-      buildings: { [c]: s.bByC[c] || [] },
-      resources: { [c]: s.rByC[c] },
-      army: { troops: { [c]: s.army.troops[c] || {} }, queue: { [c]: s.army.queue[c] || [] } },
       marches: s.marches,
       settings: { sound: s.soundEnabled },
     };
@@ -2138,6 +2131,7 @@ function App({ account, onLogout, onAuthLost }) {
   const expBusyRef = useRef(false);
   const lastFetchRef = useRef(0);
   const serverNow = useCallback(() => Date.now() + expOffsetRef.current, []);
+  useEffect(() => { if (account.state) { expOffsetRef.current = account.state.now - Date.now(); setExpOffset(expOffsetRef.current); } }, []);
   const syncClock = (now) => { if (now) { expOffsetRef.current = now - Date.now(); setExpOffset(expOffsetRef.current); } };
 
   const flushSaved = useCallback(async () => {
@@ -2154,6 +2148,44 @@ function App({ account, onLogout, onAuthLost }) {
     setArmy((prev) => ({ ...prev, troops: { ...prev.troops, [culture]: save.troops } }));
     if (save.resources) setRByC((prev) => ({ ...prev, [culture]: { ...(prev[culture] || {}), ...save.resources } }));
   }, [culture]);
+
+  // The server's answer to GET /state, /collect, /upgrade, /train: the whole economy (buildings + timers, resources, army).
+  const adoptState = useCallback((st, announce) => {
+    syncClock(st.now);
+    if (!inflightRef.current) verRef.current = st.version;
+    const byId = new Map(st.buildings.map((b) => [b.id, b]));
+    if (announce) {
+      for (const old of (snapRef.current.bByC[culture] || [])) {
+        const nb = byId.get(old.id);
+        if (nb && nb.level > old.level) showToast((theme.labels[old.id] || { name: old.id }).name + " → Level " + nb.level);
+      }
+    }
+    setBByC((prev) => ({ ...prev, [culture]: (prev[culture] || []).map((d) => (byId.has(d.id) ? { ...d, ...byId.get(d.id) } : d)) }));
+    setRByC((prev) => ({ ...prev, [culture]: { ...(prev[culture] || {}), ...st.resources } }));
+    setArmy({ troops: { ...snapRef.current.army.troops, [culture]: (st.army.troops || {})[culture] || {} }, queue: { ...snapRef.current.army.queue, [culture]: (st.army.queue || {})[culture] || [] } });
+  }, [culture, showToast, theme]);
+
+  const refreshBusyRef = useRef(false);
+  const refreshState = useCallback(async () => {
+    if (refreshBusyRef.current || stoppedRef.current) return;
+    refreshBusyRef.current = true;
+    try { adoptState(await api.getState(), true); }
+    catch (err) { if (err.status === 401) onAuthLost(); }
+    finally { refreshBusyRef.current = false; }
+  }, [adoptState, onAuthLost]);
+
+  // every economy action: save pending marches first (so the version matches), ask the server, adopt its answer. One at a time.
+  const econChain = useRef(Promise.resolve());
+  const econ = useCallback((fn) => {
+    const run = econChain.current.then(async () => {
+      if (!(await flushSaved())) throw Object.assign(new Error("Saving… try again in a moment"), { status: 0 });
+      const st = await fn();
+      adoptState(st);
+      return st;
+    });
+    econChain.current = run.catch(() => {});
+    return run;
+  }, [flushSaved, adoptState]);
 
   const handleApiError = useCallback((err) => {
     if (err.status === 401) { stoppedRef.current = true; onAuthLost(); }
@@ -2273,29 +2305,15 @@ function App({ account, onLogout, onAuthLost }) {
     } catch (err) { handleApiError(err); } finally { pvpBusyRef.current = false; setFmBusy(false); }
   }, [fm, flushSaved, adoptServer, showToast, handleApiError]);
 
-  // Somebody attacked OUR castle. The server already took the losses and the loot out of its copy of our save, and this
-  // client is the one that writes the save, so: take the server's new version, apply the same losses and loot here, save.
+  // Somebody attacked OUR castle. The server already took the losses and the loot out of our save (it owns troops and
+  // resources), so we only show the notice and take the server's new numbers.
   const onAttacked = useCallback(async (m) => {
     if (stoppedRef.current) return;
     lastRaidRef.current = Date.now();
-    try {
-      const { save } = await api.getSave();
-      verRef.current = save.version;
-    } catch (err) { if (err.status === 401) { stoppedRef.current = true; onAuthLost(); } return; }
-    setArmy((prev) => {
-      const cur = { ...(prev.troops[culture] || {}) };
-      for (const [id, n] of Object.entries(m.losses || {})) { cur[id] = Math.max(0, (cur[id] || 0) - n); if (!cur[id]) delete cur[id]; }
-      return { ...prev, troops: { ...prev.troops, [culture]: cur } };
-    });
-    setRByC((prev) => {
-      const cur = { ...(prev[culture] || {}) };
-      for (const [k, n] of Object.entries(m.loot || {})) cur[k] = Math.max(0, (cur[k] || 0) - n);
-      return { ...prev, [culture]: cur };
-    });
     setRaid(m);
     showToast((m.by || "Someone") + " attacked your castle" + (m.win ? " and was beaten back" : ""));
-    saveSoon();
-  }, [culture, onAuthLost, showToast, saveSoon]);
+    await refreshState();
+  }, [showToast, refreshState]);
 
   useEffect(() => {
     const onSrv = (ev) => { const m = ev.detail || {}; if (m.type === "attacked") onAttacked(m); };
@@ -2337,21 +2355,21 @@ function App({ account, onLogout, onAuthLost }) {
   // Production tick (1s) & Marches update
   useEffect(() => {
     const iv = setInterval(() => {
-      // 1. Resources
+      // 1. Resources: only the display moves here (the server calculates the real amount from timestamps)
       setBByC((prev) => {
         const next = { ...prev };
         [culture].forEach((c) => {
           next[c] = (next[c] || []).map((b) => {
-            if (!b.produces) return b;
-            const prev0 = b.stored || 0;
-            const stored = Math.min(prev0 + productionRate(b.level), capacity(b.level));
-            if (stored === prev0) return b;
-            const readyAt = (prev0 < 1 && stored >= 1) ? Date.now() : (b.readyAt || 0);
-            return { ...b, stored, readyAt };
+            if (!b.produces || !b.ratePerSec) return b;
+            const stored = Math.min((b.stored || 0) + b.ratePerSec, b.cap);
+            return stored === b.stored ? b : { ...b, stored };
           });
         });
         return next;
       });
+      // an upgrade or a training batch is finished -> get the real state from the server
+      const snap = snapRef.current, tnow = Date.now() + expOffsetRef.current;
+      if ((snap.bByC[culture] || []).some((b) => b.upgrading && b.upgrading.endsAt <= tnow) || ((snap.army.queue[culture] || []).some((j) => j.endsAt <= tnow))) refreshState();
 
       // 2. Marches
       setMarches((prev) => {
@@ -2371,7 +2389,7 @@ function App({ account, onLogout, onAuthLost }) {
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [showToast, culture]);
+  }, [showToast, culture, refreshState]);
 
   const spawnPop = (id, text, icon) => {
     const pid = ++popId.current;
@@ -2384,37 +2402,31 @@ function App({ account, onLogout, onAuthLost }) {
     if (amount < 1) return;
     sound.playCollect();
     flyCollect(srcEl, building.produces, amount);
-    setBByC((prev) => ({ ...prev, [culture]: prev[culture].map((b) => b.id === building.id ? { ...b, stored: 0, readyAt: 0 } : b) }));
+    // show it at once; the server's answer then replaces these numbers
+    setBByC((prev) => ({ ...prev, [culture]: prev[culture].map((b) => b.id === building.id ? { ...b, stored: (b.stored || 0) - amount } : b) }));
     setRByC((prev) => ({ ...prev, [culture]: { ...prev[culture], [building.produces]: prev[culture][building.produces] + amount } }));
     spawnPop(building.id, "+" + fmt(amount), RES_ICON[building.produces]);
     showToast("+" + fmt(amount) + " " + theme.resourceNames[building.produces]);
-    saveSoon();
+    econ(() => api.collect(building.id)).catch((err) => { handleApiError(err); refreshState(); });
   };
 
-  const upgrade = (building, cost) => {
-    sound.playUpgrade();
-    setRByC((prev) => ({ ...prev, [culture]: { ...prev[culture], wood: prev[culture].wood - cost.wood, stone: prev[culture].stone - cost.stone, coin: prev[culture].coin - cost.coin } }));
-    setBByC((prev) => ({ ...prev, [culture]: prev[culture].map((b) => b.id === building.id ? { ...b, level: b.level + 1 } : b) }));
-    setSelectedId(null);
-    showToast((theme.labels[building.id] || { name: building.id }).name + " → Level " + (building.level + 1));
-    saveSoon();
+  const collectAll = () => {
+    econ(() => api.collect()).then(() => { sound.playCollect(); showToast("Collected everything"); }).catch(handleApiError);
   };
 
-  const train = (troop, count, unitCost) => {
-    sound.playUpgrade();
-    setRByC((prev) => {
-      const r = { ...prev[culture] };
-      for (const [k, v] of Object.entries(unitCost)) r[k] = r[k] - v * count;
-      return { ...prev, [culture]: r };
-    });
-    setArmy((prev) => {
-      const q = prev.queue[culture] || [];
-      const start = q.length ? q[q.length - 1].endsAt : Date.now();
-      const job = { id: Date.now() + "_" + Math.random().toString(36).slice(2, 6), troopId: troop.id, count, endsAt: start + troopUnitTime(troop) * count * 1000 };
-      return { ...prev, queue: { ...prev.queue, [culture]: [...q, job] } };
-    });
-    showToast("Training " + count + " × " + troop.name);
-    saveSoon();
+  const upgrade = (building) => {
+    econ(() => api.upgrade(building.id)).then(() => {
+      sound.playUpgrade();
+      setSelectedId(null);
+      showToast((theme.labels[building.id] || { name: building.id }).name + ": upgrade to Level " + (building.level + 1) + " started");
+    }).catch((err) => { handleApiError(err); refreshState(); });
+  };
+
+  const train = (troop, count) => {
+    econ(() => api.train(troop.id, count)).then(() => {
+      sound.playUpgrade();
+      showToast("Training " + count + " × " + troop.name);
+    }).catch((err) => { handleApiError(err); refreshState(); });
   };
 
   const toggleSound = () => {
@@ -2477,6 +2489,7 @@ function App({ account, onLogout, onAuthLost }) {
               key: culture + "-" + b.id, b, theme,
               showCollect: !!b.produces && (b.stored || 0) >= 1,
               active: selectedId === b.id,
+              upgradeLeft: b.upgrading ? fmtTime((b.upgrading.endsAt - serverNow()) / 1000) : "",
               onSelect: (bb) => setSelectedId(bb.id),
               onCollect: collect
             })),
@@ -2501,15 +2514,15 @@ function App({ account, onLogout, onAuthLost }) {
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setRanksOpen(true); } }, e("div", { className: "nic" }, Icon("trophy")), e("span", null, "Ranks"))),
 
     // Sheets & Overlays
-    e(DetailSheet, { building: selected && selected.category !== "barracks" ? selected : null, theme, resources, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
-    e(BarracksSheet, { open: !!selected && selected.category === "barracks", building: selected, culture, theme, resources, army, onClose: () => setSelectedId(null), onTrain: train }),
+    e(DetailSheet, { building: selected && selected.category !== "barracks" ? selected : null, theme, resources: available, hallLevel, serverNow, onClose: () => setSelectedId(null), onCollect: collect, onUpgrade: upgrade }),
+    e(BarracksSheet, { open: !!selected && selected.category === "barracks", building: selected, culture, theme, resources: available, army, onClose: () => setSelectedId(null), onTrain: train }),
     e(MailUI.MailPanel, {
       open: mailOpen, tab: mailTab, onTab: setMailTab, focusId: mailFocus, refreshKey: mailTick, unread: mailUnread, onUnread: setMailUnread,
       onClose: () => { setMailOpen(false); setMailFocus(null); }, onToast: showToast,
       renderChat: () => e(ChatView, { me: account.user.username, active: mailOpen && mailTab === "chat" })
     }),
     guideOpen && battleCfg && e(BattleUI.GuideSheet, { config: battleCfg, onClose: () => setGuideOpen(false) }),
-    e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme }),
+    e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme, onCollectAll: collectAll }),
     e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, expeds, serverNow, maxActive: (campSel && campSel.rules && campSel.rules.maxActive) || 3, unreadReports: mailUnread.report, onOpenDefense: openDefenseEditor, onOpenMap: () => { setBattleOpen(false); goView("world"); }, onOpenReports: () => openMail("report"), onOpenGuide: () => { setBattleOpen(false); setGuideOpen(true); } }),
     e(CampSheet, {
       camp: campSel && campSel.camp, home: campSel && campSel.home, rules: campSel && campSel.rules,
@@ -2612,7 +2625,9 @@ function Root() {
         await api.join(choice.civId);
       }
       const { save } = await api.getSave();
-      setAccount({ user: me.user, save });
+      const state = await api.getState(); // creates the economy on the first visit; the server owns buildings / resources / army
+      const c = save.culture;
+      setAccount({ user: me.user, state, save: { ...save, version: state.version, buildings: { [c]: state.buildings }, resources: { [c]: state.resources }, army: state.army } });
       setPhase("game");
     } catch (err) {
       setMessage(err.status === 0 ? "Cannot reach the game server. Start it (npm run server) and try again." : "Could not start: " + err.message);

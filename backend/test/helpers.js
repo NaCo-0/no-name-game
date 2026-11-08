@@ -7,7 +7,7 @@ process.env.ADMIN_LOGIN_LIMIT = process.env.ADMIN_LOGIN_LIMIT || '1000';
 import http from 'node:http';
 import { WebSocket } from 'ws';
 
-const { initDb, AdminUser } = await import('../src/models.js');
+const { initDb, AdminUser, GameSave } = await import('../src/models.js');
 const { createApp } = await import('../src/app.js');
 const { attachLive, closeAll } = await import('../src/live.js');
 const { hashPassword } = await import('../src/auth.js');
@@ -77,8 +77,15 @@ export async function boot({ npc, spawner } = {}) {
     return { ws, msgs, closed, opened, waitFor, close: () => ws.close() };
   }
 
+  /** Test shortcut: merge `patch` straight into a player's save (the economy is server-side, so a client can not do this). */
+  async function grant(playerId, patch) {
+    const row = await GameSave.findOne({ where: { playerId } });
+    await GameSave.update({ data: { ...(row.data || {}), ...patch }, revision: row.revision + 1 }, { where: { id: row.id } });
+    return row.revision + 1;
+  }
+
   return {
-    base, call, register, adminToken, player, socket, world,
+    base, call, register, adminToken, player, socket, world, grant,
     async close() {
       world.stopTicker();
       closeAll();
