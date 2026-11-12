@@ -466,6 +466,8 @@ export class EditorController {
     }
     const corridors = [...this.corridors.values()].flat();
 
+    const mountainGrid = this._buildMountainGrid(tag);
+
     const { trees, stats } = generateForestPlacements({
       gridWidth: this.gridWidth,
       gridHeight: this.gridHeight,
@@ -487,12 +489,96 @@ export class EditorController {
         groveY: t.groveY,
       });
       if (!typeId) continue;
+      // Skip trees that a mountain drawn in front of them would swallow
+      // (half-hidden at a mountain's edge or fully buried in its body).
+      if (this._treeSwallowedByMountain(typeId, t.tileX, t.tileY, t.scale, mountainGrid)) continue;
       if (t.kind === 'cluster') clusters++;
       else if (t.kind === 'bush') bushes++;
       else singles++;
       this.placeInstanceAtTile(typeId, t.tileX, t.tileY, tag, { scale: t.scale, flipX: t.flipX });
     }
     return { count: singles + clusters + bushes, singles, clusters, bushes, stats };
+  }
+
+  /** Alpha mask of a type's sprite at its current display size (cached). */
+  _alphaMask(type, instScale = 1) {
+    const h = Math.max(1, Math.round(type.displayHeight * instScale));
+    const key = `${type.textureKey}|${h}`;
+    if (!this._maskCache) this._maskCache = new Map();
+    let m = this._maskCache.get(key);
+    if (m) return m;
+    const src = this.scene.textures.get(type.textureKey).getSourceImage();
+    const w = Math.max(1, Math.round(src.width * h / src.height));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(src, 0, 0, w, h);
+    const d = ctx.getImageData(0, 0, w, h).data;
+    const a = new Uint8Array(w * h);
+    for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] > 40 ? 1 : 0;
+    m = { w, h, a };
+    this._maskCache.set(key, m);
+    return m;
+  }
+
+  /** Spatial hash of every blocking object (the mountains), not of the given tag. */
+  _buildMountainGrid(tag) {
+    const CELL = 12; // tiles
+    const grid = new Map();
+    for (const inst of this.instances.values()) {
+      if (inst.tag === tag) continue;
+      const type = this.objectTypes.get(inst.typeId);
+      if (!type || !(type.blockRadius > 0)) continue;
+      const k = `${Math.floor(inst.tileX / CELL)},${Math.floor(inst.tileY / CELL)}`;
+      let arr = grid.get(k);
+      if (!arr) grid.set(k, (arr = []));
+      arr.push({ inst, type });
+    }
+    return { grid, CELL };
+  }
+
+  /**
+   * True if a mountain that is drawn IN FRONT of this tree (larger tileX+tileY)
+   * covers any visible part of the tree's sprite. Uses the real sprite alpha
+   * at the real display sizes, so it does not change any object size.
+   */
+  _treeSwallowedByMountain(typeId, tileX, tileY, instScale, { grid, CELL }) {
+    const tType = this.objectTypes.get(typeId);
+    if (!tType) return false;
+    const tm = this._alphaMask(tType, instScale);
+    const tp = IsoMath.tileToWorld(tileX, tileY);
+    const tLeft = tp.x - tm.w * tType.anchorX;
+    const tTop = tp.y - tm.h * tType.anchorY;
+    const tDepth = tileX + tileY;
+    const cx = Math.floor(tileX / CELL);
+    const cy = Math.floor(tileY / CELL);
+    const STEP = 3; // sample every 3rd pixel of the tree
+    for (let gy = cy - 2; gy <= cy + 2; gy++) {
+      for (let gx = cx - 2; gx <= cx + 2; gx++) {
+        const arr = grid.get(`${gx},${gy}`);
+        if (!arr) continue;
+        for (const { inst, type } of arr) {
+          if (inst.tileX + inst.tileY <= tDepth) continue; // mountain behind the tree: tree is drawn over it
+          const mm = this._alphaMask(type, inst.scale ?? 1);
+          const mp = IsoMath.tileToWorld(inst.tileX, inst.tileY);
+          const mLeft = mp.x - mm.w * type.anchorX;
+          const mTop = mp.y - mm.h * type.anchorY;
+          const x0 = Math.max(tLeft, mLeft), x1 = Math.min(tLeft + tm.w, mLeft + mm.w);
+          const y0 = Math.max(tTop, mTop), y1 = Math.min(tTop + tm.h, mTop + mm.h);
+          if (x1 <= x0 || y1 <= y0) continue;
+          for (let y = Math.ceil(y0); y < y1; y += STEP) {
+            for (let x = Math.ceil(x0); x < x1; x += STEP) {
+              const ti = (y - Math.round(tTop)) * tm.w + (x - Math.round(tLeft));
+              const mi = (y - Math.round(mTop)) * mm.w + (x - Math.round(mLeft));
+              const tx = x - Math.round(tLeft), my = y - Math.round(mTop), mx = x - Math.round(mLeft);
+              if (tx >= tm.w || mx >= mm.w || my >= mm.h) continue;
+              if (tm.a[ti] && mm.a[mi]) return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   /** Removes every instance previously placed with the given tag. */

@@ -624,6 +624,14 @@
   .action-btn, .close-btn { min-height: 44px; }
   .close-btn { min-width: 44px; width: 44px; height: 44px; }
   @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  /* Barracks: the troop picture sits in ONE fixed spot. It no longer depends on the panel's height
+     (name/cost wrapping, training queue) or on the picture's own width, so switching troops
+     never moves it. All troop pictures share the same box, centered, feet on the same line. */
+  .barracks { --bk-panel-h: 330px; }
+  .barracks .bk-stage { position: absolute; left: 0; right: 0; top: calc(64px + env(safe-area-inset-top, 0px)); bottom: var(--bk-panel-h); padding: 0; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
+  .barracks .bk-hero { width: auto; height: 100%; max-height: 100%; max-width: none; flex: 0 0 auto; object-fit: contain; object-position: center bottom; }
+  .barracks .bk-panel { margin: auto auto 0; min-height: var(--bk-panel-h); }
+  .barracks .bk-queue { max-height: 96px; overflow-y: auto; }
 </style>
 </head>
 <body>
@@ -980,6 +988,9 @@ function troopUnitCost(t) {
 function troopUnitTime(t) { return TROOP_LEVEL_TIME[t.level - 1]; }
 function fmtTime(sec) { sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return (h ? h + "h " : "") + (h || m ? m + "m " : "") + s + "s"; }
 
+// Horizontal body-center (0..1 of image width) of each troop picture, measured without the weapon/shield tips,
+// so the hero can be shifted to put the BODY (not the image box) at the same spot.
+const TROOP_CX = {"ansar_warrior":0.5697,"arab_archer":0.3975,"archer":0.3926,"armored_cavalry":0.5262,"berserker":0.5076,"cataphract":0.5061,"cavalry":0.5206,"elite_archer":0.4704,"guard":0.5663,"huscarl":0.5672,"immortal_guard":0.5795,"keshik":0.5095,"legionnaire":0.5075,"light_cavalry":0.5289,"light_swordsman":0.5077,"linebreaker":0.5167,"mangudai":0.5151,"praetorian_cavalry":0.5436,"samurai":0.4925,"shieldbearer":0.611,"skirmisher":0.5058,"spearman":0.3726,"swordsman":0.5416,"yumi_archer":0.4024};
 function BarracksSheet({ open, building, culture, theme, resources, army, onClose, onTrain }) {
   const [cls, setCls] = useState("spear");
   const [pick, setPick] = useState(null);
@@ -1002,7 +1013,7 @@ function BarracksSheet({ open, building, culture, theme, resources, army, onClos
     e("div", { className: "bk-top" },
       e("div", { className: "bk-title" }, ((theme.labels && theme.labels[building && building.id]) || { name: "Barracks" }).name, e("small", null, "TRAIN TROOPS" + (building ? " · LV " + building.level : ""))),
       e("button", { className: "close-btn", onClick: onClose }, Icon("close"))),
-    e("div", { className: "bk-stage" }, open && e("img", { className: "bk-hero", key: troop.id, src: "/assets/troops/" + troop.id + ".webp", alt: troop.name, draggable: false })),
+    e("div", { className: "bk-stage" }, open && e("img", { className: "bk-hero", key: troop.id, style: { transform: "translateX(" + ((0.5 - (TROOP_CX[troop.id] ?? 0.5)) * 100).toFixed(2) + "%)" }, src: "/assets/troops/" + troop.id + ".webp", alt: troop.name, draggable: false })),
     e("div", { className: "bk-panel" },
       e("div", { className: "bk-tabs" }, TROOP_CLASSES.map((c) => e("button", { key: c.id, className: "bk-tab" + (c.id === cls ? " active" : ""), onClick: () => { sound.playClick(); setCls(c.id); } }, c.name))),
       e("div", { className: "bk-cards" }, list.map((t) => e("button", { key: t.id, className: "bk-card" + (t.id === troop.id ? " active" : "") + (t.special ? " special" : ""), onClick: () => { sound.playClick(); setPick(t.id); setQty(1); } },
