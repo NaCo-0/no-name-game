@@ -16,6 +16,7 @@ import * as NPC from './npcConfig.js';
 import * as live from './live.js';
 import * as mail from './mail.js';
 import { prepare } from './economy.js';
+import * as events from './social/events.js';
 
 export function createWorld({ spawner, npc = {} }) {
   const N = {
@@ -144,6 +145,15 @@ export function createWorld({ spawner, npc = {} }) {
   }
 
   // ---- hamle-ha ----------------------------------------------------------------------------
+  /** A camp was defeated (by an expedition or a rally): it disappears and a new one spawns elsewhere after RESPAWN_MS. */
+  async function removeCamp(camp) {
+    await camp.destroy();
+    live.broadcast({ type: 'campGone', id: camp.key });
+    const t = setTimeout(() => { respawnTimers.delete(t); serial(() => spawnCamp(camp.type)).catch(() => {}); }, N.respawnMs);
+    t.unref?.();
+    respawnTimers.add(t);
+  }
+
   /** Lashkar-haye reside jang mikonan (ghadimi-tarin avval) va natije zakhire mishe. Ba ticker-e 1 sanie-ee va ghabl-e har attack/claim. */
   function resolveDue(now = Date.now()) {
     return serial(async () => {
@@ -162,11 +172,8 @@ export function createWorld({ spawner, npc = {} }) {
             loot: r.win ? camp.loot : {},
           };
           if (r.win) {
-            await camp.destroy();
-            live.broadcast({ type: 'campGone', id: camp.key });
-            const t = setTimeout(() => { respawnTimers.delete(t); serial(() => spawnCamp(camp.type)).catch(() => {}); }, N.respawnMs);
-            t.unref?.();
-            respawnTimers.add(t);
+            await removeCamp(camp);
+            await events.record(e.playerId, 'camp_win', { level: camp.level });
           }
         }
         await e.update({ status: 'returning', report });
@@ -178,9 +185,14 @@ export function createWorld({ spawner, npc = {} }) {
   }
 
   const tick = { id: null };
+  const tickHooks = new Set(); // other systems (rallies) run on the same 1-second ticker
+  const addTickHook = (fn) => { tickHooks.add(fn); };
   const startTicker = (ms = 1000) => {
     if (tick.id) return;
-    tick.id = setInterval(() => resolveDue().catch((err) => console.error('[tick]', err)), ms);
+    tick.id = setInterval(() => {
+      resolveDue().catch((err) => console.error('[tick]', err));
+      for (const fn of tickHooks) Promise.resolve().then(() => fn()).catch((err) => console.error('[tick hook]', err));
+    }, ms);
     tick.id.unref?.();
   };
   const stopTicker = () => {
@@ -293,5 +305,6 @@ export function createWorld({ spawner, npc = {} }) {
   return {
     rules, castleJson, campJson, syncWorld, syncCamps, joinWorld, dropPlayer, worldJson,
     resolveDue, startTicker, stopTicker, attack, claim, expeditionsOf,
+    serial, removeCamp, addTickHook,
   };
 }

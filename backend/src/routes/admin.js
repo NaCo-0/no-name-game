@@ -9,6 +9,7 @@ import { CULTURE_TO_CIV } from '../constants.js';
 import { hashPassword, verifyPassword, signAdmin, adminAuth, validPassword, validUsername } from '../auth.js';
 import { audit, shallowDiff } from '../audit.js';
 import * as live from '../live.js';
+import * as alliance from '../social/alliance.js';
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: Number(process.env.ADMIN_LOGIN_LIMIT || 15), standardHeaders: true, legacyHeaders: false });
 const viewer = adminAuth('viewer'), mod = adminAuth('moderator'), root = adminAuth('superadmin');
@@ -172,6 +173,7 @@ r.post('/players/:id/culture', root, wrap(async (req, res) => {
     await p.update({ territoryId: terr?.id ?? null }, { transaction: t });
     if (!culture || culture !== before) await world.dropPlayer(p.id, t); // ghale-ye ghadimi va hamle-ha pak mishan
   });
+  if (!culture || culture !== before) await alliance.onPlayerDropped(p.id); // alliance + rally cleanup (outside the save transaction)
   live.kick(p.id, 'culture_changed');
   let castle = null;
   if (culture && culture !== before) { // ghale-ye jadid dar tamaddon-e jadid (agar naghshe baked nabashe, bazikon dar vorood-e badi ghale migire)
@@ -191,6 +193,7 @@ r.delete('/players/:id', root, wrap(async (req, res) => {
   const p = await Player.findByPk(req.params.id);
   if (!p) return res.status(404).json({ error: 'not_found' });
   live.kick(p.id, 'deleted');
+  await alliance.onPlayerDropped(p.id);
   await world.dropPlayer(p.id);
   await p.destroy();
   await audit(req, 'player.delete', 'player', p.id, { username: p.username });

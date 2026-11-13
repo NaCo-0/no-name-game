@@ -11,6 +11,7 @@ import { publicConfig } from '../battleConfig.js';
 import * as pvp from '../pvp.js';
 import * as mail from '../mail.js';
 import * as eco from '../economy.js';
+import * as events from '../social/events.js';
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const userJson = (p) => ({ id: p.id, username: p.username });
@@ -82,6 +83,7 @@ export default function gameRoutes(world) {
       await s.save({ transaction: t });
       return { status: 200, body: { revision: s.revision, version: s.revision } };
     });
+    if (out.status === 200) events.observeSave(req.player.id).catch(() => {}); // growth events (Grand Builder) read the new save
     res.status(out.status).json(out.body);
   }
   r.post('/game/save', playerAuthQuery, saveHandler);

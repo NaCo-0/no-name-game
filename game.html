@@ -648,9 +648,11 @@ import { civById, civByTerritory } from './runtime/civilizations.js';
 import { switchView } from './runtime/ui/ViewTransition.js';
 import { createBattleUI, injectBattleCss, campPreview, fname as formName } from './runtime/ui/BattleSheets.js';
 import { createMailUI, injectMailCss } from './runtime/ui/MailPanel.js';
+import * as socialApi from './runtime/ui/socialApi.js';
+import { createSocialUI, injectSocialCss } from './runtime/ui/SocialUI.js';
 import * as battleApi from './runtime/ui/battleApi.js';
 
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const e = React.createElement;
 
 const CULTURE_ORDER = ["viking", "roman", "japanese", "arabian", "mongol", "persian"];
@@ -1128,6 +1130,8 @@ const BattleUI = createBattleUI({ React, Icon, troopName });
 injectBattleCss();
 const MailUI = createMailUI({ React, Icon, BattleUI, mailApi: battleApi });
 injectMailCss();
+const SocialUI = createSocialUI({ React, Icon, troopName, fmt, fmtTime, api: socialApi });
+injectSocialCss();
 
 function CampSheet({ camp, home, rules, troops, config, activeCount, onClose, onAttack }) {
   const [sel, setSel] = useState({});
@@ -1934,6 +1938,12 @@ function App({ account, onLogout, onAuthLost }) {
   const [viewMode, setViewMode] = useState("world"); // "city" or "world"
   const [selectedId, setSelectedId] = useState(null);
   const [mailOpen, setMailOpen] = useState(false);
+  const [allyOpen, setAllyOpen] = useState(false);       // alliance sheet (members, rallies)
+  const [eventsOpen, setEventsOpen] = useState(false);   // the two individual events of days 1-3
+  const [eventsSum, setEventsSum] = useState(null);      // GET /events answer, for the strip under the HUD
+  const [allyBadge, setAllyBadge] = useState(0);         // join requests + rallies you have not joined
+  const [socialTick, setSocialTick] = useState(0);       // +1 on every live alliance / rally / event message
+  const [rallyReports, setRallyReports] = useState(null);
   const [mailTab, setMailTab] = useState("report");   // report | letter | chat
   const [mailFocus, setMailFocus] = useState(null);   // report to open straight away
   const [mailUnread, setMailUnread] = useState({ report: 0, letter: 0 });
@@ -2275,6 +2285,67 @@ function App({ account, onLogout, onAuthLost }) {
     return () => window.removeEventListener("kingdoms:server", onSrv);
   }, [showToast]);
 
+  // ---- alliances, rallies, events (runtime/ui/SocialUI.js) ----
+  const socialError = useCallback((err) => {
+    if (err.status === 409 && err.data && err.data.code === "stale") { refreshState(); showToast("Your army just changed. Try again."); }
+    else handleApiError(err);
+  }, [handleApiError, refreshState, showToast]);
+
+  // calls that change your troops / resources: save first, send the version, take the server's new numbers
+  const socialCall = useCallback(async (name, body) => {
+    if (!(await flushSaved())) throw Object.assign(new Error("Saving… try again in a moment"), { status: 0 });
+    const r = await socialApi[name]({ ...body, baseVersion: verRef.current });
+    if (r.save && r.save.troops) adoptServer(r.save);
+    return r;
+  }, [flushSaved, adoptServer]);
+
+  const socialCtx = useMemo(() => {
+    const byLevel = { 1: 10, 2: 22, 3: 45, 4: 90 };
+    const power = (battleCfg && battleCfg.power) || Object.fromEntries(Object.keys(TROOP_BY_ID).map((id) => [id, byLevel[TROOP_BY_ID[id].level] || 10]));
+    return { serverNow, troops: army.troops[culture] || {}, power, call: socialCall, toast: showToast, onError: socialError, refreshKey: socialTick };
+  }, [serverNow, army, culture, battleCfg, socialCall, showToast, socialError, socialTick]);
+
+  const refreshSocial = useCallback(async () => {
+    try {
+      const [ev, al] = await Promise.all([socialApi.getEvents(), socialApi.getAlliance()]);
+      setEventsSum(ev);
+      let badge = 0;
+      if (al.alliance) { badge += (al.alliance.requests || []).length; badge += (await socialApi.getRallies()).rallies.filter((r) => !r.mine).length; }
+      setAllyBadge(badge);
+    } catch (err) { if (err.status === 401) onAuthLost(); }
+  }, [onAuthLost]);
+
+  // the troops and loot of rallies that ended come home like returning expeditions
+  const claimRally = useCallback(async (retry = true) => {
+    if (stoppedRef.current) return;
+    try {
+      if (!(await flushSaved())) return;
+      const r = await socialApi.claimRally(verRef.current);
+      if (r.reports.length) { adoptServer(r.save); setRallyReports(r.reports); }
+    } catch (err) {
+      if (err.status === 409 && err.data && err.data.code === "stale" && retry) { await refreshState(); return claimRally(false); }
+      if (err.status === 401) onAuthLost();
+    }
+  }, [flushSaved, adoptServer, refreshState, onAuthLost]);
+
+  useEffect(() => { claimRally(); }, []);
+  useEffect(() => { refreshSocial(); }, [refreshSocial, socialTick]);
+  useEffect(() => { const iv = setInterval(refreshSocial, 60000); return () => clearInterval(iv); }, [refreshSocial]);
+  useEffect(() => {
+    const onSrv = (ev) => {
+      const m = ev.detail || {};
+      if (m.type === "alliance") { setSocialTick((n) => n + 1); if (m.why === "kicked") showToast("You were removed from the alliance"); if (m.why === "disbanded") showToast("Your alliance was closed"); if (m.why === "accepted") showToast("Your request was accepted. Welcome!"); }
+      else if (m.type === "rally") {
+        setSocialTick((n) => n + 1);
+        if (m.phase === "new") showToast((m.by || "A member") + " started a rally: " + (m.target || "join in!"));
+        if (m.phase === "done") { showToast(m.cancelled ? "A rally ended. Your troops are coming back" : m.win ? "Your rally won! Collecting the spoils" : "Your rally lost the battle"); claimRally(); }
+      }
+      else if (m.type === "event") setSocialTick((n) => n + 1);
+    };
+    window.addEventListener("kingdoms:server", onSrv);
+    return () => window.removeEventListener("kingdoms:server", onSrv);
+  }, [showToast, claimRally]);
+
   const openAttackEditor = useCallback(async (castle) => {
     try {
       const config = await loadBattleConfig();
@@ -2471,9 +2542,10 @@ function App({ account, onLogout, onAuthLost }) {
             e("span", null, (themes[culture] && themes[culture].kingdomName) || (themes[culture] && themes[culture].name) || culture))),
         e("button", { className: "menu-toggle", onClick: () => { sound.playClick(); setMenuOpen(true); }, "aria-label": "Menu" }, Icon("menu"))),
       // All five resources are always visible (no sideways scrolling)
-      e("div", { className: "ledger" },
+      e("div", { className: "ledger", role: "button", tabIndex: 0, "aria-label": "Open storage", onClick: () => { sound.playClick(); setStorageOpen(true); }, onKeyDown: (ev) => { if (ev.key === "Enter") setStorageOpen(true); } },
         resKeys.map((r) => e("div", { key: culture + "-" + r, className: "ledger-cell", "data-res": r, title: theme.resourceNames[r] }, Icon(RES_ICON[r]), e("b", null, e(CountNum, { value: resources[r], res: r })))),
-        e("div", { key: culture + "-coin", className: "ledger-cell coin", "data-res": "coin", title: "Coins" }, Icon("coin"), e("b", null, e(CountNum, { value: resources.coin, res: "coin" }))))),
+        e("div", { key: culture + "-coin", className: "ledger-cell coin", "data-res": "coin", title: "Coins" }, Icon("coin"), e("b", null, e(CountNum, { value: resources.coin, res: "coin" })))),
+      e(SocialUI.EventsStrip, { summary: eventsSum, now: serverNow(), onClick: () => { sound.playClick(); setEventsOpen(true); } })),
 
     // Main Stage Area (Dual View)
     e("div", { className: "stage", ref: stageRef },
@@ -2518,7 +2590,9 @@ function App({ account, onLogout, onAuthLost }) {
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setBattleOpen(true); } },
         (marches.length + expeds.length) > 0 && e("span", { className: "badge" }, marches.length + expeds.length),
         e("div", { className: "nic" }, Icon("sword")), e("span", null, "Battle")),
-      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setStorageOpen(true); } }, e("div", { className: "nic" }, Icon("chest")), e("span", null, "Storage")),
+      e("button", { className: "nav-btn", onClick: () => { sound.playClick(); setAllyOpen(true); } },
+        allyBadge > 0 && e("span", { className: "badge" }, allyBadge),
+        e("div", { className: "nic" }, Icon("alliance")), e("span", null, "Alliance")),
       e("button", { className: "nav-btn", onClick: () => { sound.playClick(); openMail(mailUnread.report > 0 || mailUnread.letter === 0 ? "report" : "letter"); } },
         (mailUnread.report + mailUnread.letter) > 0 && e("span", { className: "badge" }, mailUnread.report + mailUnread.letter),
         e("div", { className: "nic" }, Icon("mail")), e("span", null, "Letters")),
@@ -2533,6 +2607,9 @@ function App({ account, onLogout, onAuthLost }) {
       renderChat: () => e(ChatView, { me: account.user.username, active: mailOpen && mailTab === "chat" })
     }),
     guideOpen && battleCfg && e(BattleUI.GuideSheet, { config: battleCfg, onClose: () => setGuideOpen(false) }),
+    allyOpen && e(SocialUI.AllianceSheet, { ctx: socialCtx, me: account.user.id, onClose: () => { setAllyOpen(false); refreshSocial(); } }),
+    eventsOpen && e(SocialUI.EventsSheet, { ctx: socialCtx, onChanged: setEventsSum, onClose: () => { setEventsOpen(false); refreshSocial(); } }),
+    e(SocialUI.RallyReportSheet, { reports: rallyReports, onClose: () => setRallyReports(null) }),
     e(StorageSheet, { open: storageOpen, onClose: () => setStorageOpen(false), resources, buildings, theme, onCollectAll: collectAll }),
     e(BattleSheet, { open: battleOpen, onClose: () => setBattleOpen(false), marches, expeds, serverNow, maxActive: (campSel && campSel.rules && campSel.rules.maxActive) || 3, unreadReports: mailUnread.report, onOpenDefense: openDefenseEditor, onOpenMap: () => { setBattleOpen(false); goView("world"); }, onOpenReports: () => openMail("report"), onOpenGuide: () => { setBattleOpen(false); setGuideOpen(true); } }),
     e(CampSheet, {

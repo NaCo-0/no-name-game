@@ -9,6 +9,7 @@ import gameRoutes from './routes/game.js';
 import adminRoutes from './routes/admin.js';
 import { createWorld } from './world.js';
 import { createMapSpawner } from './spawn.js';
+import { createSocial } from './social/index.js';
 
 /**
  * @param {object} [o]
@@ -30,6 +31,7 @@ export function createApp({ spawner, npc } = {}) {
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
   app.use('/api/admin', adminRoutes(world));
+  app.use('/api', createSocial(world).router); // alliances, rallies, events (before gameRoutes: it has a blanket /game auth)
   app.use('/api', gameRoutes(world));
   app.use('/api', (req, res) => res.status(404).json({ error: 'unknown_endpoint', message: 'unknown endpoint' }));
 
