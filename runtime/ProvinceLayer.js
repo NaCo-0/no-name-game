@@ -248,15 +248,23 @@ export class ProvinceLayer {
         this.events.emit('select', p);
       });
 
+      // a gold ring under the building while the province is open for the conquest event
+      const ring = scene.add.graphics().setDepth(DEPTH_BASE + p.capital.tileX + p.capital.tileY - 1).setVisible(false);
+      ring.lineStyle(7, 0xffd24a, 0.95);
+      ring.strokeEllipse(world.x, world.y + 6, w * 0.78, w * 0.3);
+      ring.lineStyle(3, 0xffffff, 0.5);
+      ring.strokeEllipse(world.x, world.y + 6, w * 0.7, w * 0.26);
+
+      const labelY = world.y - src.height * scale * anchorY - 4;
       const label = this._makeLabel(p, civ);
-      label.setPosition(world.x, world.y - src.height * scale * anchorY - 4);
+      label.setPosition(world.x, labelY);
       label.setVisible(this.namesVisible);
       this._labels.push(label);
-      this.capitals.push({ province: p, sprite, shadow, label });
+      this.capitals.push({ province: p, sprite, shadow, label, ring, civ, labelX: world.x, labelY, sub: null, ringTween: null });
     }
   }
 
-  _makeLabel(p, civ) {
+  _makeLabel(p, civ, sub = null, subColor = '#ffd24a') {
     const scene = this.scene;
     const text = scene.add.text(0, 0, p.name, {
       fontFamily: this.fontFamily,
@@ -269,18 +277,48 @@ export class ProvinceLayer {
     text.setOrigin(0.5, 1);
     const padX = 14;
     const padY = 5;
-    const w = text.width + padX * 2;
-    const h = text.height + padY * 2;
+    let subText = null;
+    if (sub) {
+      subText = scene.add.text(0, 0, sub, { fontFamily: this.fontFamily, fontSize: '19px', fontStyle: 'bold', color: subColor, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 1);
+    }
+    const w = Math.max(text.width, subText ? subText.width : 0) + padX * 2;
+    const h = text.height + padY * 2 + (subText ? subText.height + 2 : 0);
     const plate = scene.add.graphics();
     plate.fillStyle(0x10131a, 0.7);
     plate.fillRoundedRect(-w / 2, -h, w, h, 9);
     plate.fillStyle(civ.color, 1);
     plate.fillRoundedRect(-w / 2, -h, w, 5, { tl: 9, tr: 9, bl: 0, br: 0 });
-    text.setPosition(0, -padY);
-    return scene.add.container(0, 0, [plate, text]).setDepth(LABEL_DEPTH);
+    text.setPosition(0, -padY - (subText ? subText.height + 2 : 0));
+    if (subText) subText.setPosition(0, -padY);
+    return scene.add.container(0, 0, subText ? [plate, text, subText] : [plate, text]).setDepth(LABEL_DEPTH);
   }
 
   // ---- toggles / frame update ---------------------------------------------------
+
+  /**
+   * Province Conquest: `states` = Map(provinceId -> { state: 'closed' | 'open' | 'done', holderTag, ownerTag }) (or null).
+   * Open provinces get a gold ring and "OPEN" (or the holder's tag); finished ones show their new owner's tag.
+   */
+  setConquest(states) {
+    for (const c of this.capitals) {
+      const st = states && states.get(c.province.id);
+      let sub = null, color = '#ffd24a';
+      if (st && st.state === 'open') sub = st.holderTag ? '\u2694 [' + st.holderTag + ']' : '\u2694 OPEN';
+      else if (st && st.state === 'done' && st.ownerTag) { sub = '[' + st.ownerTag + ']'; color = '#9be07a'; }
+      const open = !!(st && st.state === 'open');
+      if (c.sub !== sub) {
+        c.sub = sub;
+        const i = this._labels.indexOf(c.label);
+        c.label.destroy();
+        c.label = this._makeLabel(c.province, c.civ, sub, color);
+        c.label.setPosition(c.labelX, c.labelY).setVisible(this.namesVisible);
+        if (i >= 0) this._labels[i] = c.label;
+      }
+      c.ring.setVisible(open);
+      if (open && !c.ringTween) c.ringTween = this.scene.tweens.add({ targets: c.ring, alpha: { from: 0.45, to: 1 }, duration: 900, yoyo: true, repeat: -1 });
+      if (!open && c.ringTween) { c.ringTween.stop(); c.ringTween = null; c.ring.setAlpha(1); }
+    }
+  }
 
   setNamesVisible(v) {
     this.namesVisible = !!v;
@@ -312,6 +350,8 @@ export class ProvinceLayer {
       c.sprite.destroy();
       c.shadow?.destroy();
       c.label.destroy();
+      c.ringTween?.stop();
+      c.ring?.destroy();
     }
     this.outlines = [];
     this.capitals = [];

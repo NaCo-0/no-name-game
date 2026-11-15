@@ -18,6 +18,8 @@ export function fakeSpawner() {
     mapKey: () => 'test-map',
     pickSpot: (civId, placed) => ({ tileX: 100 + placed.length * 10, tileY: 200 }),
     pickAnySpot: (placed) => ({ tileX: 300 + placed.length * 7, tileY: 400 }),
+    /** 15 provinces for Persia on a 3 x 5 lattice (neighbours left/right/up/down), so the tests know who touches whom. */
+    provinces: () => ({ provinces: Array.from({ length: 15 }, (_, i) => { const row = Math.floor(i / 5), col = i % 5, nb = []; if (col > 0) nb.push(i - 1); if (col < 4) nb.push(i + 1); if (row > 0) nb.push(i - 5); if (row < 2) nb.push(i + 5); return { id: i, civId: 'persia', local: i, name: `Prov ${i}`, capital: { tileX: 20 + i * 5, tileY: 30 }, neighbors: nb }; }) }),
     makeNpcs: () => [{ key: 'npc_persia_0', name: 'Npc One', civId: 'persia', tileX: 50, tileY: 50 }],
   };
 }

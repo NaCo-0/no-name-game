@@ -49,6 +49,14 @@ const CSS = `
 .mp-field input:focus, .mp-field textarea:focus { outline: none; border-color: var(--accent-color); }
 .mp-count { text-align: right; font-size: 11.5px; font-weight: 600; color: var(--inksoft-color); margin-top: -6px; margin-bottom: 10px; }
 .mp-err { margin: 0 0 10px; font-size: 13px; color: #f08a80; }
+.mp-ele { text-align: center; }
+.mp-ele img { width: min(52%, 220px); height: auto; filter: drop-shadow(0 8px 12px rgba(0,0,0,.45)); }
+.mp-ele h3 { margin: 6px 0 10px; }
+.mp-ele dl { margin: 0 0 10px; text-align: left; }
+.mp-ele dl div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 2px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 13.5px; }
+.mp-ele dt { color: var(--inksoft-color, #cbbfa5); }
+.mp-ele dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mp-note { margin: 0 0 10px; font-size: 12.5px; font-weight: 700; color: var(--inksoft-color, #cbbfa5); }
 .mp-actions { display: flex; gap: 10px; margin-top: 12px; }
 .mp-fa { direction: rtl; text-align: right; font-family: 'Vazirmatn', 'Inter', sans-serif; }
 `;
@@ -79,12 +87,26 @@ export function createMailUI({ React, Icon, BattleUI, mailApi }) {
   function reportLook(m) {
     const d = m.data || {}, r = d.report || {};
     const att = d.role !== 'defender';
+    if (r.elephant) return { tone: '#46b86a', line: 'Rally \u00b7 ' + num(r.elephant.damage) + ' damage \u00b7 no losses', icon: 'sword' };
     const won = att ? !!r.win : !r.win;
     const loot = sum(r.loot);
     const lost = att ? sum(r.losses) : sum(r.defenderLosses);
     const tone = r.gone ? '#e0a23f' : won ? '#46b86a' : att ? '#e0503f' : '#e0a23f';
-    const line = r.gone ? 'Target already gone' : (att ? 'You lost ' + num(lost) : 'You lost ' + num(lost)) + (loot ? (att ? ' \u00b7 loot +' : ' \u00b7 stolen \u2212') + num(loot) : '');
+    const line = (d.source === 'rally' ? 'Rally \u00b7 ' : '') + (r.gone ? 'Target already gone' : (att ? 'You lost ' + num(lost) : 'You lost ' + num(lost)) + (loot ? (att ? ' \u00b7 loot +' : ' \u00b7 stolen \u2212') + num(loot) : ''));
     return { tone, line, icon: att ? 'sword' : 'shield' };
+  }
+
+  /** The result of a rally on the War Elephant (it has no battle to replay: just damage and bonuses). */
+  function ElephantReport({ r }) {
+    const el = r.elephant, rows = [['Your damage', num(el.damage)], ['Alliance total so far', num(el.alliance) + ' (' + el.pct + '%)'], ['Your share of the rally', (r.rally && r.rally.share != null ? r.rally.share : 100) + '%'],
+      ['Rally bonus', '+' + (el.rallyBonus || 0) + '%'], ['Trap bonus', '+' + (el.trapBonus || 0) + '%'], ['Troops sent / back', num(sum(r.sent)) + ' / ' + num(sum(r.survivors))]];
+    const names = { spear: 'Spears', sword: 'Swords', archer: 'Archers', cav: 'Cavalry' };
+    return e('div', { className: 'mp-ele' },
+      e('img', { src: '/assets/events/elephant/phase_' + (el.phase || 1) + '.png', alt: 'War Elephant', draggable: false }),
+      e('h3', null, 'War Elephant'),
+      e('dl', null, rows.map(([k, v]) => e('div', { key: k }, e('dt', null, k), e('dd', null, v)))),
+      el.byClass && Object.keys(el.byClass).length > 0 && e('p', { className: 'mp-note' }, 'Damage by troop type: ' + Object.entries(el.byClass).map(([c, n]) => (names[c] || c) + ' ' + num(n)).join(' \u00b7 ')),
+      el.phase > (el.phaseBefore || 1) && e('p', { className: 'mp-note' }, 'This hit pushed the elephant into phase ' + el.phase + '!'));
   }
 
   function MailPanel({ open, tab, onTab, focusId, refreshKey, unread, onUnread, onClose, onToast, renderChat }) {
@@ -167,7 +189,8 @@ export function createMailUI({ React, Icon, BattleUI, mailApi }) {
         const d = m.data || {};
         body = e('div', { className: 'mp-body' },
           e('button', { type: 'button', className: 'mp-back', onClick: () => setDetail(null) }, '\u2039 All reports'),
-          e('div', { className: 'bt-sheet', style: { padding: 0, maxHeight: 'none', overflow: 'visible', border: 'none', background: 'none' } },
+          d.source === 'rally' && d.report && d.report.rally && e('p', { className: 'mp-note' }, 'Alliance rally' + (d.report.rally.host ? ' hosted by ' + d.report.rally.host : '') + (d.report.rally.participants ? ' \u00b7 ' + d.report.rally.participants + ' players' : '') + (d.report.rally.share != null ? ' \u00b7 your share ' + d.report.rally.share + '%' : '')),
+          d.target === 'elephant' && d.report && d.report.elephant ? e(ElephantReport, { r: d.report }) : e('div', { className: 'bt-sheet', style: { padding: 0, maxHeight: 'none', overflow: 'visible', border: 'none', background: 'none' } },
             e(BattleUI.ReportView, { report: d.report, role: d.role, title: d.castleName || (d.report && d.report.campType ? d.report.campType + ' camp' : undefined) })),
           e('div', { className: 'mp-actions' }, e('button', { type: 'button', className: 'action-btn secondary', onClick: () => remove('report', m.id) }, 'Delete report')));
       } else {

@@ -1,6 +1,6 @@
 /**
  * Alliances: create, join (open / by request), roles (leader > officer > member), kick, leave, transfer, disband.
- * Rules: one alliance per player; members share one civilization (kingdoms are per civilization); max MAX_MEMBERS.
+ * Rules: one alliance per player; members can be of ANY civilization; max MAX_MEMBERS.
  * Rally cleanup when somebody leaves is done through `hooks` (set by rally.js).
  */
 import { Op } from 'sequelize';
@@ -70,10 +70,10 @@ export async function mine(player) {
   return { alliance: await detail(await Alliance.findByPk(m.allianceId), m), requested };
 }
 
-/** GET /alliances?q= : alliances of YOUR civilization you could join. */
+/** GET /alliances?q= : alliances you could join (any civilization). */
 export async function list(player, q = '') {
-  const culture = await cultureOf(player.id);
-  const where = { culture };
+  await cultureOf(player.id);
+  const where = {};
   const s = clean(q, 20).toLowerCase();
   if (s) where[Op.or] = [{ nameKey: { [Op.like]: `%${s.replace(/[%_]/g, '')}%` } }, { tagKey: { [Op.like]: `%${s.replace(/[%_]/g, '').toUpperCase()}%` } }];
   const rows = await Alliance.findAll({ where, limit: 60 });
@@ -118,11 +118,10 @@ async function assertRoom(a) {
 
 /** POST /alliance/join { allianceId } : open -> you are in; request -> a request is sent to the officers. */
 export async function join(player, body = {}) {
-  const culture = await cultureOf(player.id);
+  await cultureOf(player.id);
   if (await membershipOf(player.id)) throw err(409, 'already_in', 'you are already in an alliance: leave it first');
   const a = await Alliance.findByPk(Number(body.allianceId));
   if (!a) throw err(404, 'no_alliance', 'this alliance does not exist');
-  if (a.culture !== culture) throw err(403, 'other_culture', 'you can only join alliances of your own civilization');
   await assertRoom(a);
   if (a.joinMode === 'open') {
     try { await sequelize.transaction((t) => addMember(a, player.id, t)); } catch (e) { if (e.name === 'SequelizeUniqueConstraintError') throw err(409, 'already_in', 'you are already in an alliance'); throw e; }
@@ -148,7 +147,6 @@ export async function answer(player, body = {}) {
   if (body.accept) {
     if (await membershipOf(req.playerId)) { await req.destroy(); throw err(409, 'already_in', 'this player joined another alliance'); }
     await assertRoom(a);
-    if ((await cultureOf(req.playerId)) !== a.culture) { await req.destroy(); throw err(409, 'other_culture', 'this player is of another civilization'); }
     await sequelize.transaction((t) => addMember(a, req.playerId, t));
     live.send(req.playerId, { type: 'alliance', why: 'accepted' });
     ping(a.id, 'joined', player.id);

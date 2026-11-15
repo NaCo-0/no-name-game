@@ -15,11 +15,15 @@ import { fight, simulate, autoLayout, normalizeLayout, layoutArmy, armyPower } f
 import * as C from '../battleConfig.js';
 import * as NPC from '../npcConfig.js';
 import * as live from '../live.js';
+import * as mail from '../mail.js';
 import * as events from './events.js';
+import * as elephant from './elephant.js';
 import { hooks as allianceHooks, membershipOf, notify } from './alliance.js';
 import { loadRow, troopsOf, resOf, withState, writeRow, staleCheck, retryStale, addTroops, addRes, RES } from './saves.js';
 
 export const MAX_ACTIVE_PER_ALLIANCE = 3;
+export const MAX_PROVINCE_RALLIES = 6;  // rallies on province towers (Province Conquest), counted apart as well
+export const MAX_ELEPHANT_RALLIES = 6; // rallies on the War Elephant run side by side (they do not count in the 3 above)
 export const DEFAULT_MINUTES = 10, MIN_MINUTES = 1, MAX_MINUTES = 60;
 const FINISHED_KEEP_MS = 24 * 3600 * 1000;
 
@@ -62,11 +66,13 @@ async function defenseLayout(playerId, army) {
 
 const isProtected = (row) => row.revision < C.PROTECT_REVISION || armyPower(troopsOf(row), {}) < C.PROTECT_POWER;
 
-export function createRally(world) {
+export function createRally(world, { conquest } = {}) {
   const serial = world.serial;
 
   // ---- json ---------------------------------------------------------------------------
   async function targetInfo(r) {
+    if (r.targetType === 'elephant') return { exists: true };
+    if (r.targetType === 'province') { try { const i = await conquest.checkTarget(Number(String(r.targetKey).split(':')[1]), r.allianceId); return { exists: true, power: i.power }; } catch { return { exists: false }; } }
     if (r.targetType === 'camp') {
       const c = await NpcCamp.findOne({ where: { key: r.targetKey } });
       return c ? { exists: true, level: c.level, power: Math.round(armyPower(c.army, {})), tileX: c.tileX, tileY: c.tileY } : { exists: false };
@@ -143,17 +149,27 @@ export function createRally(world) {
     const row = await loadRow(player.id);
     staleCheck(row, body.baseVersion, 'start the rally');
     const now = Date.now();
-    const type = body.targetType === 'castle' ? 'castle' : body.targetType === 'camp' ? 'camp' : null;
-    if (!type) throw err(400, 'bad_target', 'targetType must be camp or castle');
-    const key = String(body.targetId || '');
+    const type = body.targetType === 'castle' ? 'castle' : body.targetType === 'camp' ? 'camp' : body.targetType === 'elephant' ? 'elephant' : body.targetType === 'province' ? 'province' : null;
+    if (!type) throw err(400, 'bad_target', 'targetType must be camp, castle, province or elephant');
+    let key = String(body.targetId || '');
 
     const open = await Rally.findAll({ where: { allianceId: m.allianceId, status: 'gathering' } });
-    if (open.length >= MAX_ACTIVE_PER_ALLIANCE) throw err(409, 'too_many', `your alliance can have at most ${MAX_ACTIVE_PER_ALLIANCE} rallies at the same time`);
+    const openMain = open.filter((r) => r.targetType !== 'elephant' && r.targetType !== 'province'), openEle = open.filter((r) => r.targetType === 'elephant'), openProv = open.filter((r) => r.targetType === 'province');
+    if (type === 'elephant' ? openEle.length >= MAX_ELEPHANT_RALLIES : type === 'province' ? openProv.length >= MAX_PROVINCE_RALLIES : openMain.length >= MAX_ACTIVE_PER_ALLIANCE) throw err(409, 'too_many', `your alliance can have at most ${type === 'elephant' ? MAX_ELEPHANT_RALLIES : type === 'province' ? MAX_PROVINCE_RALLIES : MAX_ACTIVE_PER_ALLIANCE} rallies like this at the same time`);
     if (open.some((r) => r.hostId === player.id)) throw err(409, 'already_hosting', 'you already have a rally: launch or cancel it first');
-    if (open.some((r) => r.targetKey === key)) throw err(409, 'same_target', 'your alliance is already gathering for this target');
+    if (type === 'province') key = `province:${Math.floor(Number(body.targetId))}`;
+    if (type !== 'elephant' && open.some((r) => r.targetKey === key)) throw err(409, 'same_target', 'your alliance is already gathering for this target');
 
-    let targetName;
-    if (type === 'camp') {
+    let targetName, lastLaunch = Infinity;
+    if (type === 'elephant') {
+      const hunt = await elephant.activeHunt(m.allianceId, now);
+      if (!hunt) throw err(409, 'no_hunt', 'the War Elephant is not here: your leader or an officer has to start the hunt first');
+      key = `elephant:${hunt.id}`; targetName = 'War Elephant'; lastLaunch = hunt.endsAt - 1500; // it must launch before the hunt ends
+    } else if (type === 'province') {
+      if (!conquest) throw err(400, 'bad_target', 'provinces are not available');
+      const info = await conquest.checkTarget(Math.floor(Number(body.targetId)), m.allianceId);
+      targetName = `${info.name} tower`; lastLaunch = now + info.closesInMs - 1500; // it must launch before the province closes
+    } else if (type === 'camp') {
       const camp = await NpcCamp.findOne({ where: { key } });
       if (!camp) throw err(404, 'no_camp', 'this camp does not exist (any more)');
       targetName = `${NPC.CAMP_TYPES[camp.type]?.name || 'Camp'} (Lv ${camp.level})`;
@@ -171,7 +187,7 @@ export function createRally(world) {
     const { sent, have } = parseTroops(body.troops, row);
     const minutes = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.floor(Number(body.minutes)) || DEFAULT_MINUTES));
     const save = await takeFromSave(row, sent, have);
-    const r = await Rally.create({ allianceId: m.allianceId, hostId: player.id, hostName: player.username, targetType: type, targetKey: key, targetName, status: 'gathering', launchAt: now + minutes * 60000 });
+    const r = await Rally.create({ allianceId: m.allianceId, hostId: player.id, hostName: player.username, targetType: type, targetKey: key, targetName, status: 'gathering', launchAt: Math.min(now + minutes * 60000, lastLaunch) });
     await RallyJoin.create({ rallyId: r.id, playerId: player.id, username: player.username, troops: sent });
     ping(m.allianceId, { phase: 'new', rallyId: r.id, by: player.username, target: targetName }, player.id);
     return { rally: await rallyJson(r, player.id, now), save: { version: save.version, troops: save.troops } };
@@ -237,12 +253,26 @@ export function createRally(world) {
     for (const j of joins) for (const [id, n] of Object.entries(j.troops)) combined[id] = (combined[id] || 0) + n;
 
     let win = false, loot = {}, dead = {}, report = {}, defenderId = null, defenderNote = null;
+    if (r.targetType === 'elephant') {
+      const hit = await elephant.applyRally(Number(String(r.targetKey).split(':')[1]), joins);
+      if (!hit) return { refund: 'over' }; // the hunt ended before the rally launched: troops come home
+      return { win: true, loot: {}, dead: {}, report: { elephant: hit.summary }, combined, defenderId: null, defenderNote: null, elephantDamage: hit.dmg };
+    }
+    if (r.targetType === 'province') {
+      const out = await conquest.battle(Number(String(r.targetKey).split(':')[1]), r.allianceId, combined);
+      if (!out) return { refund: 'over' }; // closed (or your alliance already holds it): troops come home
+      return { win: out.win, loot: {}, dead: out.dead, report: out.report, combined, defenderId: null, defenderNote: null };
+    }
     if (r.targetType === 'camp') {
       const camp = await NpcCamp.findOne({ where: { key: r.targetKey } });
       if (!camp) return { refund: 'gone' };
-      const res = fight(combined, camp.army);
+      const res = fight(combined, camp.army, { defenderFormation: NPC.CAMP_TYPES[camp.type]?.formation });
       win = res.win; dead = res.attackerLosses; loot = win ? camp.loot : {};
-      report = { ticks: res.ticks, log: res.log, attackerPower: res.attackerPower, defenderPower: res.defenderPower, camp: { level: camp.level, type: camp.type } };
+      report = {
+        ticks: res.ticks, log: res.log, events: res.events, attackerPower: res.attackerPower, defenderPower: res.defenderPower,
+        attackerFormation: res.attackerFormation, defenderFormation: res.defenderFormation, effects: res.effects, slots: res.slots,
+        defenderLosses: res.defenderLosses, defenderSent: res.defenderSent, campType: camp.type, campLevel: camp.level, camp: { level: camp.level, type: camp.type },
+      };
       if (win) await world.removeCamp(camp);
       if (win) for (const j of joins) await events.record(j.playerId, 'camp_win', { level: camp.level });
     } else {
@@ -276,6 +306,7 @@ export function createRally(world) {
         ticks: out.res.ticks, log: out.res.log, attackerPower: out.res.attackerPower, defenderPower: out.res.defenderPower,
         attackerFormation: attLayout.formation, defenderFormation: out.defLayout.formation, wounded: out.A.wounded,
         defenderLosses: out.D.dead, defenderWounded: out.D.wounded, sent: layoutArmy(attLayout),
+        events: out.res.events, effects: out.res.effects, slots: out.res.slots, defenderSent: out.res.defenderSent, defenderSurvivors: out.res.defenderSurvivors,
       };
       defenderNote = { type: 'attacked', by: `${r.hostName} (rally)`, win: !out.res.win, losses: out.D.dead, wounded: out.D.wounded, loot };
     }
@@ -302,11 +333,44 @@ export function createRally(world) {
       const j = joins[i], returned = { ...j.troops };
       for (const [id, n] of Object.entries(deadBy[i])) { returned[id] = (returned[id] || 0) - n; if (returned[id] <= 0) delete returned[id]; }
       const myLoot = {}; for (const k of RES) if (lootBy[k][i] > 0) myLoot[k] = lootBy[k][i];
-      await j.update({ result: { rallyId: r.id, win: out.win, targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: deadBy[i], returned, loot: myLoot, share: Math.round((power[i] / totalPower) * 100) } });
+      await j.update({ result: { rallyId: r.id, win: out.win, targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: deadBy[i], returned, loot: myLoot, share: Math.round((power[i] / totalPower) * 100), ...(out.elephantDamage ? { damage: out.elephantDamage[i], elephant: out.report.elephant } : {}), ...(out.report && out.report.province ? { province: out.report.province } : {}) } });
     }
     await r.update({ status: 'done', report: { win: out.win, participants: joins.length, loot: out.loot, dead: out.dead, ...out.report } });
     for (const j of joins) live.send(j.playerId, { type: 'rally', phase: 'done', rallyId: r.id, win: out.win });
+    await mailReports(r, joins, out, { deadBy, lootBy, power, totalPower });
     if (out.defenderId && out.defenderNote) live.send(out.defenderId, out.defenderNote);
+  }
+
+  /** Every donor gets the fight in their battle reports (letters); the defender of a castle gets it too. Never blocks the rally. */
+  async function mailReports(r, joins, out, { deadBy, lootBy, power, totalPower }) {
+    const at = Date.now();
+    const tag = r.targetType === 'camp' ? 'camp' : r.targetType === 'elephant' ? 'elephant' : 'castle';
+    try {
+      if (tag === 'elephant') {
+        for (let i = 0; i < joins.length; i++) {
+          const j = joins[i], res = j.result || {};
+          const mine = { win: true, loot: {}, losses: {}, sent: j.troops, survivors: res.returned || {}, elephant: { ...out.report.elephant, damage: res.damage, share: res.share }, rally: { host: r.hostName, participants: joins.length, share: res.share } };
+          await mail.deliver({ playerId: j.playerId, kind: 'report', read: true, subject: `War Elephant: ${Math.round(res.damage || 0).toLocaleString('en-US')} damage`, data: { role: 'attacker', source: 'rally', target: 'elephant', castleName: 'War Elephant', host: r.hostName, at, report: mine } }).catch(() => {});
+        }
+        return;
+      }
+      for (let i = 0; i < joins.length; i++) {
+        const j = joins[i], res = j.result || {};
+        const mine = { ...out.report, wounded: undefined, win: out.win, loot: res.loot || {}, sent: j.troops, losses: deadBy[i], survivors: res.returned || {}, rally: { host: r.hostName, participants: joins.length, share: res.share } };
+        await mail.deliver({
+          playerId: j.playerId, kind: 'report', read: true,
+          subject: `Rally ${out.win ? 'victory' : 'defeat'}: ${r.targetName}`,
+          data: { role: 'attacker', source: 'rally', target: tag, castleName: r.targetName, host: r.hostName, at, report: mine },
+        }).catch(() => {});
+      }
+      if (out.defenderId) {
+        await mail.deliver({
+          playerId: out.defenderId, kind: 'report', fromName: r.hostName,
+          subject: `${out.win ? 'Raided' : 'Held'}: ${r.hostName}'s alliance rally attacked ${r.targetName}`,
+          data: { role: 'defender', source: 'rally', target: 'castle', castleName: r.targetName, attacker: r.hostName, at, report: { ...out.report, win: out.win, loot: out.loot, losses: out.dead, rally: { host: r.hostName, participants: joins.length } } },
+        }).catch(() => {});
+      }
+    } catch (e) { console.error('[rally] report mail failed', e.message); }
   }
 
   /** Host / officer / leader launches before the timer ends. body: { rallyId } */

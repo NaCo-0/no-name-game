@@ -18,7 +18,10 @@ import { createSocial } from './social/index.js';
  * @returns express app; `app.locals.world` = donya-ye bazi (syncWorld, syncCamps, startTicker, ...)
  */
 export function createApp({ spawner, npc } = {}) {
-  const world = createWorld({ spawner: spawner || createMapSpawner({ root: config.projectRoot }), npc });
+  const theSpawner = spawner || createMapSpawner({ root: config.projectRoot });
+  const world = createWorld({ spawner: theSpawner, npc });
+  const social = createSocial(world, { spawner: theSpawner });
+  world.conquest = social.conquest; // the admin panel reads its calendar
   const app = express();
   app.locals.world = world;
   app.disable('x-powered-by');
@@ -31,7 +34,7 @@ export function createApp({ spawner, npc } = {}) {
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
   app.use('/api/admin', adminRoutes(world));
-  app.use('/api', createSocial(world).router); // alliances, rallies, events (before gameRoutes: it has a blanket /game auth)
+  app.use('/api', social.router); // alliances, rallies, events (before gameRoutes: it has a blanket /game auth)
   app.use('/api', gameRoutes(world));
   app.use('/api', (req, res) => res.status(404).json({ error: 'unknown_endpoint', message: 'unknown endpoint' }));
 

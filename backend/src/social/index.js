@@ -5,13 +5,19 @@ import { sequelize } from '../models.js';
 import * as alliance from './alliance.js';
 import * as events from './events.js';
 import { createRally } from './rally.js';
+import { createElephant } from './elephant.js';
+import { createConquest } from './conquest.js';
 
-export function createSocial(world) {
-  const rally = createRally(world);
+export function createSocial(world, { spawner } = {}) {
+  const conquest = createConquest(world, { spawner: spawner || {} });
+  const rally = createRally(world, { conquest });
   world.addTickHook(() => rally.tick());
+  const elephant = createElephant(world);
+  world.addTickHook(() => conquest.tick());
+  world.addTickHook(() => elephant.tick()); // after the rallies: a rally launched at the last second still counts
 
   const r = Router();
-  r.use(['/alliance', '/alliances', '/rally', '/events'], playerAuth);
+  r.use(['/alliance', '/alliances', '/rally', '/events', '/conquest'], playerAuth);
   const ok = (fn) => async (req, res) => res.json({ ok: true, now: Date.now(), ...(await fn(req.player, req.body || {}, req)) });
 
   // ---- alliances ----
@@ -38,9 +44,20 @@ export function createSocial(world) {
   r.post('/rally/cancel', ok((p, b) => rally.cancel(p, b)));
   r.post('/rally/claim', ok((p, b) => rally.claim(p, b)));
 
+  // ---- Province Conquest ----
+  r.get('/conquest', ok((p) => conquest.status(p)));
+  r.get('/conquest/map', ok(() => ({ map: conquest.map() })));
+
+  // ---- War Elephant (alliance hunt) ----
+  r.get('/alliance/elephant', ok((p) => elephant.status(p)));
+  r.post('/alliance/elephant/start', ok((p, b) => elephant.start(p, b)));
+  r.post('/alliance/elephant/cancel', ok((p) => elephant.cancel(p)));
+  r.post('/alliance/elephant/donate', ok((p, b) => elephant.donate(p, b)));
+  r.post('/alliance/elephant/claim', ok((p, b) => elephant.claim(p, b)));
+
   // ---- events ----
   r.get('/events', ok((p) => events.eventsFor(p)));
   r.post('/events/claim', ok((p, b) => events.claim(p, b)));
 
-  return { router: r, rally, sequelize };
+  return { router: r, rally, elephant, conquest, sequelize };
 }

@@ -42,11 +42,12 @@ test('alliance: create, validate names, join (open + request), roles, kick, leav
   assert.equal(j.json.joined, true);
   assert.equal(j.json.alliance.memberCount, 2);
   assert.equal((await api('POST', '/api/alliance/join', b.token, { allianceId: id })).json.error, 'already_in');
-  // search shows it, only for the same civ
+  // search shows it, for every civilization
   assert.equal((await api('GET', '/api/alliances?q=wol', c.token)).json.alliances[0].name, 'Wolves');
   const roman = await t.player('RomanGuy', 'rome');
-  assert.equal((await api('GET', '/api/alliances', roman.token)).json.alliances.length, 0);
-  assert.equal((await api('POST', '/api/alliance/join', roman.token, { allianceId: id })).json.error, 'other_culture');
+  assert.equal((await api('GET', '/api/alliances', roman.token)).json.alliances.length, 1);
+  assert.equal((await api('POST', '/api/alliance/join', roman.token, { allianceId: id })).json.joined, true);
+  await api('POST', '/api/alliance/leave', roman.token, {});
 
   // request mode
   assert.equal((await api('POST', '/api/alliance/settings', b.token, { joinMode: 'request' })).json.error, 'not_allowed');
@@ -152,6 +153,17 @@ test('rally on a camp: donations leave the save, one combined battle, loot split
   assert.deepEqual((await api('POST', '/api/rally/claim', a.token, { baseVersion: ca.json.save.version })).json.reports, []); // only once
   // no double counting: survivors in the save == what the report says
   assert.deepEqual(await troopsNow(a), ca.json.reports[0].returned);
+
+  // the rally is in everybody's battle reports (letters), with the whole fight and their own numbers
+  for (const who of [a, b]) {
+    const mails = (await api('GET', '/api/game/mail?kind=report', who.token)).json.mails;
+    const m = mails.find((x) => x.data && x.data.source === 'rally');
+    assert.ok(m, 'rally report mail');
+    assert.equal(m.data.role, 'attacker');
+    assert.equal(m.data.report.win, true);
+    assert.ok(Array.isArray(m.data.report.log) && m.data.report.log.length > 0);
+    assert.equal(m.data.report.rally.participants, 2);
+  }
 });
 
 test('rally on a castle: attackers fight the real defender, defender loses troops/loot, allies and beginners are protected', async () => {
@@ -215,6 +227,7 @@ test('rally: timer launches it by itself (ticker); cancel / leaving the alliance
 
   // cancel refunds everybody
   await api('POST', '/api/rally/claim', a.token, { baseVersion: await ver(a) });
+  await setSave(a, { troops: { guard: 50 } }); // the random camp may have killed the guards: the test is about refunds, not about this fight
   const c2 = await api('POST', '/api/rally', a.token, { targetType: 'camp', targetId: (await api('GET', '/api/alliance/targets', a.token)).json.camps[2].id, troops: { guard: 5 }, baseVersion: await ver(a) });
   assert.equal(c2.status, 200);
   const x = await api('POST', '/api/rally/cancel', a.token, { rallyId: c2.json.rally.id });
@@ -223,14 +236,25 @@ test('rally: timer launches it by itself (ticker); cancel / leaving the alliance
   assert.ok(cl.json.reports.some((q) => q.cancelled !== false && q.refund));
 });
 
-test('events: window = server days 1-3, camp wins and building levels score, tiers pay out once, leaderboard', async () => {
+test('events: builder on day 2, hunter on day 3 (admin can move the clock), camp wins and building levels score, tiers pay out once, leaderboard', async () => {
   const p = await t.player('EvHero'), q = await t.player('EvOther');
-  // server day 1
+  const H = 3600 * 1000;
+  // server day 1: both events are still to come
   await clock.setServerStart(Date.now() - 1000);
+  await clock.setTimeOffset(0);
   const e0 = (await api('GET', '/api/events', p.token)).json;
   assert.equal(e0.serverDay, 1);
   assert.equal(e0.events.length, 2);
-  assert.ok(e0.events.every((e) => e.state === 'active'));
+  assert.ok(e0.events.every((e) => e.state === 'upcoming'));
+  assert.equal(e0.events.find((e) => e.id === 'grand_builder').startsAt - e0.events.find((e) => e.id === 'grand_builder').endsAt, -24 * H);
+  assert.equal((await api('POST', '/api/events/claim', p.token, { eventId: 'grand_builder', tier: 0 })).json.error, 'not_started');
+
+  // 24h after the server start: Grand Builder is live, Bandit Hunter waits for the next day
+  await clock.setTimeOffset(24 * H);
+  const e0b = (await api('GET', '/api/events', p.token)).json;
+  assert.equal(e0b.serverDay, 2);
+  assert.equal(e0b.events.find((e) => e.id === 'grand_builder').state, 'active');
+  assert.equal(e0b.events.find((e) => e.id === 'bandit_hunter').state, 'upcoming');
 
   // Grand Builder: baseline first, then +3 levels = 75 points
   await setSave(p, { buildings: [{ id: 'hq', level: 2 }, { id: 'farm', level: 1 }] });
@@ -238,6 +262,13 @@ test('events: window = server days 1-3, camp wins and building levels score, tie
   await setSave(p, { buildings: [{ id: 'hq', level: 4 }, { id: 'farm', level: 2 }] });
   const e1 = (await api('GET', '/api/events', p.token)).json.events.find((e) => e.id === 'grand_builder');
   assert.equal(e1.points, 75);
+
+  // next day: Grand Builder is over, Bandit Hunter starts
+  await clock.setTimeOffset(48 * H + 1000);
+  const eb = (await api('GET', '/api/events', p.token)).json.events;
+  assert.equal(eb.find((e) => e.id === 'grand_builder').state, 'ended');
+  assert.equal(eb.find((e) => e.id === 'bandit_hunter').state, 'active');
+  assert.equal(eb.find((e) => e.id === 'grand_builder').points, 75);
 
   // Bandit Hunter: win a camp through a normal expedition
   const world = (await api('GET', '/api/game/world', p.token)).json;
@@ -267,7 +298,7 @@ test('events: window = server days 1-3, camp wins and building levels score, tie
   assert.equal((await api('POST', '/api/events/claim', p.token, { eventId: 'nope', tier: 0 })).status, 404);
 
   // after day 3 the event is over: no more points
-  await clock.setServerStart(Date.now() - 3 * 86400000 - 1000);
+  await clock.setTimeOffset(72 * H + 1000);
   const e3 = (await api('GET', '/api/events', p.token)).json;
   assert.equal(e3.serverDay, 4);
   assert.ok(e3.events.every((e) => e.state === 'ended'));
@@ -275,4 +306,218 @@ test('events: window = server days 1-3, camp wins and building levels score, tie
   const events = await import('../src/social/events.js');
   await events.record(p.id, 'camp_win', { level: 3 });
   assert.equal((await api('GET', '/api/events', p.token)).json.events.find((e) => e.id === 'bandit_hunter').points, pts);
+  await clock.setTimeOffset(0);
+});
+
+test('war elephant: opens on day 5, one hunt per 4-day cycle, enhance, rally damage without losses, rewards after 30 minutes', async () => {
+  const H = 3600 * 1000;
+  const a = await t.player('EleLead'), b = await t.player('EleB'), c = await t.player('EleOut');
+  const al = (await api('POST', '/api/alliance', a.token, { name: 'Elephants', tag: 'ELE' })).json.alliance;
+  await api('POST', '/api/alliance/join', b.token, { allianceId: al.id });
+  await setSave(a, { troops: { spearman: 300, archer: 100, cavalry: 100 }, res: { wood: 5000, iron: 2000 } });
+  await setSave(b, { troops: { spearman: 200 } });
+  await clock.setServerStart(Date.now() - 1000);
+
+  // before day 5: locked
+  await clock.setTimeOffset(0);
+  let s = (await api('GET', '/api/alliance/elephant', a.token)).json.elephant;
+  assert.equal(s.state, 'locked');
+  assert.equal((await api('POST', '/api/alliance/elephant/start', a.token, { minutes: 0 })).json.error, 'locked');
+  assert.equal((await api('GET', '/api/alliance/elephant', c.token)).json.elephant.available, false); // no alliance
+
+  // server day 5 (hour 96): open
+  await clock.setTimeOffset(96 * H);
+  s = (await api('GET', '/api/alliance/elephant', a.token)).json.elephant;
+  assert.equal(s.state, 'idle');
+  assert.equal(s.cycle.number, 1);
+  assert.equal(s.canManage, true);
+  assert.equal((await api('GET', '/api/alliance/elephant', b.token)).json.elephant.canManage, false);
+  assert.equal((await api('POST', '/api/alliance/elephant/start', b.token, { minutes: 0 })).json.error, 'not_allowed');
+
+  // enhance the trap: resources leave the save, points count (iron counts double)
+  assert.equal((await api('POST', '/api/alliance/elephant/donate', a.token, { resources: { wood: 99999 }, baseVersion: await ver(a) })).json.error, 'not_enough');
+  const d = await api('POST', '/api/alliance/elephant/donate', a.token, { resources: { wood: 1000, iron: 250 }, baseVersion: await ver(a) });
+  assert.equal(d.status, 200);
+  assert.equal(d.json.elephant.hunt.trap.points, 1500);
+  assert.equal(d.json.elephant.hunt.trap.level, 1); // 1500 points = level 1 for a small alliance
+  assert.equal(d.json.save.resources.wood, 4000);
+
+  // no rally before the hunt is on
+  assert.equal((await api('POST', '/api/rally', a.token, { targetType: 'elephant', troops: { spearman: 10 }, minutes: 1, baseVersion: await ver(a) })).json.error, 'no_hunt');
+
+  // activate now
+  const st = await api('POST', '/api/alliance/elephant/start', a.token, { minutes: 0 });
+  assert.equal(st.json.elephant.state, 'active');
+  assert.ok(st.json.elephant.hunt.msLeft > 29 * 60000);
+  assert.ok(st.json.elephant.hunt.pool >= 4000);
+  assert.equal((await api('POST', '/api/alliance/elephant/start', a.token, { minutes: 0 })).json.error, 'already_used');
+  assert.equal((await api('POST', '/api/alliance/elephant/donate', a.token, { resources: { wood: 10 }, baseVersion: await ver(a) })).json.error, 'trap_busy');
+
+  // rally on the elephant: two members, one battle-free hit, nobody loses a soldier
+  const rl = await api('POST', '/api/rally', a.token, { targetType: 'elephant', troops: { spearman: 300, archer: 100 }, minutes: 5, baseVersion: await ver(a) });
+  assert.equal(rl.status, 200);
+  assert.equal(rl.json.rally.target.type, 'elephant');
+  assert.equal((await api('POST', '/api/rally/join', b.token, { rallyId: rl.json.rally.id, troops: { spearman: 200 }, baseVersion: await ver(b) })).status, 200);
+  const lch = await api('POST', '/api/rally/launch', a.token, { rallyId: rl.json.rally.id });
+  assert.equal(lch.status, 200);
+  assert.equal(lch.json.rally.status, 'done');
+  const e1 = lch.json.rally.report.elephant;
+  assert.ok(e1.total > 0);
+  assert.equal(e1.rallyBonus, 4);  // 2 members: +4%
+  assert.equal(e1.trapBonus, 5);   // trap level 1: +5%
+  assert.ok(e1.byClass.spear > 0 && e1.byClass.archer > 0);
+
+  const ca = await api('POST', '/api/rally/claim', a.token, { baseVersion: await ver(a) });
+  assert.equal(ca.status, 200);
+  assert.equal(ca.json.save.troops.spearman, 300); // everyone gets everything back
+  assert.equal(ca.json.save.troops.archer, 100);
+  await api('POST', '/api/rally/claim', b.token, { baseVersion: await ver(b) });
+  assert.equal((await troopsNow(b)).spearman, 200);
+
+  // spears hit harder than horses (per power)
+  const pu = (await import('../src/battleConfig.js')).unitPower;
+  const el = await import('../src/social/elephant.js');
+  assert.ok(el.troopDamage({ spearman: 10 }) / (10 * pu('spearman')) > el.troopDamage({ cavalry: 10 }) / (10 * pu('cavalry')));
+
+  // the rally is in both battle reports
+  for (const who of [a, b]) {
+    const mails = (await api('GET', '/api/game/mail?kind=report', who.token)).json.mails;
+    const m = mails.find((x) => x.data && x.data.target === 'elephant');
+    assert.ok(m, 'elephant report');
+    assert.ok(m.data.report.elephant.damage > 0);
+  }
+
+  // standings
+  s = (await api('GET', '/api/alliance/elephant', b.token)).json.elephant;
+  assert.equal(s.hunt.damage, e1.total);
+  assert.equal(s.hunt.top.length, 2);
+  assert.equal(s.hunt.top[0].username, 'EleLead');
+  assert.equal(s.hunt.me.hits, 1);
+  assert.ok([1, 2, 3].includes(s.hunt.phase));
+
+  // time is up: rewards are computed and can be claimed once
+  const hunt = await RallyM.ElephantHunt.findByPk(s.hunt.id);
+  await hunt.update({ endsAt: Date.now() - 10 });
+  await sleep(2200);
+  s = (await api('GET', '/api/alliance/elephant', a.token)).json.elephant;
+  assert.equal(s.state, 'ended');
+  assert.ok(s.hunt.me.reward && s.hunt.me.reward.total.wood > 0);
+  assert.ok(s.pending.count >= 1);
+  const before = (await M.GameSave.findOne({ where: { playerId: a.id } })).data.resources.persian;
+  const cl = await api('POST', '/api/alliance/elephant/claim', a.token, { baseVersion: await ver(a) });
+  assert.equal(cl.status, 200);
+  assert.ok(cl.json.save.resources.wood > before.wood);
+  assert.equal((await api('POST', '/api/alliance/elephant/claim', a.token, { baseVersion: await ver(a) })).json.rewards.length, 0);
+  assert.equal((await api('GET', '/api/alliance/elephant', a.token)).json.elephant.pending.count, 0);
+
+  // same cycle: no second hunt. 4 days later (cycle 2): available again, can be scheduled and cancelled
+  assert.equal((await api('POST', '/api/alliance/elephant/start', a.token, { minutes: 0 })).json.error, 'already_used');
+  await clock.setTimeOffset(200 * H); // hour 192 starts cycle 2
+  s = (await api('GET', '/api/alliance/elephant', a.token)).json.elephant;
+  assert.equal(s.cycle.number, 2);
+  assert.equal(s.state, 'idle');
+  const sc = await api('POST', '/api/alliance/elephant/start', a.token, { minutes: 30 });
+  assert.equal(sc.json.elephant.state, 'scheduled');
+  assert.ok(sc.json.elephant.hunt.msToStart > 29 * 60000);
+  assert.equal((await api('POST', '/api/alliance/elephant/cancel', a.token)).json.elephant.state, 'idle');
+
+  // after day 31 the season is over
+  await clock.setTimeOffset(31 * 24 * H + 1000);
+  assert.equal((await api('GET', '/api/alliance/elephant', a.token)).json.elephant.state, 'over');
+  await clock.setTimeOffset(0);
+});
+
+test('province conquest: opens day 7 08:00, two adjacent provinces every 30 min for 1 hour, rallies take and swap the tower, most points wins', async () => {
+  const H = 3600 * 1000, MIN = 60000;
+  const Q = await import('../src/social/conquest.js');
+  // pairing: every pair is adjacent on the lattice, all 15 are covered once, 7 pairs + 1 alone
+  const provs = Array.from({ length: 15 }, (_, i) => { const row = Math.floor(i / 5), col = i % 5, nb = []; if (col > 0) nb.push(i - 1); if (col < 4) nb.push(i + 1); if (row > 0) nb.push(i - 5); if (row < 2) nb.push(i + 5); return { id: i, local: i, neighbors: nb }; });
+  const groups = Q.groupsFor(provs);
+  assert.equal(groups.length, 8);
+  assert.deepEqual(groups.flat().sort((a, b) => a - b), provs.map((p) => p.id));
+  assert.equal(groups.filter((g) => g.length === 2).length, 7);
+  for (const g of groups.filter((x) => x.length === 2)) assert.ok(provs[g[0]].neighbors.includes(g[1]), 'pair touches');
+
+  const a = await t.player('ConqA'), b = await t.player('ConqB');
+  const alA = (await api('POST', '/api/alliance', a.token, { name: 'Alpha Conq', tag: 'AAA' })).json.alliance;
+  await api('POST', '/api/alliance', b.token, { name: 'Beta Conq', tag: 'BBB' });
+  const troops = { spearman: 1500, archer: 800 };
+  await setSave(a, { troops }); await setSave(b, { troops });
+  await clock.setServerStart(Date.now() - 1000);
+  const hit = async (who, id) => {
+    await setSave(who, { troops }); // fresh army for every hit (the garrison kills some)
+    const rl = await api('POST', '/api/rally', who.token, { targetType: 'province', targetId: id, troops, minutes: 1, baseVersion: await ver(who) });
+    if (rl.status !== 200) return rl;
+    const lch = await api('POST', '/api/rally/launch', who.token, { rallyId: rl.json.rally.id });
+    await api('POST', '/api/rally/claim', who.token, { baseVersion: await ver(who) });
+    return lch;
+  };
+  const conquest = async (who = a) => (await api('GET', '/api/conquest', who.token)).json.conquest;
+
+  // before the event
+  await clock.setTimeOffset(0);
+  let c = await conquest();
+  assert.equal(c.event.state, 'upcoming');
+  assert.equal(c.provinces.length, 15);
+  assert.ok(c.provinces.every((p) => p.state === 'closed'));
+  assert.equal((await hit(a, 0)).json.error, 'not_open');
+
+  // server day 7, 08:00 (hour 152): the first pair of the biome is open
+  await clock.setTimeOffset(152 * H + 1000);
+  c = await conquest();
+  assert.equal(c.event.state, 'live');
+  const open = c.provinces.filter((p) => p.state === 'open');
+  assert.equal(open.length, 2);
+  assert.equal(open[0].partner, open[1].id);
+  assert.equal(open[0].slot, 0);
+  const tower = open[0].id, later = c.provinces.find((p) => p.slot === 1).id;
+  assert.equal((await hit(a, later)).json.error, 'not_open'); // the next pair opens half an hour later
+
+  // A takes the tower, B takes it from A, A takes it back; nobody can rally a tower they already hold
+  const w1 = await hit(a, tower);
+  assert.equal(w1.status, 200);
+  assert.equal(w1.json.rally.report.win, true);
+  assert.equal(w1.json.rally.report.province.captured, true);
+  c = await conquest();
+  assert.equal(c.provinces.find((p) => p.id === tower).holder.tag, 'AAA');
+  assert.equal((await hit(a, tower)).json.error, 'already_holder');
+  await sleep(1200);
+  assert.equal((await hit(b, tower)).status, 200);
+  assert.equal((await conquest()).provinces.find((p) => p.id === tower).holder.tag, 'BBB');
+  await sleep(1200);
+  assert.equal((await hit(a, tower)).status, 200);
+  c = await conquest();
+  const T = c.provinces.find((p) => p.id === tower);
+  assert.equal(T.holder.tag, 'AAA');
+  assert.equal(T.captures, 3);
+  assert.equal(T.top[0].tag, 'AAA'); // 2 captures + holding time
+  assert.ok(T.top[0].points >= 600 && T.top[1].points >= 300 && T.top[1].points < 600);
+  assert.equal(T.myPoints, T.top[0].points);
+
+  // the rally is in the battle reports, like any rally
+  const mails = (await api('GET', '/api/game/mail?kind=report', a.token)).json.mails;
+  assert.ok(mails.some((x) => x.data && x.data.source === 'rally' && x.data.castleName === `Prov ${tower} tower`));
+
+  // 30 minutes later the next pair opens too (two windows overlap)
+  await clock.setTimeOffset(152 * H + 31 * MIN);
+  c = await conquest();
+  assert.equal(c.provinces.filter((p) => p.state === 'open').length, 4);
+
+  // the hour is over: the province goes to the alliance with the most points of that tower
+  await clock.setTimeOffset(152 * H + 61 * MIN);
+  await sleep(2200);
+  c = await conquest();
+  const done = c.provinces.find((p) => p.id === tower);
+  assert.equal(done.state, 'done');
+  assert.equal(done.owner.tag, 'AAA');
+  assert.equal(done.owner.allianceId, alA.id);
+  assert.equal(c.provinces.filter((p) => p.state === 'open').length, 4); // slots 1 and 2 are open (a new pair every 30 minutes)
+  assert.equal((await hit(b, tower)).json.error, 'closed');
+  // untouched provinces just stay NPC
+  assert.equal(c.provinces.find((p) => p.id === open[1].id).owner, null);
+
+  // the whole event: 8 slots, the last one ends at 12:30
+  await clock.setTimeOffset(152 * H + 5 * H);
+  assert.equal((await conquest()).event.state, 'over');
+  await clock.setTimeOffset(0);
 });

@@ -219,3 +219,32 @@ test('admin: new admin accounts, and the last superadmin is protected', async ()
   assert.equal((await A('DELETE', `/admins/${rootRow.id}`, root)).json.error, 'last_superadmin');
   assert.equal((await A('PATCH', `/admins/${rootRow.id}`, root, { role: 'viewer' })).json.error, 'last_superadmin');
 });
+
+test('admin: server time moves only the event clock, audit logged, superadmin only', async () => {
+  const call = (m, path, tok, body) => t.call(m, '/api/admin' + path, { token: tok, body });
+  const g = await call('GET', '/server-time', view);
+  assert.equal(g.status, 200);
+  assert.equal(g.json.offsetMs, 0);
+  assert.equal(g.json.events.length, 2);
+  assert.equal(g.json.elephant.unlockHour, 96);
+  assert.equal(g.json.elephant.cycles.length, 7);
+  assert.equal(g.json.elephant.cycles[1].startHour, 192);
+  assert.equal(g.json.conquest.startHour, 152); // server day 7, 08:00
+  assert.equal(g.json.conquest.slots, 8);
+  assert.equal(g.json.conquest.endHour, 152 + 10.5 + 1); // 8 pairs, one every 1.5 hours (1 hour open + 30 min break): the last opens 10.5 hours later and stays one hour
+  assert.equal((await call('POST', '/server-time', mod, { shiftMs: 3600000 })).status, 403);
+  const a = await call('POST', '/server-time', root, { shiftMs: 6 * 3600000 });
+  assert.equal(a.status, 200);
+  assert.equal(a.json.offsetMs, 6 * 3600000);
+  const b = await call('POST', '/server-time', root, { shiftMs: -2 * 3600000 });
+  assert.equal(b.json.offsetMs, 4 * 3600000);
+  const c = await call('POST', '/server-time', root, { gotoHour: 24 });
+  assert.equal(c.json.events.find((e) => e.id === 'grand_builder').state, 'active');
+  assert.equal(c.json.events.find((e) => e.id === 'bandit_hunter').state, 'upcoming');
+  assert.equal((await call('POST', '/server-time', root, { shiftMs: 1e15 })).status, 400);
+  assert.equal((await call('POST', '/server-time', root, {})).status, 400);
+  const r = await call('POST', '/server-time', root, { reset: true });
+  assert.equal(r.json.offsetMs, 0);
+  const log = (await call('GET', '/audit', view)).json;
+  assert.ok(JSON.stringify(log).includes('server.time'));
+});

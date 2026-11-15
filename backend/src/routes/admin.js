@@ -10,6 +10,9 @@ import { hashPassword, verifyPassword, signAdmin, adminAuth, validPassword, vali
 import { audit, shallowDiff } from '../audit.js';
 import * as live from '../live.js';
 import * as alliance from '../social/alliance.js';
+import * as clock from '../social/clock.js';
+import * as socialEvents from '../social/events.js';
+import * as elephant from '../social/elephant.js';
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: Number(process.env.ADMIN_LOGIN_LIMIT || 15), standardHeaders: true, legacyHeaders: false });
 const viewer = adminAuth('viewer'), mod = adminAuth('moderator'), root = adminAuth('superadmin');
@@ -210,6 +213,29 @@ r.post('/broadcast', mod, wrap(async (req, res) => {
   const delivered = pid ? (live.send(pid, { type: 'admin_message', text }) ? 1 : 0) : live.broadcast({ type: 'admin_message', text });
   await audit(req, pid ? 'message.player' : 'message.broadcast', pid ? 'player' : null, pid ?? null, { text, delivered });
   res.json({ delivered });
+}));
+
+// ---------- server time (event clock) ----------
+// Moves ONLY the clock the events use (windows, rewards), for testing. Building timers, marches and rallies stay on real time.
+const MAX_SHIFT = 400 * 24 * 3600 * 1000;
+async function timeJson() {
+  const [offsetMs, startAt] = await Promise.all([clock.timeOffset(), clock.serverStart()]);
+  const realNow = Date.now(), serverNow = realNow + offsetMs;
+  return { realNow, offsetMs, serverNow, serverStartAt: startAt, serverDay: await clock.serverDay(serverNow), events: await socialEvents.eventWindows(serverNow), elephant: await elephant.schedule(serverNow), conquest: await world.conquest?.schedule(serverNow) ?? null };
+}
+r.get('/server-time', viewer, wrap(async (req, res) => res.json(await timeJson())));
+r.post('/server-time', root, wrap(async (req, res) => {
+  const b = req.body || {}, before = await clock.timeOffset();
+  let next;
+  if (b.reset === true) next = 0;
+  else if (Number.isFinite(Number(b.shiftMs)) && b.shiftMs !== null && b.shiftMs !== '') next = before + Number(b.shiftMs);
+  else if (Number.isFinite(Number(b.gotoHour)) && b.gotoHour !== null && b.gotoHour !== '') next = (await clock.serverStart()) + Number(b.gotoHour) * clock.HOUR_MS - Date.now(); // server time = start + N hours
+  else return res.status(400).json({ error: 'bad_request', message: 'send shiftMs, gotoHour or reset' });
+  if (!Number.isFinite(next) || Math.abs(next) > MAX_SHIFT) return res.status(400).json({ error: 'out_of_range', message: 'the shift is too large' });
+  await clock.setTimeOffset(next);
+  await audit(req, 'server.time', 'server', null, { offsetMs: { before, after: Math.round(next) } });
+  live.broadcast({ type: 'event' }); // open game screens reload their event bar
+  res.json(await timeJson());
 }));
 
 // ---------- territories ----------

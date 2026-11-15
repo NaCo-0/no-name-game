@@ -1,5 +1,5 @@
 /**
- * Individual events (server days 1-3). Two of them, both personal (no alliance needed):
+ * Individual events on a timetable (hours since the server started). Both are personal (no alliance needed):
  *   bandit_hunter  - points for every NPC camp you (or your rally) defeat; bigger camps give more
  *   grand_builder  - points for every building level you gain during the event
  * Points are saved per player; milestone tiers give rewards (claimed one by one); the leaderboard shows the best players.
@@ -9,27 +9,19 @@ import { EventScore, EventClaim } from './models.js';
 import { Player, GameSave, sequelize } from '../models.js';
 import { httpError } from '../httpError.js';
 import * as live from '../live.js';
-import { serverStart, serverDay, DAY_MS } from './clock.js';
+import { serverStart, serverDay, serverNow, DAY_MS, HOUR_MS } from './clock.js';
 import { loadRow, resOf, addRes, withState, writeRow, staleCheck, troopsOf } from './saves.js';
 
 export const CAMP_POINTS = { 1: 10, 2: 25, 3: 60 };
 export const BUILD_POINTS_PER_LEVEL = 25;
 export const CLAIM_GRACE_DAYS = 7; // rewards can be taken until this many days after the event ends
 
+// Timetable, in hours after the server started: Grand Builder runs on server day 2, Bandit Hunter on day 3 (the next day).
+export const SCHEDULE = { grand_builder: { startHour: 24, endHour: 48 }, bandit_hunter: { startHour: 48, endHour: 72 } };
+
 export const EVENTS = [
   {
-    id: 'bandit_hunter', name: 'Bandit Hunter', unit: 'points', startDay: 1, endDay: 3,
-    desc: 'Send your troops against NPC camps. Every victory scores points; stronger camps score more.',
-    how: ['Level 1 camp: 10 points', 'Level 2 camp: 25 points', 'Level 3 camp: 60 points', 'Rally wins count for everyone who joined'],
-    tiers: [
-      { points: 30, reward: { food: 600, wood: 600 } },
-      { points: 100, reward: { coin: 500, stone: 800 } },
-      { points: 250, reward: { coin: 1200, iron: 500 } },
-      { points: 500, reward: { coin: 3000, iron: 1000, food: 2000 } },
-    ],
-  },
-  {
-    id: 'grand_builder', name: 'Grand Builder', unit: 'points', startDay: 1, endDay: 3,
+    id: 'grand_builder', name: 'Grand Builder', unit: 'points', ...SCHEDULE.grand_builder,
     desc: 'Raise your buildings. Every level you gain while the event runs scores points.',
     how: ['Each building level gained: 25 points', 'Counts from the moment you first take part'],
     tiers: [
@@ -39,14 +31,32 @@ export const EVENTS = [
       { points: 1000, reward: { coin: 4000, iron: 1200 } },
     ],
   },
+  {
+    id: 'bandit_hunter', name: 'Bandit Hunter', unit: 'points', ...SCHEDULE.bandit_hunter,
+    desc: 'Send your troops against NPC camps. Every victory scores points; stronger camps score more.',
+    how: ['Level 1 camp: 10 points', 'Level 2 camp: 25 points', 'Level 3 camp: 60 points', 'Rally wins count for everyone who joined'],
+    tiers: [
+      { points: 30, reward: { food: 600, wood: 600 } },
+      { points: 100, reward: { coin: 500, stone: 800 } },
+      { points: 250, reward: { coin: 1200, iron: 500 } },
+      { points: 500, reward: { coin: 3000, iron: 1000, food: 2000 } },
+    ],
+  },
 ];
 const byId = new Map(EVENTS.map((e) => [e.id, e]));
 
-async function windowOf(def, now = Date.now()) {
+async function windowOf(def, now = null) {
+  now ??= await serverNow();
   const start = await serverStart();
-  const startsAt = start + (def.startDay - 1) * DAY_MS, endsAt = start + def.endDay * DAY_MS;
+  const startsAt = start + def.startHour * HOUR_MS, endsAt = start + def.endHour * HOUR_MS;
   const state = now < startsAt ? 'upcoming' : now < endsAt ? 'active' : 'ended';
   return { startsAt, endsAt, state };
+}
+
+/** For the admin panel: the timetable as the event clock sees it right now. */
+export async function eventWindows(now = null) {
+  now ??= await serverNow();
+  return Promise.all(EVENTS.map(async (def) => ({ id: def.id, name: def.name, startHour: def.startHour, endHour: def.endHour, ...(await windowOf(def, now)) })));
 }
 
 async function usernameOf(playerId) { return (await Player.findByPk(playerId, { attributes: ['username'] }))?.username || '?'; }
@@ -96,7 +106,8 @@ export async function observeSave(playerId, row = null) {
 }
 
 /** GET /events */
-export async function eventsFor(player, now = Date.now()) {
+export async function eventsFor(player, now = null) {
+  now ??= await serverNow();
   await observeSave(player.id);
   const claims = await EventClaim.findAll({ where: { playerId: player.id } });
   const out = [];
@@ -127,7 +138,7 @@ export async function claim(player, body = {}) {
   const tier = Number(body.tier);
   const t = def.tiers[tier];
   if (!Number.isInteger(tier) || !t) throw httpError(400, 'unknown reward tier', { code: 'bad_tier' });
-  const now = Date.now(), w = await windowOf(def, now);
+  const now = await serverNow(), w = await windowOf(def, now);
   if (w.state === 'upcoming') throw httpError(409, 'this event has not started', { code: 'not_started' });
   if (now >= w.endsAt + CLAIM_GRACE_DAYS * DAY_MS) throw httpError(409, 'the rewards of this event expired', { code: 'expired' });
   await observeSave(player.id);

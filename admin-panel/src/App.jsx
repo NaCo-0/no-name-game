@@ -12,6 +12,7 @@ import Online from './pages/Online.jsx';
 import Audit from './pages/Audit.jsx';
 import Chat from './pages/Chat.jsx';
 import Admins from './pages/Admins.jsx';
+import ServerTime from './pages/ServerTime.jsx';
 
 function Login({ onLogin }) {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -53,6 +54,7 @@ const NAV = [
   { to: '/online', label: 'آنلاین‌ها', icon: 'pulse' },
   { to: '/chat', label: 'چت بازی', icon: 'chat' },
   { to: '/territories', label: 'قلمروها', icon: 'map' },
+  { to: '/server-time', label: 'زمان سرور', icon: 'pulse' },
   { to: '/audit', label: 'گزارش تغییرات', icon: 'log' },
   { to: '/admins', label: 'مدیران', icon: 'shield', min: 'superadmin' },
 ];
@@ -105,6 +107,7 @@ function Shell() {
             <Route path="online" element={<Online />} />
             <Route path="chat" element={<Chat />} />
             <Route path="territories" element={<Territories />} />
+            <Route path="server-time" element={<ServerTime />} />
             <Route path="audit" element={<Audit />} />
             {can(admin.role, 'superadmin') && <Route path="admins" element={<Admins />} />}
             <Route path="*" element={<Navigate to="/" replace />} />

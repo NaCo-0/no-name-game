@@ -47,6 +47,12 @@ export function createWorld({ spawner, npc = {} }) {
   };
 
   // ---- ghale-ha -----------------------------------------------------------------------
+  /** A castle spot in a RANDOM biome (any civilization's land), whatever civilization the player chose. */
+  function pickCastleSpot(placed) {
+    const order = [...CIV_IDS].sort(() => Math.random() - 0.5);
+    for (const id of order) { const spot = spawner.pickSpot(id, placed); if (spot) return spot; }
+    return spawner.pickAnySpot ? spawner.pickAnySpot(placed) : null;
+  }
   /** Ghale-haye NPC ro ba naghshe-ye baked-e felli hamahang mikone. */
   async function syncWorld() {
     const key = spawner.mapKey();
@@ -60,7 +66,7 @@ export function createWorld({ spawner, npc = {} }) {
       const players = await Castle.findAll({ where: { isNpc: false } });
       const placed = await Castle.findAll({ where: { isNpc: true } });
       for (const c of players) {
-        const spot = spawner.pickSpot(c.civId, placed);
+        const spot = pickCastleSpot(placed);
         if (spot) { await c.update({ tileX: spot.tileX, tileY: spot.tileY }); placed.push(c); }
       }
       console.log('[game] map was baked again: castles were placed anew');
@@ -82,7 +88,7 @@ export function createWorld({ spawner, npc = {} }) {
       const civId = save.culture ? CULTURE_TO_CIV[save.culture] : requestedCivId;
       if (!CIV_IDS.includes(civId)) throw httpError(400, 'choose a civilization', { code: 'bad_civ' });
       const placed = await Castle.findAll();
-      const spot = spawner.pickSpot(civId, placed);
+      const spot = pickCastleSpot(placed); // the spawn spot has nothing to do with the chosen civilization: any biome
       if (!spot) throw httpError(503, 'no free spot found for a new castle', { code: 'no_spot' });
       castle = await sequelize.transaction(async (t) => {
         const c = await Castle.create({

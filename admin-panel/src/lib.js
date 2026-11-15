@@ -36,7 +36,7 @@ export const ACTION_FA = {
   'player.ban': 'مسدود کردن بازیکن', 'player.unban': 'رفع مسدودی', 'player.update': 'ویرایش بازیکن',
   'player.edit_save': 'ویرایش داده‌ی بازی', 'player.reset_password': 'بازنشانی رمز', 'player.set_culture': 'تغییر تمدن',
   'player.kick': 'اخراج از بازی', 'player.delete': 'حذف بازیکن', 'territory.update': 'ویرایش قلمرو',
-  'message.broadcast': 'پیام به همه', 'message.player': 'پیام به بازیکن',
+  'server.time': 'تغییر زمان سرور', 'message.broadcast': 'پیام به همه', 'message.player': 'پیام به بازیکن',
   'player.mute': 'بی‌صدا کردن در چت', 'player.unmute': 'رفع بی‌صدایی', 'chat.delete': 'حذف پیام چت',
 };
 

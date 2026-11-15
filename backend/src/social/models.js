@@ -58,3 +58,45 @@ export const EventClaim = sequelize.define('EventClaim', {
   eventId: { type: DataTypes.STRING(24), allowNull: false },
   tier: { type: DataTypes.INTEGER, allowNull: false },
 }, { indexes: [{ unique: true, fields: ['playerId', 'eventId', 'tier'] }] });
+
+/** War Elephant (alliance hunt, like the Bear Trap): one row per alliance per 4-day cycle. */
+export const ElephantHunt = sequelize.define('ElephantHunt', {
+  allianceId: { type: DataTypes.INTEGER, allowNull: false },
+  cycle: { type: DataTypes.INTEGER, allowNull: false }, // 0 = server day 5-8, 1 = day 9-12, ...
+  status: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'prep' }, // prep (only enhancing) | scheduled | active | ended
+  startsAt: { type: DataTypes.DOUBLE, allowNull: true },   // real ms (a hunt is 30 real minutes, whatever the admin does to the event clock)
+  endsAt: { type: DataTypes.DOUBLE, allowNull: true },
+  startedBy: { type: DataTypes.INTEGER, allowNull: true },
+  startedByName: { type: DataTypes.STRING, allowNull: true },
+  pool: { type: DataTypes.DOUBLE, allowNull: false, defaultValue: 0 },   // the elephant's "health": phases and alliance tiers are shares of it
+  damage: { type: DataTypes.DOUBLE, allowNull: false, defaultValue: 0 },
+  enhancePoints: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+}, { indexes: [{ unique: true, fields: ['allianceId', 'cycle'] }, { fields: ['status'] }] });
+
+export const ElephantScore = sequelize.define('ElephantScore', {
+  huntId: { type: DataTypes.INTEGER, allowNull: false },
+  playerId: { type: DataTypes.INTEGER, allowNull: false },
+  username: { type: DataTypes.STRING, allowNull: false },
+  power: { type: DataTypes.DOUBLE, allowNull: false, defaultValue: 0 },   // army power when the hunt began: rewards are measured against it
+  damage: { type: DataTypes.DOUBLE, allowNull: false, defaultValue: 0 },
+  hits: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  donated: { type: DataTypes.JSON, allowNull: true },                      // { wood: n, ... } given to the trap
+  donatedPoints: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  reward: { type: DataTypes.JSON, allowNull: true },                       // set when the hunt ends
+  claimed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+}, { indexes: [{ unique: true, fields: ['huntId', 'playerId'] }, { fields: ['playerId', 'claimed'] }] });
+
+/** Province Conquest: the live state of one province's tower while (and after) its window is open. */
+export const ProvinceState = sequelize.define('ProvinceState', {
+  provinceId: { type: DataTypes.INTEGER, allowNull: false, unique: true },   // civIndex * 15 + local index (see runtime/provinces.js)
+  civId: { type: DataTypes.STRING(12), allowNull: false },
+  status: { type: DataTypes.STRING(8), allowNull: false, defaultValue: 'open' }, // open | done
+  holderId: { type: DataTypes.INTEGER, allowNull: true },                    // alliance holding the tower right now
+  holdSince: { type: DataTypes.DOUBLE, allowNull: true },
+  points: { type: DataTypes.JSON, allowNull: false, defaultValue: {} },      // { allianceId: points } for this tower
+  names: { type: DataTypes.JSON, allowNull: false, defaultValue: {} },       // { allianceId: { name, tag } } (stays readable if an alliance is later disbanded)
+  captures: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  ownerId: { type: DataTypes.INTEGER, allowNull: true },                     // the province now belongs to this alliance
+  log: { type: DataTypes.JSON, allowNull: false, defaultValue: [] },         // last captures, newest first
+  lastTickAt: { type: DataTypes.DOUBLE, allowNull: true },
+});

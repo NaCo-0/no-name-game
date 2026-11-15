@@ -43,5 +43,15 @@ export const launchRally = (rallyId) => post('/api/rally/launch', { rallyId });
 export const cancelRally = (b) => post('/api/rally/cancel', b);
 export const claimRally = (baseVersion) => post('/api/rally/claim', { baseVersion });
 // events
-export const getEvents = () => get('/api/events');
+// the event clock can differ from this device's clock (admins may move it): keep the gap so countdowns match the server
+export const getEvents = async () => { const d = await get('/api/events'); d.skew = (Number(d.now) || Date.now()) - Date.now(); return d; };
 export const claimEvent = (b) => post('/api/events/claim', b);
+// War Elephant (alliance hunt)
+export const getElephant = () => get('/api/alliance/elephant');
+export const elephantStart = (b) => post('/api/alliance/elephant/start', b);
+export const elephantCancel = () => post('/api/alliance/elephant/cancel');
+export const elephantDonate = (b) => post('/api/alliance/elephant/donate', b);   // { resources, baseVersion }
+export const elephantClaim = (b) => post('/api/alliance/elephant/claim', b);     // { baseVersion }
+// Province Conquest
+export const getConquest = () => get('/api/conquest');
+export const getConquestMap = () => get('/api/conquest/map');
