@@ -1,7 +1,7 @@
 /** PvP: defense layout (Meta) + instant castle attack. */
-import { Castle, GameSave, Meta, sequelize } from './models.js';
+import { Castle, GameSave, Meta, Expedition, Player, sequelize } from './models.js';
 import { httpError } from './httpError.js';
-import { normalizeLayout, bestAutoLayout, layoutArmy, simulate } from './battle.js';
+import { normalizeLayout, bestAutoLayout, layoutArmy, simulate, fitLayout } from './battle.js';
 import * as mail from './mail.js';
 import * as C from './battleConfig.js';
 import * as live from './live.js';
@@ -74,7 +74,11 @@ export async function setDefense(player, body = {}) {
   return { layout };
 }
 
-/** body: { castleId, layout | troops, baseVersion } */
+let W = null;
+/** app.js hands over the world: castle attacks are marches now (the army walks, fights when it arrives, and walks home like a camp expedition). */
+export function bind(world) { W = world; world.hooks.castle = resolveCastleArrival; }
+
+/** body: { castleId, layout | troops, baseVersion } : the army leaves NOW, the fight happens when it gets there. */
 export const attackCastle = (player, body = {}) => serial(async () => {
   const att = await loadRow(player.id);
   if (Number.isInteger(body.baseVersion) && body.baseVersion !== att.revision) {
@@ -85,55 +89,68 @@ export const attackCastle = (player, body = {}) => serial(async () => {
   if (castle.isNpc) throw httpError(400, 'npc castles cannot be attacked yet', { code: 'npc_castle' });
   if (castle.playerId === player.id) throw httpError(400, 'you cannot attack your own castle', { code: 'own_castle' });
   const def = await loadRow(castle.playerId);
-
   const attHave = troopsOf(att), defHave = troopsOf(def);
   const attLayout = normalizeLayout(body.layout ?? bestAutoLayout(body.troops || {}), attHave);
   if (def.revision < C.PROTECT_REVISION || C.armyPower(defHave, {}) < C.PROTECT_POWER) {
     throw httpError(409, 'this player is under beginner protection', { code: 'protected' });
   }
-  const defLayout = usable(await savedLayout(castle.playerId), defHave);
+  const mine = await Castle.findOne({ where: { playerId: player.id } });
+  if (!mine) throw httpError(409, 'you have no castle yet', { code: 'no_castle' });
+  const active = await Expedition.count({ where: { playerId: player.id, claimed: false } });
+  if (active >= W.rules.maxActive) throw httpError(409, `at most ${W.rules.maxActive} armies can be out at the same time`, { code: 'too_many' });
 
-  const r = simulate(attLayout, defLayout);
-  const A = apply(attHave, r.attackerLosses), D = apply(defHave, r.defenderLosses);
-
-  const attRes = resOf(att), defRes = resOf(def), loot = {};
-  if (r.win) {
-    let cap = 0;
-    for (const [id, n] of Object.entries(r.attackerSurvivors)) cap += n * (C.CARRY[C.unitStats(id)?.cls] || 0);
-    const want = Object.fromEntries(RES.map((k) => [k, Math.floor((defRes[k] || 0) * C.LOOT_SHARE)]));
-    const sum = RES.reduce((a, k) => a + want[k], 0);
-    const f = sum > cap ? cap / sum : 1;
-    for (const k of RES) {
-      const n = Math.floor(want[k] * f);
-      if (n > 0) { loot[k] = n; defRes[k] -= n; attRes[k] = Math.min(1e12, attRes[k] + n); }
-    }
-  }
-
-  const report = {
-    castleId: castle.key, castleName: castle.name, win: r.win, ticks: r.ticks, log: r.log,
-    attackerPower: r.attackerPower, defenderPower: r.defenderPower,
-    attackerFormation: attLayout.formation, defenderFormation: defLayout.formation,
-    sent: layoutArmy(attLayout), survivors: r.attackerSurvivors, losses: A.dead, wounded: A.wounded,
-    defenderLosses: D.dead, defenderWounded: D.wounded, defenderSent: r.defenderSent, defenderSurvivors: r.defenderSurvivors, loot,
-    effects: r.effects, slots: r.slots, events: r.events,
-  };
-  const version = await sequelize.transaction(async (t) => {
-    const v = await write(att, withState(att, A.left, attRes), t);
-    await write(def, withState(def, D.left, defRes), t);
-    return v;
+  const sent = layoutArmy(attLayout), left = { ...attHave };
+  for (const [id, n] of Object.entries(sent)) { left[id] -= n; if (left[id] <= 0) delete left[id]; }
+  const version = await write(att, withState(att, left, resOf(att)));
+  const now = Date.now(), oneWay = W.marchMs(mine, castle);
+  const e = await Expedition.create({
+    playerId: player.id, campKey: `castle:${castle.key}`, campType: 'castle', campLevel: 0, troops: sent,
+    fromX: mine.tileX, fromY: mine.tileY, toX: castle.tileX, toY: castle.tileY,
+    arriveAt: now + oneWay, returnAt: now + 2 * oneWay, status: 'marching', report: { plan: { layout: attLayout, castleName: castle.name } },
   });
-  // Both sides keep the report in their letters. The attacker sees it at once (read); the defender gets a live notice.
-  const stamp = { castleId: castle.key, castleName: castle.name, attacker: player.username, defender: def.playerId, at: Date.now() };
-  const dm = await mail.deliver({
-    playerId: castle.playerId, kind: 'report', fromName: player.username,
-    subject: `${r.win ? 'Raided' : 'Held'}: ${player.username} attacked ${castle.name}`,
-    data: { role: 'defender', source: 'castle', ...stamp, report },
-  });
-  await mail.deliver({
-    playerId: player.id, kind: 'report', read: true,
-    subject: `${r.win ? 'Victory' : 'Defeat'}: attacked ${castle.name}`,
-    data: { role: 'attacker', source: 'castle', ...stamp, report },
-  });
-  live.send(castle.playerId, { type: 'attacked', by: player.username, win: !r.win, losses: D.dead, wounded: D.wounded, loot, mailId: dm.id });
-  return { report, save: { version, troops: A.left, resources: attRes } };
+  live.send(castle.playerId, { type: 'incoming', by: player.username, arriveAt: e.arriveAt });
+  return { now, expedition: W.expJson(e, now), save: { version, troops: left } };
 });
+
+/** The army reached the castle (called by world.resolveDue inside world.serial). Returns the expedition's report: survivors + loot come home with it. */
+async function resolveCastleArrival(e) {
+  const castleKey = String(e.campKey).slice('castle:'.length), plan = (e.report || {}).plan || {};
+  const castle = await Castle.findOne({ where: { key: castleKey } });
+  const attName = (await Player.findByPk(e.playerId))?.username || 'Someone';
+  const gone = (reason) => ({ gone: true, reason, win: false, castleId: castleKey, castleName: plan.castleName || 'castle', survivors: e.troops, losses: {}, loot: {} });
+  if (!castle || castle.isNpc || castle.playerId === e.playerId) return gone('gone');
+  const attLayout = fitLayout(plan.layout, e.troops);
+
+  for (let tries = 0; ; tries++) {
+    const def = await loadRow(castle.playerId);
+    const defHave = troopsOf(def);
+    if (def.revision < C.PROTECT_REVISION || C.armyPower(defHave, {}) < C.PROTECT_POWER) return gone('protected');
+    const defLayout = usable(await savedLayout(castle.playerId), defHave);
+    const r = simulate(attLayout, defLayout);
+    const A = apply(e.troops, r.attackerLosses), D = apply(defHave, r.defenderLosses);
+    const defRes = resOf(def), loot = {};
+    if (r.win) {
+      let cap = 0;
+      for (const [id, n] of Object.entries(r.attackerSurvivors)) cap += n * (C.CARRY[C.unitStats(id)?.cls] || 0);
+      const want = Object.fromEntries(RES.map((k) => [k, Math.floor((defRes[k] || 0) * C.LOOT_SHARE)]));
+      const sum = RES.reduce((a, k) => a + want[k], 0), f = sum > cap ? cap / sum : 1;
+      for (const k of RES) { const n = Math.floor(want[k] * f); if (n > 0) { loot[k] = n; defRes[k] -= n; } }
+    }
+    try { await write(def, withState(def, D.left, defRes)); } catch (err) { if (err.code === 'stale' && tries < 4) continue; throw err; }
+    const report = {
+      castleId: castle.key, castleName: castle.name, gone: false, win: r.win, ticks: r.ticks, log: r.log,
+      attackerPower: r.attackerPower, defenderPower: r.defenderPower,
+      attackerFormation: attLayout.formation, defenderFormation: defLayout.formation,
+      sent: layoutArmy(attLayout), survivors: A.left, losses: A.dead, wounded: A.wounded,
+      defenderLosses: D.dead, defenderWounded: D.wounded, defenderSent: r.defenderSent, defenderSurvivors: r.defenderSurvivors, loot,
+      effects: r.effects, slots: r.slots, events: r.events,
+    };
+    const dm = await mail.deliver({
+      playerId: castle.playerId, kind: 'report', fromName: attName,
+      subject: `${r.win ? 'Raided' : 'Held'}: ${attName} attacked ${castle.name}`,
+      data: { role: 'defender', source: 'castle', castleId: castle.key, castleName: castle.name, attacker: attName, defender: castle.playerId, at: Date.now(), report },
+    }).catch(() => null);
+    live.send(castle.playerId, { type: 'attacked', by: attName, win: !r.win, losses: D.dead, wounded: D.wounded, loot, mailId: dm?.id });
+    return report;
+  }
+}

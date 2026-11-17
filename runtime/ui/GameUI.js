@@ -194,6 +194,7 @@ export function createGameUI({ scene, map, layer, player, onChangeCiv, onArmyCha
           onSubmit: async (layout) => {
             try {
               const res = await attackCastle({ castleId: c.id, layout, baseVersion: d.version });
+              if (res.expedition) { onArmyChanged?.(res.save); closePanel(); return; } // the army marches now; its report arrives when it is home
               const r = res.report || {};
               onArmyChanged?.(res.save);
               showPanel(

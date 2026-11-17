@@ -100,3 +100,21 @@ export const ProvinceState = sequelize.define('ProvinceState', {
   log: { type: DataTypes.JSON, allowNull: false, defaultValue: [] },         // last captures, newest first
   lastTickAt: { type: DataTypes.DOUBLE, allowNull: true },
 });
+
+/** Province Conquest: troops that STAY in a captured tower and defend it (one row per player per tower). */
+export const TowerTroops = sequelize.define('TowerTroops', {
+  provinceId: { type: DataTypes.INTEGER, allowNull: false },
+  playerId: { type: DataTypes.INTEGER, allowNull: false },
+  username: { type: DataTypes.STRING, allowNull: false },
+  allianceId: { type: DataTypes.INTEGER, allowNull: false },
+  troops: { type: DataTypes.JSON, allowNull: false }, // { troopId: n }
+}, { indexes: [{ unique: true, fields: ['provinceId', 'playerId'] }, { fields: ['allianceId'] }] });
+
+/** Troops walking home from a tower (withdrawn, wounded, tower closed): claimed together with rally results once returnAt has passed. */
+export const TroopReturn = sequelize.define('TroopReturn', {
+  playerId: { type: DataTypes.INTEGER, allowNull: false },
+  troops: { type: DataTypes.JSON, allowNull: false },
+  returnAt: { type: DataTypes.DOUBLE, allowNull: false },
+  why: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'tower' },
+  claimed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+}, { indexes: [{ fields: ['playerId', 'claimed'] }] });

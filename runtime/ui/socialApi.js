@@ -55,3 +55,8 @@ export const elephantClaim = (b) => post('/api/alliance/elephant/claim', b);    
 // Province Conquest
 export const getConquest = () => get('/api/conquest');
 export const getConquestMap = () => get('/api/conquest/map');
+export const getTower = (provinceId) => get('/api/conquest/tower?provinceId=' + encodeURIComponent(provinceId));
+export const setTowerLayout = (b) => post('/api/conquest/tower/layout', b);        // { provinceId, layout }
+export const reinforceTower = (b) => post('/api/conquest/tower/reinforce', b);     // { provinceId, troops, baseVersion }
+export const withdrawTower = (b) => post('/api/conquest/tower/withdraw', b);       // { provinceId }
+export const setRallyPlan = (b) => post('/api/rally/plan', b);                      // { rallyId, layout|null }

@@ -2,16 +2,18 @@
  * Rallies: a member calls the alliance to attack ONE target (an NPC camp or another player's castle).
  *   1. host creates the rally and puts in their first troops; it launches by itself after `minutes` (or the host / an officer launches it early)
  *   2. other members "donate" troops while it is gathering (troops leave their save right away, so nobody can use them twice)
- *   3. at launch ALL troops fight as ONE army (one battle, instant like castle attacks); winners split the loot by contributed power
- *   4. every donor claims survivors + loot share (POST /rally/claim), exactly like returning expeditions
+ *   3. at launch the army MARCHES from the host's castle to the target (travel time like NPC expeditions); when it arrives ALL troops fight
+ *      as ONE army, arranged by the host's battle plan (any formation / slot mix, see setPlan) or automatically; winners split the loot by power
+ *   4. the survivors walk home; once they are back every donor claims survivors + loot share (POST /rally/claim). Troops that capture a
+ *      province tower do not come home: they STAY in the tower as its garrison (see conquest.js)
  * Everything runs inside world.serial so it never races with camp attacks.
  */
 import { Op } from 'sequelize';
-import { Rally, RallyJoin, AllianceMember, Alliance } from './models.js';
+import { Rally, RallyJoin, AllianceMember, Alliance, TroopReturn } from './models.js';
 import { Castle, NpcCamp, GameSave, Meta } from '../models.js';
 import { httpError } from '../httpError.js';
 import { troopFor } from '../troops.js';
-import { fight, simulate, autoLayout, normalizeLayout, layoutArmy, armyPower } from '../battle.js';
+import { fight, simulate, autoLayout, bestAutoLayout, normalizeLayout, fitLayout, layoutArmy, armyPower } from '../battle.js';
 import * as C from '../battleConfig.js';
 import * as NPC from '../npcConfig.js';
 import * as live from '../live.js';
@@ -87,6 +89,8 @@ export function createRally(world, { conquest } = {}) {
     const joins = r.status === 'gathering' ? all.filter((j) => !j.result) : all; // a member who left keeps a refund row, but is not part of the army
     const total = {};
     for (const j of joins) for (const [id, n] of Object.entries(j.troops)) total[id] = (total[id] || 0) + n;
+    const march = r.report && r.report.march ? r.report.march : null, plan = r.report && r.report.plan ? r.report.plan : null;
+    const finished = r.status === 'done' || r.status === 'cancelled';
     return {
       id: r.id, allianceId: r.allianceId, hostId: r.hostId, hostName: r.hostName,
       target: { type: r.targetType, id: r.targetKey, name: r.targetName, ...(r.status === 'gathering' ? await targetInfo(r) : {}) },
@@ -94,8 +98,19 @@ export function createRally(world, { conquest } = {}) {
       troops: sum(total), power: Math.round(armyPower(total, {})), donors: joins.length,
       members: joins.map((j) => ({ id: j.playerId, username: j.username, troops: sum(j.troops), power: Math.round(armyPower(j.troops, {})) })),
       mine: mineJoin && !(r.status === 'gathering' && mineJoin.result) ? { troops: mineJoin.troops, count: sum(mineJoin.troops), result: mineJoin.result || null } : null,
-      report: r.report || null,
+      march: march ? { ...march, msLeft: Math.max(0, march.arriveAt - now), msHome: Math.max(0, march.returnAt - now) } : null,
+      plan: plan ? { formation: plan.layout.formation, by: plan.by, layout: plan.layout } : null,
+      army: total,
+      report: finished ? (r.report || null) : null,
     };
+  }
+
+  /** Where is the target? (the army walks there) */
+  async function tileOfTarget(r) {
+    if (r.targetType === 'camp') { const c = await NpcCamp.findOne({ where: { key: r.targetKey } }); return c ? { tileX: c.tileX, tileY: c.tileY } : null; }
+    if (r.targetType === 'castle') { const c = await Castle.findOne({ where: { key: r.targetKey } }); return c ? { tileX: c.tileX, tileY: c.tileY } : null; }
+    if (r.targetType === 'province') return conquest?.tileOf ? conquest.tileOf(Number(String(r.targetKey).split(':')[1])) : null;
+    return null;
   }
 
   // ---- troop bookkeeping --------------------------------------------------------------
@@ -231,7 +246,8 @@ export function createRally(world, { conquest } = {}) {
 
   async function refundAll(r, reason) {
     const joins = (await RallyJoin.findAll({ where: { rallyId: r.id } })).filter((j) => !j.result);
-    for (const j of joins) await j.update({ result: { win: false, refund: true, reason, targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: {}, returned: j.troops, loot: {}, rallyId: r.id } });
+    const returnAt = r.status === 'marching' && r.report && r.report.march ? r.report.march.returnAt : undefined; // an army that was already walking turns around and comes home
+    for (const j of joins) await j.update({ result: { win: false, refund: true, reason, targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: {}, returned: j.troops, loot: {}, rallyId: r.id, ...(returnAt ? { returnAt } : {}) } });
     await r.update({ status: 'cancelled', report: { cancelled: true, reason } });
     for (const j of joins) live.send(j.playerId, { type: 'rally', phase: 'done', rallyId: r.id, win: false, cancelled: true });
   }
@@ -248,7 +264,7 @@ export function createRally(world, { conquest } = {}) {
   });
 
   // ---- the battle -----------------------------------------------------------------------
-  async function runBattle(r, joins) {
+  async function runBattle(r, joins, plan) {
     const combined = {};
     for (const j of joins) for (const [id, n] of Object.entries(j.troops)) combined[id] = (combined[id] || 0) + n;
 
@@ -259,14 +275,16 @@ export function createRally(world, { conquest } = {}) {
       return { win: true, loot: {}, dead: {}, report: { elephant: hit.summary }, combined, defenderId: null, defenderNote: null, elephantDamage: hit.dmg };
     }
     if (r.targetType === 'province') {
-      const out = await conquest.battle(Number(String(r.targetKey).split(':')[1]), r.allianceId, combined);
+      const provinceId = Number(String(r.targetKey).split(':')[1]);
+      const out = await conquest.battle(provinceId, r.allianceId, combined, Date.now(), { attLayout: plan ? fitLayout(plan.layout, combined) : null, hostName: r.hostName });
       if (!out) return { refund: 'over' }; // closed (or your alliance already holds it): troops come home
-      return { win: out.win, loot: {}, dead: out.dead, report: out.report, combined, defenderId: null, defenderNote: null };
+      return { win: out.win, loot: {}, dead: out.dead, report: out.report, combined, defenderId: null, defenderNote: null, station: out.win ? provinceId : null };
     }
     if (r.targetType === 'camp') {
       const camp = await NpcCamp.findOne({ where: { key: r.targetKey } });
       if (!camp) return { refund: 'gone' };
-      const res = fight(combined, camp.army, { defenderFormation: NPC.CAMP_TYPES[camp.type]?.formation });
+      const campForm = NPC.CAMP_TYPES[camp.type]?.formation;
+      const res = plan ? simulate(fitLayout(plan.layout, combined), bestAutoLayout(camp.army, campForm || 'wedge')) : fight(combined, camp.army, { defenderFormation: campForm });
       win = res.win; dead = res.attackerLosses; loot = win ? camp.loot : {};
       report = {
         ticks: res.ticks, log: res.log, events: res.events, attackerPower: res.attackerPower, defenderPower: res.defenderPower,
@@ -280,7 +298,7 @@ export function createRally(world, { conquest } = {}) {
       if (!castle || castle.isNpc) return { refund: 'gone' };
       if (await AllianceMember.findOne({ where: { allianceId: r.allianceId, playerId: castle.playerId } })) return { refund: 'ally' };
       defenderId = castle.playerId;
-      const attLayout = autoLayout(combined);
+      const attLayout = plan ? fitLayout(plan.layout, combined) : autoLayout(combined);
       const out = await retryStale(async () => {
         const def = await loadRow(defenderId);
         if (isProtected(def)) return { refund: 'protected' };
@@ -313,12 +331,14 @@ export function createRally(world, { conquest } = {}) {
     return { win, loot, dead, report, combined, defenderId, defenderNote };
   }
 
+  /** The army has arrived: the fight. */
   async function resolve(r) {
-    if (r.status !== 'gathering') return;
+    if (r.status !== 'gathering' && r.status !== 'marching') return;
     const joins = (await RallyJoin.findAll({ where: { rallyId: r.id }, order: [['id', 'ASC']] })).filter((j) => !j.result);
     if (!joins.length) return refundAll(r, 'empty');
+    const march = r.report && r.report.march ? r.report.march : null, plan = r.report && r.report.plan ? r.report.plan : null;
     let out;
-    try { out = await runBattle(r, joins); } catch (e) { console.error('[rally] battle failed, refunding:', e.message); return refundAll(r, 'error'); }
+    try { out = await runBattle(r, joins, plan); } catch (e) { console.error('[rally] battle failed, refunding:', e.message); return refundAll(r, 'error'); }
     if (out.refund) return refundAll(r, out.refund);
 
     const power = joins.map((j) => armyPower(j.troops, {}));
@@ -330,12 +350,18 @@ export function createRally(world, { conquest } = {}) {
     }
     const totalPower = power.reduce((a, b) => a + b, 0) || 1;
     for (let i = 0; i < joins.length; i++) {
-      const j = joins[i], returned = { ...j.troops };
+      const j = joins[i];
+      let returned = { ...j.troops };
       for (const [id, n] of Object.entries(deadBy[i])) { returned[id] = (returned[id] || 0) - n; if (returned[id] <= 0) delete returned[id]; }
+      let stationed = null;
+      if (out.station != null && sum(returned) > 0) { // the winners of a tower stay in it: they are its garrison now
+        stationed = returned; returned = {};
+        await conquest.station(out.station, r.allianceId, j.playerId, j.username, stationed);
+      }
       const myLoot = {}; for (const k of RES) if (lootBy[k][i] > 0) myLoot[k] = lootBy[k][i];
-      await j.update({ result: { rallyId: r.id, win: out.win, targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: deadBy[i], returned, loot: myLoot, share: Math.round((power[i] / totalPower) * 100), ...(out.elephantDamage ? { damage: out.elephantDamage[i], elephant: out.report.elephant } : {}), ...(out.report && out.report.province ? { province: out.report.province } : {}) } });
+      await j.update({ result: { rallyId: r.id, win: out.win, targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: deadBy[i], returned, ...(stationed ? { stationed } : {}), ...(march && !stationed ? { returnAt: march.returnAt } : {}), loot: myLoot, share: Math.round((power[i] / totalPower) * 100), ...(out.elephantDamage ? { damage: out.elephantDamage[i], elephant: out.report.elephant } : {}), ...(out.report && out.report.province ? { province: out.report.province } : {}) } });
     }
-    await r.update({ status: 'done', report: { win: out.win, participants: joins.length, loot: out.loot, dead: out.dead, ...out.report } });
+    await r.update({ status: 'done', report: { win: out.win, participants: joins.length, loot: out.loot, dead: out.dead, ...out.report, ...(march ? { march } : {}) } });
     for (const j of joins) live.send(j.playerId, { type: 'rally', phase: 'done', rallyId: r.id, win: out.win });
     await mailReports(r, joins, out, { deadBy, lootBy, power, totalPower });
     if (out.defenderId && out.defenderNote) live.send(out.defenderId, out.defenderNote);
@@ -344,7 +370,7 @@ export function createRally(world, { conquest } = {}) {
   /** Every donor gets the fight in their battle reports (letters); the defender of a castle gets it too. Never blocks the rally. */
   async function mailReports(r, joins, out, { deadBy, lootBy, power, totalPower }) {
     const at = Date.now();
-    const tag = r.targetType === 'camp' ? 'camp' : r.targetType === 'elephant' ? 'elephant' : 'castle';
+    const tag = r.targetType === 'camp' ? 'camp' : r.targetType === 'elephant' ? 'elephant' : r.targetType === 'province' ? 'province' : 'castle';
     try {
       if (tag === 'elephant') {
         for (let i = 0; i < joins.length; i++) {
@@ -380,41 +406,93 @@ export function createRally(world, { conquest } = {}) {
     if (!r || r.allianceId !== m.allianceId) throw err(404, 'no_rally', 'this rally does not exist');
     if (r.status !== 'gathering') throw err(409, 'rally_over', 'this rally is over');
     if (r.hostId !== player.id && m.role === 'member') throw err(403, 'not_allowed', 'only the host, an officer or the leader can launch it');
-    await resolve(r);
+    await startMarch(r);
     await r.reload();
     return { rally: await rallyJson(r, player.id) };
   });
 
-  /** Ticker (every second, from world.startTicker): launches rallies whose time is up. */
+  /** Launch: the army leaves the host's castle and walks to the target (the elephant hunt happens on the spot, no walking). */
+  async function startMarch(r, now = Date.now()) {
+    if (r.status !== 'gathering') return;
+    if (r.targetType === 'elephant') return resolve(r);
+    const host = await Castle.findOne({ where: { playerId: r.hostId } }), to = await tileOfTarget(r);
+    if (!host || !to) return refundAll(r, 'gone'); // the target vanished while the rally was gathering
+    const oneWay = world.marchMs(host, to);
+    const march = { from: { tileX: host.tileX, tileY: host.tileY }, to, startAt: now, arriveAt: now + oneWay, returnAt: now + 2 * oneWay };
+    await r.update({ status: 'marching', report: { ...(r.report || {}), march } });
+    const joins = await RallyJoin.findAll({ where: { rallyId: r.id } });
+    for (const j of joins) live.send(j.playerId, { type: 'rally', phase: 'march', rallyId: r.id, arriveAt: march.arriveAt });
+    ping(r.allianceId, { phase: 'update', rallyId: r.id });
+  }
+
+  const homeSeen = new Set();
+  let lastHome = 0;
+  /** Ticker (every second, from world.startTicker): launches rallies whose time is up, fights the ones whose army arrived, tells donors when troops are home. */
   const tick = (now = Date.now()) => serial(async () => {
     const due = await Rally.findAll({ where: { status: 'gathering', launchAt: { [Op.lte]: now } }, order: [['launchAt', 'ASC']] });
-    for (const r of due) { try { await resolve(r); } catch (e) { console.error('[rally] resolve failed', e.message); } }
+    for (const r of due) { try { await startMarch(r, now); } catch (e) { console.error('[rally] launch failed', e.message); } }
+    const walking = (await Rally.findAll({ where: { status: 'marching' }, order: [['id', 'ASC']] })).filter((r) => r.report && r.report.march && r.report.march.arriveAt <= now);
+    for (const r of walking) { try { await resolve(r); } catch (e) { console.error('[rally] resolve failed', e.message); } }
+    if (now - lastHome >= 5000) {
+      lastHome = now;
+      for (const j of await RallyJoin.findAll({ where: { claimed: false, result: { [Op.ne]: null } } })) {
+        const at = j.result && j.result.returnAt;
+        if (at && at <= now && !homeSeen.has('r' + j.id)) { homeSeen.add('r' + j.id); live.send(j.playerId, { type: 'rally', phase: 'home', rallyId: j.rallyId }); }
+      }
+      for (const t of await TroopReturn.findAll({ where: { claimed: false, returnAt: { [Op.lte]: now } } })) {
+        if (!homeSeen.has('t' + t.id)) { homeSeen.add('t' + t.id); live.send(t.playerId, { type: 'rally', phase: 'home', tower: true }); }
+      }
+    }
+  });
+
+  /** The host's battle plan: any formation and slot mix, built from the troops that are in the rally right now (it is fitted to whoever is there at launch).
+   *  body: { rallyId, layout }  (layout: null removes the plan) */
+  const setPlan = (player, body = {}) => serial(async () => {
+    const m = await mustBeMember(player);
+    const now = Date.now();
+    const r = await gatheringRally(m, body.rallyId, now);
+    if (r.hostId !== player.id && m.role === 'member') throw err(403, 'not_allowed', 'only the host, an officer or the leader can set the battle plan');
+    if (r.targetType === 'elephant') throw err(400, 'no_plan', 'the War Elephant is hit by every donor on their own: there is no battle plan');
+    const rest = { ...(r.report || {}) };
+    if (body.layout == null) delete rest.plan;
+    else {
+      const layout = normalizeLayout(body.layout); // shape, two types per slot, formation caps
+      rest.plan = { layout, by: player.username, at: now };
+    }
+    await r.update({ report: Object.keys(rest).length ? rest : null });
+    ping(m.allianceId, { phase: 'update', rallyId: r.id }, player.id);
+    return { rally: await rallyJson(r, player.id, now) };
   });
 
   // ---- results ----------------------------------------------------------------------------
   /** POST /rally/claim { baseVersion } : survivors + loot of every finished rally you were in. */
   const claim = (player, body = {}) => serial(async () => {
+    const now = Date.now();
     const joins = await RallyJoin.findAll({ where: { playerId: player.id, claimed: false } });
-    const done = joins.filter((j) => j.result);
+    const done = joins.filter((j) => j.result && (!j.result.returnAt || j.result.returnAt <= now)); // armies still walking home are not here yet
+    const walkers = (await TroopReturn.findAll({ where: { playerId: player.id, claimed: false } })).filter((t) => t.returnAt <= now);
     const row = await loadRow(player.id);
-    if (!done.length) return { reports: [], save: { version: row.revision, troops: troopsOf(row), resources: resOf(row) } };
+    if (!done.length && !walkers.length) return { reports: [], returns: 0, save: { version: row.revision, troops: troopsOf(row), resources: resOf(row) } };
     staleCheck(row, body.baseVersion, 'claim');
     let troops = {}, loot = {};
     for (const j of done) { troops = addTroops(troops, j.result.returned); loot = addRes(loot, j.result.loot); }
+    for (const t of walkers) troops = addTroops(troops, t.troops);
     const save = await giveToSave(row, troops, loot);
     for (const j of done) await j.update({ claimed: true });
+    for (const t of walkers) await t.update({ claimed: true });
     const reports = done.map((j) => ({ id: j.rallyId, ...j.result }));
-    return { reports, save: { version: save.version, troops: save.troops, resources: save.resources } };
+    return { reports, returns: walkers.length, save: { version: save.version, troops: save.troops, resources: save.resources } };
   });
 
   /** GET /alliance/rallies */
   async function list(player) {
     const m = await mustBeMember(player);
     const now = Date.now();
-    const rows = await Rally.findAll({ where: { allianceId: m.allianceId, [Op.or]: [{ status: 'gathering' }, { updatedAt: { [Op.gte]: new Date(now - FINISHED_KEEP_MS) } }] }, order: [['id', 'DESC']], limit: 12 });
-    const pending = await RallyJoin.count({ where: { playerId: player.id, claimed: false, result: { [Op.ne]: null } } });
+    const rows = await Rally.findAll({ where: { allianceId: m.allianceId, [Op.or]: [{ status: 'gathering' }, { status: 'marching' }, { updatedAt: { [Op.gte]: new Date(now - FINISHED_KEEP_MS) } }] }, order: [['id', 'DESC']], limit: 12 });
+    const open = await RallyJoin.findAll({ where: { playerId: player.id, claimed: false, result: { [Op.ne]: null } } });
+    const pending = open.filter((j) => !j.result.returnAt || j.result.returnAt <= now).length;
     const all = await Promise.all(rows.map((r) => rallyJson(r, player.id, now)));
-    return { now, rallies: all.filter((r) => r.status === 'gathering'), recent: all.filter((r) => r.status !== 'gathering').slice(0, 5), pending, maxActive: MAX_ACTIVE_PER_ALLIANCE };
+    return { now, rallies: all.filter((r) => r.status === 'gathering'), marching: all.filter((r) => r.status === 'marching'), recent: all.filter((r) => r.status !== 'gathering' && r.status !== 'marching').slice(0, 5), pending, maxActive: MAX_ACTIVE_PER_ALLIANCE };
   }
 
   /** GET /alliance/targets : camps + castles of OTHER alliances, nearest first. */
@@ -445,10 +523,12 @@ export function createRally(world, { conquest } = {}) {
       const j = await RallyJoin.findOne({ where: { rallyId: r.id, playerId } });
       if (j) await j.update({ result: { win: false, refund: true, reason: 'left_alliance', targetName: r.targetName, targetType: r.targetType, sent: j.troops, dead: {}, returned: j.troops, loot: {}, rallyId: r.id } });
     }
+    if (conquest && conquest.releasePlayer) await conquest.releasePlayer(playerId); // troops stationed in a tower walk home
   });
   allianceHooks.onDisband = (allianceId) => serial(async () => {
     for (const r of await Rally.findAll({ where: { allianceId, status: 'gathering' } })) await refundAll(r, 'disbanded');
+    if (conquest && conquest.releaseAlliance) await conquest.releaseAlliance(allianceId);
   });
 
-  return { create, join, leave, cancel, launch, tick, claim, list, targets };
+  return { create, join, leave, cancel, launch, tick, claim, list, targets, setPlan };
 }

@@ -125,6 +125,19 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
   }
 
   // ---------------------------------------------------------------- one rally card
+  /** A rally whose army is on the road: it walks from the host's castle, the fight happens when it arrives. */
+  function MarchCard({ r, ctx }) {
+    useTicker();
+    const left = (r.march.arriveAt - ctx.serverNow()) / 1000;
+    return h('div', { className: 'so-card so-rally' },
+      h('div', { className: 'so-rally-top' },
+        h('div', null, h('b', null, r.target.name), h('small', null, 'Led by ' + r.hostName + ' \u00b7 ' + num(r.troops) + ' soldiers on the march')),
+        h('span', { className: 'so-timer', 'aria-label': 'arrives in' }, I('clock'), left > 0 ? clock(left) : 'Fighting')),
+      h('div', { className: 'bt2-timer' }, h('i', { style: { width: Math.max(4, Math.min(100, (1 - left * 1000 / Math.max(1, r.march.arriveAt - r.march.startAt)) * 100)) + '%' } })),
+      h('p', { className: 'so1-sub' }, left > 0 ? 'The army reaches its target in ' + clock(left) + '. The fight is decided when it arrives; the survivors then walk home.' : 'The armies are fighting right now.'),
+      r.plan && h('p', { className: 'so-mine' }, 'Battle plan: ' + r.plan.formation.replace(/_/g, ' ')));
+  }
+
   function RallyCard({ r, me, role, ctx, onAdd, act }) {
     useTicker();
     const left = (r.launchAt - ctx.serverNow()) / 1000;
@@ -141,10 +154,12 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
       verdict && h('div', { className: 'so-verdict ' + verdict[0] }, verdict[1]),
       gone && h('div', { className: 'so-verdict bad' }, 'This target is gone: the rally will give everyone their troops back'),
       r.mine && h('p', { className: 'so-mine' }, 'You added ' + num(r.mine.count) + ' soldiers'),
+      !ele && h('p', { className: 'so1-sub' }, r.plan ? 'Battle plan ready: ' + r.plan.formation.replace(/_/g, ' ') + ' (by ' + r.plan.by + ').' : 'No battle plan: the army is arranged automatically. The host can build one.'),
       h('div', { className: 'so-actions' },
         h('button', { className: 'action-btn primary', onClick: () => onAdd(r) }, I('plus'), r.mine ? 'Add more' : 'Join'),
         r.mine && !isHost && h('button', { className: 'action-btn secondary', onClick: () => act('leaveRally', { rallyId: r.id }, 'You took your troops back') }, 'Withdraw'),
-        canLead && h('button', { className: 'action-btn secondary', onClick: () => act('launch', { rallyId: r.id }) }, 'Launch now'),
+        canLead && !ele && h('button', { className: 'action-btn secondary', onClick: () => ctx.openFormation && ctx.openFormation({ army: r.army, initial: r.plan ? r.plan.layout : null, title: 'Battle plan', subtitle: 'Arrange the whole army: formation and what stands in each slot. Soldiers who join later are placed by their class. The fight uses this plan when the army arrives.', submitLabel: 'Save plan', onSave: (layout) => act('setRallyPlan', { rallyId: r.id, layout }, 'Battle plan saved') }) }, I('sword'), r.plan ? 'Edit plan' : 'Battle plan'),
+        canLead && h('button', { className: 'action-btn secondary', onClick: () => act('launch', { rallyId: r.id }) }, 'Send the army'),
         canLead && h('button', { className: 'action-btn secondary', onClick: () => act('cancelRally', { rallyId: r.id }, 'Rally cancelled. Claim your troops back.') }, 'Cancel')),
       r.members.length > 1 && h('div', { className: 'so-donors' }, r.members.slice().sort((a, b) => b.power - a.power).map((m) => h('span', { key: m.id, className: 'so-donor' }, m.username, h('b', null, num(m.troops))))));
   }
@@ -234,6 +249,7 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
         !rallies ? h('p', { className: 'so1-sub' }, 'Loading…')
           : open.length === 0 ? h(Empty, { icon: I('sword'), title: 'No rally right now', text: 'Start one: pick a target, add your troops, and your alliance has a few minutes to join. Everyone fights as one army and shares the loot.' })
             : open.map((r) => h(RallyCard, { key: r.id, r, me, role, ctx, act, onAdd: (x) => { setAdd(x); setView('add'); } })),
+        rallies && rallies.marching && rallies.marching.length > 0 && h('div', { className: 'so2-sec' }, h('div', { className: 'so2-sec-h' }, 'On the march'), rallies.marching.map((r) => h(MarchCard, { key: r.id, r, ctx }))),
         rallies && rallies.recent.length > 0 && h('div', { className: 'so-recent' }, h('div', { className: 'so2-sec-h' }, 'Recent'),
           rallies.recent.map((r) => h('div', { key: r.id, className: 'so-row' }, h('span', { className: 'so-row-main' }, h('b', null, r.target.name), h('small', null, 'Called by ' + r.hostName + ' · ' + r.donors + ' joined')),
             h('span', { className: 'so-res-tag ' + (r.report && r.report.win ? 'win' : 'lose') }, result(r)))))),
@@ -379,6 +395,7 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
     const [gather, setGather] = useState(3);
     const [busy, setBusy] = useState(false);
     const [pic, setPic] = useState(null), [peek, setPeek] = useState(null);
+    const [tower, setTower] = useState(null);   // GET /conquest/tower for the province that is open
     useTicker(1000);
     useEffect(() => { let on = true; api.getConquestMap().then((r) => { if (on) setPic(r.map); }).catch(() => {}); return () => { on = false; }; }, []);
     useEffect(() => { const t = setInterval(() => load(), 20000); return () => clearInterval(t); }, []);
@@ -391,12 +408,19 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
       } catch (e) { ctx.onError(e); }
     }, []);
     useEffect(() => { load(); }, [ctx.refreshKey]);
+    useEffect(() => { setTower(null); if (sel != null) api.getTower(sel).then((r) => setTower(r.tower)).catch(() => {}); }, [sel, ctx.refreshKey]);
     const guard = async (fn, okMsg) => { setBusy(true); try { const r = await fn(); if (okMsg) ctx.toast(okMsg); return r; } catch (e) { ctx.onError(e); return null; } finally { setBusy(false); } };
     const act = (name, body, okMsg) => guard(async () => { const r = name === 'launch' ? await api.launchRally(body.rallyId) : await ctx.call(name, body); await load(); if (name === 'launch') ctx.toast('The rally attacks the tower!'); return r; }, okMsg);
 
     if (!data) return h(Sheet, { title: 'Province Conquest', icon: I('hall'), onClose }, h('p', { className: 'so1-sub' }, 'Loading…'));
     const lap = Date.now() - at, vnow = data.serverNow + lap, ev = data.event, cfg = data.config;
     const p = sel != null ? data.provinces.find((x) => x.id === sel) : null;
+
+    if (p && view === 'reinforce') {
+      return h(Sheet, { title: 'Reinforce the tower', sub: p.name, icon: I('shield'), onBack: () => setView('home'), onClose },
+        h('p', { className: 'so1-sub' }, 'These soldiers join the garrison at once and stay in the tower until you pull them out or the province closes.'),
+        h(TroopPicker, { troops: ctx.troops, power: ctx.power, confirmLabel: 'Send inside', busy, onConfirm: async (troops) => { const r = await guard(() => ctx.call('reinforceTower', { provinceId: p.id, troops }), 'Your troops joined the garrison'); if (r) { setView('home'); load(); } } }));
+    }
 
     // ---- one province: call a rally / add troops
     if (p && view === 'call') {
@@ -412,6 +436,23 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
         h(TroopPicker, { troops: ctx.troops, power: ctx.power, confirmLabel: 'Send', busy, onConfirm: async (troops) => { const r = await guard(() => ctx.call('joinRally', { rallyId: add.id, troops }), 'Your troops joined the rally'); if (r) { setView('home'); load(); } } }));
     }
 
+    // ---- the troops standing in the tower (they stay after a capture and defend it)
+    const garrisonSection = (x) => {
+      const g = x.garrison || { npc: true }, t = tower;
+      const ours = t && t.army;
+      return h('div', { className: 'so2-sec' },
+        h('div', { className: 'so2-sec-h' }, 'Garrison', h('span', { className: 'so2-sec-sub' }, 'power ' + fmt(x.garrisonPower))),
+        g.npc ? h('p', { className: 'so1-sub' }, x.state === 'open' ? 'Only the old NPC garrison stands here. The troops that win the tower stay in it and defend it.' : 'The NPC garrison.')
+          : ours ? [
+            h('p', { key: 'a', className: 'so1-sub' }, num(g.troops) + ' soldiers of your alliance stand in this tower' + (g.mine ? ' (' + num(g.mine) + ' are yours)' : '') + '. ' + (t.planned ? 'Its defensive formation is set.' : 'No formation set: they are arranged automatically.')),
+            t.members && h('div', { key: 'm', className: 'so-donors' }, t.members.map((m) => h('span', { key: m.id, className: 'so-donor' }, m.username, h('b', null, num(m.count))))),
+            h('div', { key: 'b', className: 'so-actions' },
+              t.canSet && h('button', { className: 'action-btn secondary', disabled: busy, onClick: () => ctx.openFormation && ctx.openFormation({ army: t.army, initial: t.layout, title: 'Tower defense', subtitle: 'This is how the troops in the tower stand when another alliance attacks. Troops are not used up.', submitLabel: 'Save defense', onSave: async (layout) => { await api.setTowerLayout({ provinceId: x.id, layout }); ctx.toast('Tower defense saved'); const r = await api.getTower(x.id); setTower(r.tower); } }) }, I('shield'), 'Defense formation'),
+              t.holds && x.state === 'open' && h('button', { className: 'action-btn secondary', disabled: busy, onClick: () => setView('reinforce') }, I('plus'), 'Reinforce'),
+              g.mine > 0 && h('button', { className: 'action-btn secondary', disabled: busy, onClick: async () => { const r = await guard(() => api.withdrawTower({ provinceId: x.id }), 'Your troops are walking home'); if (r) load(); } }, 'Pull my troops out'))]
+            : h('p', { className: 'so1-sub' }, 'Held by ' + g.players + (g.players === 1 ? ' player' : ' players') + ' of ' + (x.holder ? '[' + x.holder.tag + ']' : 'an alliance') + '. Beat them to take the tower.'));
+    };
+
     // ---- one province
     if (p) {
       const mine = rallies.filter((r) => r.target.id === 'province:' + p.id);
@@ -423,6 +464,8 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
               h('small', null, p.state === 'open' ? (p.holder ? 'Holding for ' + clock(p.holdSecs + lap / 1000) + ' \u00b7 ' + p.captures + (p.captures === 1 ? ' capture' : ' captures') : 'Garrison power ' + fmt(p.garrisonPower)) : p.state === 'closed' ? 'Garrison power ' + fmt(p.garrisonPower) : 'The hour is over')),
             p.state === 'open' && h('span', { className: 'so-timer' }, I('clock'), clock(left))),
           p.state === 'open' && p.holder && h('p', { className: 'so1-sub', style: { marginTop: '8px' } }, 'Garrison power ' + fmt(p.garrisonPower) + ' defends it. A rally that wins takes the tower and the points start counting for it.')),
+
+        garrisonSection(p),
 
         h('div', { className: 'so2-sec' },
           h('div', { className: 'so2-sec-h' }, 'Points of this tower', p.myPoints > 0 && h('span', { className: 'so2-sec-sub' }, 'Your alliance: ' + num(p.myPoints))),
@@ -743,7 +786,7 @@ export function createSocialUI({ React, Icon, troopName, fmt, fmtTime, api }) {
       cards.length ? h('div', { className: 'so-evbar hub', role: 'group', 'aria-label': 'Events' }, cards) : h('p', { className: 'so1-sub' }, 'No event is live or coming up right now.'));
   }
 
-  return { AllianceSheet, EventsSheet, EventsButton, EventsHub, RallyReportSheet, ElephantSheet, ConquestSheet };
+  return { MarchCard, AllianceSheet, EventsSheet, EventsButton, EventsHub, RallyReportSheet, ElephantSheet, ConquestSheet };
 }
 
 export function injectSocialCss() {

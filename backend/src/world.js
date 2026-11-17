@@ -32,7 +32,7 @@ export function createWorld({ spawner, npc = {} }) {
     army: c.army, formation: NPC.CAMP_TYPES[c.type].formation || 'wedge', power: Math.round(armyPower(c.army, {})), loot: c.loot,
   });
   const expJson = (e, now = Date.now()) => ({
-    id: e.id, campId: e.campKey, campType: e.campType, campLevel: e.campLevel, troops: e.troops,
+    id: e.id, campId: e.campKey, campType: e.campType, campLevel: e.campLevel, troops: e.troops, kind: e.campType === 'castle' ? 'castle' : 'camp', targetName: e.campType === 'castle' ? ((e.report && (e.report.castleName || (e.report.plan && e.report.plan.castleName))) || null) : null,
     from: { tileX: e.fromX, tileY: e.fromY }, to: { tileX: e.toX, tileY: e.toY },
     arriveAt: e.arriveAt, returnAt: e.returnAt, status: e.status, claimed: e.claimed,
     report: now >= e.arriveAt ? e.report : null, // natije ta residan-e lashkar mahrame
@@ -165,6 +165,13 @@ export function createWorld({ spawner, npc = {} }) {
     return serial(async () => {
       const arrived = await Expedition.findAll({ where: { status: 'marching', arriveAt: { [Op.lte]: now } }, order: [['arriveAt', 'ASC']] });
       for (const e of arrived) {
+        if (e.campType === 'castle') { // an army against another player's castle: pvp.js fights it
+          let report;
+          try { report = await hooks.castle(e); } catch (err) { console.error('[castle fight]', err.message); report = { gone: true, win: false, survivors: e.troops, losses: {}, loot: {} }; }
+          await e.update({ status: 'returning', report });
+          live.send(e.playerId, { type: 'expedition', id: e.id, phase: 'arrived' });
+          continue;
+        }
         const camp = await NpcCamp.findOne({ where: { key: e.campKey } });
         let report;
         if (!camp) {
@@ -190,6 +197,7 @@ export function createWorld({ spawner, npc = {} }) {
     });
   }
 
+  const hooks = { castle: null }; // pvp.js plugs in the fight for armies that were sent against another player's castle
   const tick = { id: null };
   const tickHooks = new Set(); // other systems (rallies) run on the same 1-second ticker
   const addTickHook = (fn) => { tickHooks.add(fn); };
@@ -298,6 +306,14 @@ export function createWorld({ spawner, npc = {} }) {
     });
     // Every returned army leaves a report in the letters (already read: the player gets the report sheet right now).
     for (const rep of out.reports) {
+      if (rep.campType === 'castle') { // the army that raided another player's castle is home: its report goes to the letters
+        await mail.deliver({
+          playerId: player.id, kind: 'report', read: true,
+          subject: rep.gone ? `Too late: ${rep.castleName || 'the castle'} could not be attacked` : `${rep.win ? 'Victory' : 'Defeat'}: attacked ${rep.castleName}`,
+          data: { role: 'attacker', source: 'castle', castleId: rep.castleId, castleName: rep.castleName, attacker: player.username, at: Date.now(), report: rep },
+        }).catch(() => {});
+        continue;
+      }
       const name = NPC.CAMP_TYPES[rep.campType]?.name || 'Camp';
       await mail.deliver({
         playerId: player.id, kind: 'report', read: true,
@@ -311,6 +327,8 @@ export function createWorld({ spawner, npc = {} }) {
   return {
     rules, castleJson, campJson, syncWorld, syncCamps, joinWorld, dropPlayer, worldJson,
     resolveDue, startTicker, stopTicker, attack, claim, expeditionsOf,
-    serial, removeCamp, addTickHook,
+    serial, removeCamp, addTickHook, hooks, expJson,
+    /** One-way march time between two tiles (ms). Used by castle attacks and rallies. */
+    marchMs: (a, b) => Math.max(N.marchMinMs, Math.round(Math.hypot(a.tileX - b.tileX, a.tileY - b.tileY) * N.marchMsPerTile)),
   };
 }

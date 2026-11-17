@@ -10,6 +10,7 @@ import adminRoutes from './routes/admin.js';
 import { createWorld } from './world.js';
 import { createMapSpawner } from './spawn.js';
 import { createSocial } from './social/index.js';
+import * as pvp from './pvp.js';
 
 /**
  * @param {object} [o]
@@ -22,6 +23,7 @@ export function createApp({ spawner, npc } = {}) {
   const world = createWorld({ spawner: theSpawner, npc });
   const social = createSocial(world, { spawner: theSpawner });
   world.conquest = social.conquest; // the admin panel reads its calendar
+  pvp.bind(world);
   const app = express();
   app.locals.world = world;
   app.disable('x-powered-by');

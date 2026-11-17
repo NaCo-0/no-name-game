@@ -90,9 +90,9 @@ export function createMailUI({ React, Icon, BattleUI, mailApi }) {
     if (r.elephant) return { tone: '#46b86a', line: 'Rally \u00b7 ' + num(r.elephant.damage) + ' damage \u00b7 no losses', icon: 'sword' };
     const won = att ? !!r.win : !r.win;
     const loot = sum(r.loot);
-    const lost = att ? sum(r.losses) : sum(r.defenderLosses);
+    const lost = att ? sum(r.losses) : d.source === 'tower' && r.mine ? sum(r.mine.lost) : sum(r.defenderLosses);
     const tone = r.gone ? '#e0a23f' : won ? '#46b86a' : att ? '#e0503f' : '#e0a23f';
-    const line = (d.source === 'rally' ? 'Rally \u00b7 ' : '') + (r.gone ? 'Target already gone' : (att ? 'You lost ' + num(lost) : 'You lost ' + num(lost)) + (loot ? (att ? ' \u00b7 loot +' : ' \u00b7 stolen \u2212') + num(loot) : ''));
+    const line = (d.source === 'rally' ? 'Rally \u00b7 ' : d.source === 'tower' ? 'Tower \u00b7 ' : '') + (r.gone ? 'Target already gone' : (att ? 'You lost ' + num(lost) : 'You lost ' + num(lost)) + (loot ? (att ? ' \u00b7 loot +' : ' \u00b7 stolen \u2212') + num(loot) : ''));
     return { tone, line, icon: att ? 'sword' : 'shield' };
   }
 
@@ -209,7 +209,7 @@ export function createMailUI({ React, Icon, BattleUI, mailApi }) {
       const shown = (all || []).filter((m) => filter === 'all' || ((m.data || {}).source === filter));
       body = e('div', { className: 'mp-body' },
         e('div', { className: 'mp-bar' },
-          e('div', { className: 'mp-chips' }, [['all', 'All'], ['camp', 'Camps'], ['castle', 'Castles']].map(([k, label]) => e('button', { key: k, type: 'button', className: 'mp-chip', 'aria-pressed': String(filter === k), onClick: () => setFilter(k) }, label))),
+          e('div', { className: 'mp-chips' }, [['all', 'All'], ['camp', 'Camps'], ['castle', 'Castles'], ['rally', 'Rallies'], ['tower', 'Towers']].map(([k, label]) => e('button', { key: k, type: 'button', className: 'mp-chip', 'aria-pressed': String(filter === k), onClick: () => setFilter(k) }, label))),
           un.report > 0 && e('button', { type: 'button', className: 'mp-link', onClick: () => markAll('report') }, 'Mark all read')),
         all === null ? e('div', { className: 'mp-empty' }, 'Loading\u2026')
           : !shown.length ? e('div', { className: 'mp-empty' }, e('b', null, 'No battle reports yet'), 'Reports of your attacks and of attacks on your castle are kept here.')

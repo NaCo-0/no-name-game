@@ -1213,7 +1213,7 @@ function CampSheet({ camp, home, rules, troops, config, activeCount, onClose, on
 }
 
 // Reports of camp attacks that just came home (they are also kept in Letters & reports).
-const campTitle = (r) => String(r.campType || "camp").replace(/^./, (c) => c.toUpperCase()) + " camp (Lv " + (r.campLevel || "?") + ")";
+const campTitle = (r) => r.campType === "castle" ? "Castle: " + (r.castleName || "enemy castle") : String(r.campType || "camp").replace(/^./, (c) => c.toUpperCase()) + " camp (Lv " + (r.campLevel || "?") + ")";
 function ReportSheet({ reports, onClose, onOpenAll }) {
   if (!reports || !reports.length) return null;
   return e("div", { className: "overlay open", onClick: (ev) => { if (ev.target === ev.currentTarget) onClose(); } },
@@ -1254,8 +1254,9 @@ function BattleSheet({ open, onClose, marches, expeds, serverNow, maxActive, unr
             const t = serverNow();
             const leg = Math.max(1, x.returnAt - x.arriveAt);
             const going = t < x.arriveAt, coming = !going && t < x.returnAt;
-            const title = going ? "Marching to a " + x.campType + " camp" : coming ? "Coming home" : "Home, collecting loot";
-            const sub = going ? "Level " + x.campLevel + " camp" : coming ? (x.report ? (x.report.win ? "Victory. Loot is on the way" : x.report.gone ? "The camp was already gone" : "Defeat") : "") : "";
+            const isCastle = x.kind === "castle";
+            const title = going ? (isCastle ? "Marching to attack " + (x.targetName || "a castle") : "Marching to a " + x.campType + " camp") : coming ? "Coming home" : "Home, collecting loot";
+            const sub = going ? (isCastle ? "The battle starts when the army arrives" : "Level " + x.campLevel + " camp") : coming ? (x.report ? (x.report.win ? "Victory. Loot is on the way" : x.report.gone ? (isCastle ? "The castle could not be attacked" : "The camp was already gone") : "Defeat") : "") : "";
             const left = going ? x.arriveAt - t : coming ? x.returnAt - t : 0;
             const prog = going ? 1 - left / leg : coming ? 1 - left / leg : 1;
             return e("div", { key: "x" + x.id, className: "bt2-army" },
@@ -1605,7 +1606,8 @@ class WorldScene extends Phaser.Scene {
       g.fillCircle(m.x, m.y, 4 / z);
     }
 
-    // Armies sent against NPC camps (positions are calculated from the server's times)
+    // Armies on the road: against NPC camps, against castles and the rally armies of the alliance (positions come from the server's times).
+    // Each army is drawn as a few little soldiers walking in a column along the path.
     const ex = this.bridge.getExpeditions();
     for (const e of ex.list) {
       const t = Date.now() + ex.offset;
@@ -1613,15 +1615,27 @@ class WorldScene extends Phaser.Scene {
       const b = this.map.tileToWorld(e.to.tileX, e.to.tileY);
       const oneWay = Math.max(1, e.returnAt - e.arriveAt);
       const out = t < e.arriveAt;
+      if (!out && (e.stays || t >= e.returnAt)) continue; // it stays in the tower / it is home
       const f = Phaser.Math.Clamp(out ? 1 - (e.arriveAt - t) / oneWay : (t - e.arriveAt) / oneWay, 0, 1);
       const p = out ? { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f } : { x: b.x + (a.x - b.x) * f, y: b.y + (a.y - b.y) * f };
-      const color = out ? 0xe8574a : (e.report && e.report.win ? 0x7bd88f : 0xb0b6c0);
-      g.lineStyle(2 / z, color, 0.7);
+      const color = out ? (e.rally ? 0xff9f43 : 0xe8574a) : (e.win ? 0x7bd88f : 0xb0b6c0);
+      g.lineStyle(2 / z, color, 0.55);
       this._dashed(g, a.x, a.y, b.x, b.y, 4 / z);
-      g.fillStyle(color, 1);
-      g.fillCircle(p.x, p.y, 8 / z);
-      g.fillStyle(0x0a0d14, 1);
-      g.fillCircle(p.x, p.y, 4 / z);
+      const dx = (out ? b.x - a.x : a.x - b.x), dy = (out ? b.y - a.y : a.y - b.y), len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+      const size = Object.values(e.troops || {}).reduce((s, n) => s + n, 0) || e.size || 1;
+      const count = Math.max(3, Math.min(7, 2 + Math.floor(Math.log10(size + 1) * 1.6)));
+      const time = Date.now();
+      for (let i = count - 1; i >= 0; i--) {
+        const back = i * 12 / z, side = (i === 0 ? 0 : (i % 2 ? 1 : -1) * 5 / z), bob = Math.sin(time / 130 + i * 1.7) * 1.6 / z;
+        const fx = p.x - ux * back - uy * side, fy = p.y - uy * back + ux * side + bob;
+        g.fillStyle(0x0a0d14, 0.35); g.fillEllipse(fx, fy + 4.5 / z, 8 / z, 3 / z);          // shadow
+        g.lineStyle(1.6 / z, 0x2b2118, 1); g.lineBetween(fx + ux * 5 / z, fy + uy * 5 / z - 4 / z, fx + ux * 5 / z, fy + uy * 5 / z + 4 / z); // spear
+        g.fillStyle(color, 1); g.fillRoundedRect(fx - 2.6 / z, fy - 2 / z, 5.2 / z, 6.5 / z, 1.5 / z); // body in the army's colour
+        g.fillStyle(0xf1d3b0, 1); g.fillCircle(fx, fy - 4 / z, 2.3 / z);                      // head
+        g.fillStyle(0x3a3f4a, 1); g.fillRect(fx - 2.6 / z, fy - 5.6 / z, 5.2 / z, 1.5 / z);     // helmet band
+      }
+      g.fillStyle(color, 1); g.fillTriangle(p.x + ux * 9 / z, p.y + uy * 9 / z - 10 / z, p.x + ux * 9 / z, p.y + uy * 9 / z - 4 / z, p.x + ux * 15 / z, p.y + uy * 9 / z - 7 / z); // banner
+      g.lineStyle(1.4 / z, 0x2b2118, 1); g.lineBetween(p.x + ux * 9 / z, p.y + uy * 9 / z - 11 / z, p.x + ux * 9 / z, p.y + uy * 9 / z);
     }
 
     if (this.marker) {
@@ -2318,21 +2332,37 @@ function App({ account, onLogout, onAuthLost }) {
     return r;
   }, [flushSaved, adoptServer]);
 
+  // the formation editor for the alliance screens: a rally's battle plan, a tower's defence ({ army, initial, title, subtitle, submitLabel, onSave(layout) })
+  const openCustomFormation = useCallback(async (o) => {
+    try {
+      const config = await loadBattleConfig();
+      setFm({ mode: "custom", config, army: o.army || {}, initial: o.initial || null, title: o.title, subtitle: o.subtitle, submitLabel: o.submitLabel, onSave: o.onSave, key: "c" + Date.now() });
+    } catch (err) { handleApiError(err); }
+  }, [loadBattleConfig, handleApiError]);
+
   const socialCtx = useMemo(() => {
     const byLevel = { 1: 10, 2: 22, 3: 45, 4: 90 };
     const power = (battleCfg && battleCfg.power) || Object.fromEntries(Object.keys(TROOP_BY_ID).map((id) => [id, byLevel[TROOP_BY_ID[id].level] || 10]));
-    return { serverNow, troops: army.troops[culture] || {}, resources, power, call: socialCall, toast: showToast, onError: socialError, refreshKey: socialTick };
-  }, [serverNow, army, culture, resources, battleCfg, socialCall, showToast, socialError, socialTick]);
+    return { serverNow, troops: army.troops[culture] || {}, resources, power, call: socialCall, toast: showToast, onError: socialError, refreshKey: socialTick, openFormation: openCustomFormation };
+  }, [serverNow, army, culture, resources, battleCfg, socialCall, showToast, socialError, socialTick, openCustomFormation]);
 
+  const [rallyMarches, setRallyMarches] = useState([]); // armies of the alliance's rallies that are walking (drawn on the map like expeditions)
+  const mapExpeds = useMemo(() => [...expeds, ...rallyMarches], [expeds, rallyMarches]);
   const refreshSocial = useCallback(async () => {
     try {
       const [ev, al] = await Promise.all([socialApi.getEvents(), socialApi.getAlliance()]);
       setEventsSum(ev);
       let badge = 0;
       if (al.alliance) {
-        badge += (al.alliance.requests || []).length; badge += (await socialApi.getRallies()).rallies.filter((r) => !r.mine && r.target.type !== "elephant").length;
+        const rl = await socialApi.getRallies(), tnow = Date.now();
+        const legs = [...(rl.marching || []), ...(rl.recent || [])].filter((r) => r.march || (r.report && r.report.march)).map((r) => {
+          const m = r.march || r.report.march, stays = !!(r.report && r.report.province && r.report.province.captured);
+          return { id: "rally" + r.id, rally: true, from: m.from, to: m.to, arriveAt: m.arriveAt, returnAt: stays ? m.arriveAt + 1 : m.returnAt, stays, win: !!(r.report && r.report.win), size: r.troops || 50, troops: r.army || null };
+        }).filter((x) => x.stays ? tnow < x.arriveAt : tnow < x.returnAt);
+        setRallyMarches(legs);
+        badge += (al.alliance.requests || []).length; badge += rl.rallies.filter((r) => !r.mine && r.target.type !== "elephant").length;
         try { setElephantSum({ ...(await socialApi.getElephant()).elephant, _at: Date.now() }); } catch { /* the cards just stay as they were */ }
-      } else setElephantSum(null);
+      } else { setElephantSum(null); setRallyMarches([]); }
       try { setConquestSum({ ...(await socialApi.getConquest()).conquest, _at: Date.now() }); } catch { /* the card just stays as it was */ }
       setAllyBadge(badge);
     } catch (err) { if (err.status === 401) onAuthLost(); }
@@ -2344,12 +2374,12 @@ function App({ account, onLogout, onAuthLost }) {
     try {
       if (!(await flushSaved())) return;
       const r = await socialApi.claimRally(verRef.current);
-      if (r.reports.length) { adoptServer(r.save); setRallyReports(r.reports); }
+      if (r.reports.length || r.returns) { adoptServer(r.save); if (r.reports.length) setRallyReports(r.reports); else showToast("Troops are back from the tower"); }
     } catch (err) {
       if (err.status === 409 && err.data && err.data.code === "stale" && retry) { await refreshState(); return claimRally(false); }
       if (err.status === 401) onAuthLost();
     }
-  }, [flushSaved, adoptServer, refreshState, onAuthLost]);
+  }, [flushSaved, adoptServer, refreshState, onAuthLost, showToast]);
 
   useEffect(() => { claimRally(); }, []);
   useEffect(() => { refreshSocial(); }, [refreshSocial, socialTick]);
@@ -2361,7 +2391,9 @@ function App({ account, onLogout, onAuthLost }) {
       else if (m.type === "rally") {
         setSocialTick((n) => n + 1);
         if (m.phase === "new") showToast((m.by || "A member") + " started a rally: " + (m.target || "join in!"));
-        if (m.phase === "done") { showToast(m.cancelled ? "A rally ended. Your troops are coming back" : m.win ? "Your rally won! Collecting the spoils" : "Your rally lost the battle"); claimRally(); }
+        if (m.phase === "march") showToast("The rally army marches out. The fight starts when it arrives");
+        if (m.phase === "done") { showToast(m.cancelled ? "A rally ended. Your troops are coming back" : m.win ? "Your rally won! The survivors walk home" : "Your rally lost the battle. The survivors walk home"); claimRally(); }
+        if (m.phase === "home") { showToast("Your rally troops are home"); claimRally(); }
       }
       else if (m.type === "event") setSocialTick((n) => n + 1);
       else if (m.type === "conquest") {
@@ -2369,6 +2401,8 @@ function App({ account, onLogout, onAuthLost }) {
         if (m.phase === "captured") showToast("[" + m.by + "] took the " + m.name + " tower");
         if (m.phase === "lost") showToast("Your alliance lost the " + m.name + " tower to [" + m.by + "]!");
         if (m.phase === "won") showToast("Your alliance won the province " + m.name + "!");
+        if (m.phase === "defended") showToast("Your tower " + m.name + " beat the attackers!");
+        if (m.phase === "overrun") showToast("The " + m.name + " tower fell. Your troops walk home");
         if (m.phase === "closed" && !m.winner) showToast(m.name + " closed: nobody took it");
       }
       else if (m.type === "elephant") {
@@ -2407,7 +2441,8 @@ function App({ account, onLogout, onAuthLost }) {
     pvpBusyRef.current = true;
     setFmBusy(true);
     try {
-      if (fm.mode === "defense") {
+      if (fm.mode === "custom") { await fm.onSave(layout); setFm(null); }
+      else if (fm.mode === "defense") {
         await api.setDefense(layout);
         setFm(null);
         showToast("Defense saved");
@@ -2416,9 +2451,9 @@ function App({ account, onLogout, onAuthLost }) {
         const r = await api.attackCastle({ castleId: fm.castle.id, layout, baseVersion: verRef.current });
         syncClock(r.now);
         adoptServer(r.save);
+        setExpeds((prev) => [...prev, r.expedition]);
         setFm(null);
-        setCastleReport(r.report);
-        showToast(r.report.win ? "Victory! The loot is in your storage" : "Defeat. Your army fought hard");
+        showToast("Army marching to " + fm.castle.name + ". The battle starts when it arrives");
       }
     } catch (err) { handleApiError(err); } finally { pvpBusyRef.current = false; setFmBusy(false); }
   }, [fm, flushSaved, adoptServer, showToast, handleApiError]);
@@ -2597,7 +2632,7 @@ function App({ account, onLogout, onAuthLost }) {
         onCampSelect: (camp, extra) => setCampSel({ camp, home: extra.home, rules: extra.rules }),
         conquest: conquestSum,
         onProvinceSelect: (prov) => { setConquestInitial(prov.id); setConquestOpen(true); },
-        expeds, expOffset,
+        expeds: mapExpeds, expOffset,
         onOpenCity: (origin) => goView("city", origin),
         marches,
         onAddMarch: (m) => setMarches((prev) => [...prev, m])
@@ -2661,14 +2696,14 @@ function App({ account, onLogout, onAuthLost }) {
     e(ReportSheet, { reports, onClose: () => setReports(null), onOpenAll: () => { setReports(null); openMail("report"); } }),
     castleSel && e(BattleUI.CastleSheet, { castle: castleSel, civName: (civById(castleSel.civId) || {}).name, onClose: () => setCastleSel(null), onAttack: openAttackEditor }),
     fm && e(BattleUI.FormationSheet, {
-      key: fm.key, mode: fm.mode, config: fm.config,
-      army: fm.mode === "defense" ? fm.army : (army.troops[culture] || {}),
+      key: fm.key, mode: fm.mode === "attack" ? "attack" : "defense", config: fm.config,
+      army: fm.mode === "attack" ? (army.troops[culture] || {}) : fm.army,
       initial: fm.initial,
-      title: fm.mode === "defense" ? "Castle defense" : "Attack " + fm.castle.name,
-      subtitle: fm.mode === "defense"
+      title: fm.mode === "custom" ? fm.title : fm.mode === "defense" ? "Castle defense" : "Attack " + fm.castle.name,
+      subtitle: fm.mode === "custom" ? fm.subtitle : fm.mode === "defense"
         ? "This is how your troops stand when another player attacks your castle. Your troops are not used up."
-        : "We arranged your troops for you. Choose how many to send, then attack. The battle is decided at once.",
-      submitLabel: fm.mode === "defense" ? "Save defense" : "Attack",
+        : "We arranged your troops for you. Choose how many to send, then attack. The army walks to the castle and the battle is decided when it arrives.",
+      submitLabel: fm.mode === "custom" ? fm.submitLabel : fm.mode === "defense" ? "Save defense" : "Attack",
       busy: fmBusy,
       onClose: () => { if (!fmBusy) setFm(null); },
       onSubmit: submitFormation

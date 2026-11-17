@@ -115,6 +115,37 @@ export function pickCounterFormation(army, vs) {
   return bestAutoLayout(army, 'wedge').formation;
 }
 
+/**
+ * Fits a layout somebody designed earlier (a rally host's battle plan, a tower's defence) to the army that is really there now:
+ * counts are scaled down when troops are missing, troops that were not in the plan are put where their class likes to stand.
+ * Never throws; falls back to the best automatic layout when the plan is unusable.
+ */
+export function fitLayout(layout, army, preferred) {
+  const have = {};
+  for (const [id, n] of Object.entries(army || {})) { const k = Math.floor(Number(n) || 0); if (k > 0 && TROOPS.get(id)) have[id] = k; }
+  if (!Object.keys(have).length) return { formation: C.FORMATIONS[preferred] ? preferred : 'wedge', slots: { S1: {}, S2: {}, S3: {}, S4: {} } };
+  let plan = null;
+  try { plan = normalizeLayout(layout); } catch { plan = null; }
+  if (!plan) return bestAutoLayout(have, preferred || layout?.formation);
+  const planned = layoutArmy(plan), slots = { S1: {}, S2: {}, S3: {}, S4: {} }, left = { ...have };
+  for (const s of C.SLOTS) {
+    for (const [id, n] of Object.entries(plan.slots[s])) {
+      const ratio = Math.min(1, (have[id] || 0) / planned[id]);
+      const k = Math.min(left[id] || 0, Math.floor(n * ratio));
+      if (k > 0) { slots[s][id] = k; left[id] -= k; }
+    }
+  }
+  for (const [id, n] of Object.entries(left)) { // whatever is left (rounding, or troops that were not in the plan)
+    if (n <= 0) continue;
+    const t = TROOPS.get(id), order = PREF[t.cls] || C.SLOTS;
+    const hasCls = (s) => Object.keys(slots[s]).some((x) => TROOPS.get(x)?.cls === t.cls);
+    const classes = (s) => new Set(Object.keys(slots[s]).map((x) => TROOPS.get(x)?.cls));
+    const s = order.find((x) => slots[x][id] || hasCls(x)) || order.find((x) => classes(x).size < C.SLOT_CLASS_LIMIT) || order[0];
+    slots[s][id] = (slots[s][id] || 0) + n;
+  }
+  return { formation: plan.formation, slots };
+}
+
 function buildSide(layout) {
   const groups = [];
   for (const s of C.SLOTS) {

@@ -42,11 +42,16 @@ export function createSocial(world, { spawner } = {}) {
   r.post('/rally/leave', ok((p, b) => rally.leave(p, b)));
   r.post('/rally/launch', ok((p, b) => rally.launch(p, b)));
   r.post('/rally/cancel', ok((p, b) => rally.cancel(p, b)));
+  r.post('/rally/plan', ok((p, b) => rally.setPlan(p, b)));
   r.post('/rally/claim', ok((p, b) => rally.claim(p, b)));
 
   // ---- Province Conquest ----
   r.get('/conquest', ok((p) => conquest.status(p)));
   r.get('/conquest/map', ok(() => ({ map: conquest.map() })));
+  r.get('/conquest/tower', ok((p, b, q) => conquest.tower(p, q.query.provinceId)));
+  r.post('/conquest/tower/layout', ok((p, b) => conquest.setTowerLayout(p, b)));
+  r.post('/conquest/tower/reinforce', ok((p, b) => conquest.reinforce(p, b)));
+  r.post('/conquest/tower/withdraw', ok((p, b) => conquest.withdraw(p, b)));
 
   // ---- War Elephant (alliance hunt) ----
   r.get('/alliance/elephant', ok((p) => elephant.status(p)));
